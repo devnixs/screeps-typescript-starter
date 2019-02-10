@@ -28,9 +28,9 @@ class Spawner {
       },
       {
         percentage: 1,
-        role: "ranged",
+        role: "fighter",
         maxCount: 4,
-        body: [TOUGH, TOUGH, MOVE, MOVE, RANGED_ATTACK, RANGED_ATTACK]
+        body: [TOUGH, TOUGH, TOUGH, TOUGH, MOVE, MOVE, ATTACK, ATTACK]
       }
     ];
 

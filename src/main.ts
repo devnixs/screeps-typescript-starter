@@ -3,6 +3,7 @@ import { roleBuilder } from "roles/builder";
 import { roleHarvester } from "roles/harvester";
 import { roleUpgrader } from "roles/upgrader";
 import { roleRanged } from "roles/ranged";
+import { roleFighter } from "roles/fighter";
 import { spawner } from "./spawner";
 
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
@@ -24,6 +25,9 @@ export const loop = ErrorMapper.wrapLoop(() => {
     }
     if (memory.role == "ranged") {
       roleRanged.run(creep);
+    }
+    if (memory.role == "fighter") {
+      roleFighter.run(creep);
     }
   }
 
