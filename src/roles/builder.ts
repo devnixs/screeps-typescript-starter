@@ -1,4 +1,5 @@
 import { sourceManager } from "../utils/source-manager";
+import { roleHarvester } from "./harvester";
 
 interface IBuilderMemory extends CreepMemory {
   building: boolean;
@@ -20,8 +21,10 @@ class RoleBuilder implements IRole {
       var targets = creep.room.find(FIND_CONSTRUCTION_SITES);
       if (targets.length) {
         if (creep.build(targets[0]) == ERR_NOT_IN_RANGE) {
-          creep.moveTo(targets[0], { visualizePathStyle: { stroke: "#ffffff" } });
+          creep.moveTo(targets[0], { visualizePathStyle: { stroke: "#ffffff" }, reusePath: 25 });
         }
+      } else {
+        roleHarvester.run(creep);
       }
     } else {
       sourceManager.harvestEnergyFromSource(creep);

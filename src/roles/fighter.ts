@@ -1,18 +1,48 @@
-interface IFighterMemory extends CreepMemory {}
+interface IFighterMemory extends CreepMemory {
+  assignedExplorerName: string | null;
+}
 
 class RoleFighter implements IRole {
   run(creep: Creep) {
-    var hostiles = creep.room.find(FIND_HOSTILE_CREEPS);
-    if (hostiles.length > 0) {
-      if (creep.attack(hostiles[0]) == ERR_NOT_IN_RANGE) {
-        creep.moveTo(hostiles[0], { visualizePathStyle: { stroke: "#ff0000" } });
+    var hostile = creep.room.find(FIND_HOSTILE_CREEPS)[0];
+    const memory: IFighterMemory = creep.memory as any;
+
+    if (!memory.assignedExplorerName && Game.time % 30 === 0) {
+      this.lookForSomeoneToProtect(creep, memory);
+    }
+
+    if (hostile) {
+      if (creep.attack(hostile) == ERR_NOT_IN_RANGE) {
+        creep.moveTo(hostile, { visualizePathStyle: { stroke: "#ff0000" }, reusePath: 25 });
       }
     } else {
-      // move to flag
-      var restFlag = creep.room.find(FIND_FLAGS, { filter: i => i.name === "rest" })[0];
-      if (restFlag) {
-        creep.moveTo(restFlag);
+      if (memory.assignedExplorerName) {
+        var assignedExplorer = Game.creeps[memory.assignedExplorerName];
+        if (!assignedExplorer) {
+          memory.assignedExplorerName = null;
+        } else {
+          creep.moveTo(assignedExplorer, { reusePath: 25 });
+        }
+      } else {
+        // move to flag
+        var restFlag = creep.room.find(FIND_FLAGS, { filter: i => i.name === "fighter_rest" })[0];
+        if (restFlag) {
+          creep.moveTo(restFlag, { reusePath: 25 });
+        }
       }
+    }
+  }
+
+  lookForSomeoneToProtect(creep: Creep, memory: IFighterMemory) {
+    const allCreeps: Creep[] = _.values(Game.creeps);
+    const explorerWithNoGuards = allCreeps.find(
+      i => i.memory.role === "explorer" && (!i.memory.guardsNames || !i.memory.guardsNames.length)
+    );
+    if (explorerWithNoGuards) {
+      explorerWithNoGuards.memory.guardsNames = explorerWithNoGuards.memory.guardsNames || [];
+      explorerWithNoGuards.memory.guardsNames.push(creep.name);
+
+      memory.assignedExplorerName = explorerWithNoGuards.name;
     }
   }
 }

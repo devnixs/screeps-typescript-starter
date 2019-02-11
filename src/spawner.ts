@@ -1,72 +1,67 @@
-interface RoleRequirement {
-  role: roles;
-  percentage: number;
-  maxCount?: number;
-  body: BodyPartConstant[];
-}
+import { getSpawnerRequirements, RoleRequirement } from "spawner-requirements";
 
 class Spawner {
   run() {
-    const roles: RoleRequirement[] = [
-      {
-        percentage: 10,
-        role: "harvester",
-        maxCount: 5,
-        body: [MOVE, WORK, CARRY]
-      },
-      {
-        percentage: 4,
-        role: "builder",
-        maxCount: 2,
-        body: [MOVE, WORK, CARRY]
-      },
-      {
-        percentage: 4,
-        role: "upgrader",
-        maxCount: 1,
-        body: [MOVE, WORK, CARRY]
-      },
-      {
-        percentage: 1,
-        role: "fighter",
-        maxCount: 4,
-        body: [TOUGH, TOUGH, TOUGH, TOUGH, MOVE, MOVE, ATTACK, ATTACK]
-      }
-    ];
-
-    const allCreeps = _.values(Game.creeps) as Creep[];
-    const counts = _.countBy(allCreeps, i => i.memory.role);
-
-    const firstSpawnName = Object.keys(Game.spawns)[0];
-    if (!firstSpawnName) {
-      console.log("No spawn found");
+    // Do the spawning logic once every 20 ticks
+    if (Game.time % 20 > 0) {
       return;
     }
-    const firstSpawn = Game.spawns[firstSpawnName];
 
-    const totalPercentage = _.sum(roles.map(i => i.percentage));
+    for (const spawnName in Game.spawns) {
+      this.handleSingleSpawn(Game.spawns[spawnName]);
+    }
+  }
 
-    const roleInfos = roles.map(role => {
-      const currentPercentage = allCreeps.length > 0 ? (counts[role.role] || 0) / allCreeps.length : 0;
+  handleSingleSpawn(spawn: StructureSpawn) {
+    const requirements = getSpawnerRequirements(spawn);
+
+    const creepsInThisRoom = spawn.room.find(FIND_MY_CREEPS);
+    const counts = _.countBy(creepsInThisRoom, i => i.memory.role);
+    const totalPercentage = _.sum(requirements.map(i => i.percentage));
+    const debugMode = false;
+
+    const roleInfos = requirements.map(role => {
+      const currentCount = counts[role.role] || 0;
+      const currentPercentage = creepsInThisRoom.length > 0 ? currentCount / creepsInThisRoom.length : 0;
       const desiredPercentage = role.percentage / totalPercentage;
-
+      if (debugMode) {
+        console.log(
+          `${role.role}(${currentCount}): has ${(currentPercentage * 100).toFixed(2)}% needs ${(
+            desiredPercentage * 100
+          ).toFixed(2)}%`
+        );
+      }
       return {
         currentPercentage,
         desiredPercentage,
-        currentCount: counts[role.role] || 0,
+        currentCount: currentCount,
         requirement: role
       };
     });
 
-    const roleNeededToBeCreated = roleInfos.filter(i => i.currentPercentage < i.desiredPercentage)[0];
+    const roleNeededToBeCreated = roleInfos.filter(
+      i =>
+        i.currentPercentage < i.desiredPercentage &&
+        (i.requirement.maxCount === undefined || i.currentCount < i.requirement.maxCount)
+    )[0];
+
     const roleThatCanBeCreated = roleInfos.filter(
       i => i.requirement.maxCount === undefined || i.currentCount < i.requirement.maxCount
     )[0];
 
+    if (debugMode) {
+      console.log(
+        "Role needed to be created: " + (roleNeededToBeCreated ? roleNeededToBeCreated.requirement.role : "N/A")
+      );
+      console.log(
+        "Role that can be needed  : " + (roleThatCanBeCreated ? roleThatCanBeCreated.requirement.role : "N/A")
+      );
+    }
+
     if (roleNeededToBeCreated) {
-      this.spawnRole(firstSpawn, roleNeededToBeCreated.requirement);
+      this.spawnRole(spawn, roleNeededToBeCreated.requirement);
     } else if (roleThatCanBeCreated) {
-      this.spawnRole(firstSpawn, roleThatCanBeCreated.requirement);
+      this.spawnRole(spawn, roleThatCanBeCreated.requirement);
     }
   }
 
@@ -79,7 +74,10 @@ class Spawner {
     const creepName = role.role + (creepsCounter + 1);
 
     spawn.spawnCreep(role.body, creepName, {
-      memory: { role: role.role } as any
+      memory: {
+        ...role.additionalMemory,
+        role: role.role
+      } as any
     });
   }
 }
