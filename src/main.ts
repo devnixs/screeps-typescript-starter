@@ -9,58 +9,63 @@ import { roleReparator } from "roles/reparator";
 import { roleExplorer } from "roles/explorer";
 import { architect } from "architect";
 import { roleLongDistanceHarvester } from "roles/longDistanceHarvester";
+import { profiler } from "./utils/profiler";
+
+// profiler.enable();
 
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
 export const loop = ErrorMapper.wrapLoop(() => {
-  spawner.run();
+  profiler.wrap(function() {
+    spawner.run();
 
-  if (Game.cpu.tickLimit < 5) {
     console.log("Bucket :" + Game.cpu.bucket);
-    console.log("Bucket almost empty. Skipping tick.");
-    return;
-  }
+    console.log("Used :" + Game.cpu.getUsed());
+    console.log("Limit :" + Game.cpu.limit);
+    console.log("TickLimit :" + Game.cpu.tickLimit);
 
-  for (var name in Game.creeps) {
-    var creep = Game.creeps[name];
-    const memory = creep.memory;
-    if (memory.role == "harvester") {
-      roleHarvester.run(creep);
+    if (Game.cpu.tickLimit < 5) {
+      console.log("Bucket :" + Game.cpu.bucket);
+      console.log("Bucket almost empty. Skipping tick.");
+      return;
     }
-    if (memory.role == "upgrader") {
-      roleUpgrader.run(creep);
-    }
-    if (memory.role == "builder") {
-      roleBuilder.run(creep);
-    }
-    if (memory.role == "ranged") {
-      roleRanged.run(creep);
-    }
-    if (memory.role == "fighter") {
-      roleFighter.run(creep);
-    }
-    if (memory.role == "reparator") {
-      roleReparator.run(creep);
-    }
-    if (memory.role == "explorer") {
-      roleExplorer.run(creep);
-    }
-    if (memory.role == "long-distance-harvester") {
-      roleLongDistanceHarvester.run(creep);
-    }
-  }
 
-  architect.run();
-
-  // Automatically delete memory of missing creeps
-  for (const name in Memory.creeps) {
-    if (!(name in Game.creeps)) {
-      delete Memory.creeps[name];
+    for (var name in Game.creeps) {
+      var creep = Game.creeps[name];
+      const memory = creep.memory;
+      if (memory.role == "harvester") {
+        roleHarvester.run(creep);
+      }
+      if (memory.role == "upgrader") {
+        roleUpgrader.run(creep);
+      }
+      if (memory.role == "builder") {
+        roleBuilder.run(creep);
+      }
+      if (memory.role == "ranged") {
+        roleRanged.run(creep);
+      }
+      if (memory.role == "fighter") {
+        roleFighter.run(creep);
+      }
+      if (memory.role == "reparator") {
+        roleReparator.run(creep);
+      }
+      if (memory.role == "explorer") {
+        roleExplorer.run(creep);
+      }
+      if (memory.role == "long-distance-harvester") {
+        roleLongDistanceHarvester.run(creep);
+      }
     }
-  }
 
-  /*   console.log("Bucket :" + Game.cpu.bucket);
-  console.log("Used :" + Game.cpu.getUsed());
-  console.log("Limit :" + Game.cpu.limit);
-  console.log("TickLimit :" + Game.cpu.tickLimit); */
+    architect.run();
+
+    // Automatically delete memory of missing creeps
+    for (const name in Memory.creeps) {
+      if (!(name in Game.creeps)) {
+        delete Memory.creeps[name];
+      }
+    }
+  });
 });

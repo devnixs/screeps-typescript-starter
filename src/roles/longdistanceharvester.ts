@@ -1,4 +1,6 @@
 import { findAndCache } from "utils/finder";
+import { defaultReusePath } from "../constants";
+import { sourceManager } from "utils/source-manager";
 
 /* import { sourceManager } from "../utils/source-manager";
 import { findAndCache } from "utils/finder";
@@ -55,7 +57,7 @@ class RoleLongDistanceHarvester implements IRole {
           // try to transfer energy, if it is not in range
           if (creep.transfer(structure, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
             // move towards it
-            creep.moveTo(structure, { reusePath: 25 });
+            creep.moveTo(structure, { reusePath: defaultReusePath });
           }
         }
       }
@@ -63,7 +65,7 @@ class RoleLongDistanceHarvester implements IRole {
       else {
         // find exit to home room
         creep.moveTo(new RoomPosition(memory.homeSpawnPosition.x, memory.homeSpawnPosition.y, memory.home), {
-          reusePath: 25
+          reusePath: defaultReusePath
         });
       }
     }
@@ -71,14 +73,7 @@ class RoleLongDistanceHarvester implements IRole {
     else {
       // if in target room
       if (creep.room.name == memory.targetRoomName) {
-        // find source
-        var source = creep.pos.findClosestByPath(FIND_SOURCES);
-
-        // try to harvest energy, if the source is not in range
-        if (source && creep.harvest(source) == ERR_NOT_IN_RANGE) {
-          // move towards the source
-          creep.moveTo(source);
-        }
+        sourceManager.harvestEnergyFromSource(creep);
       }
       // if not in target room
       else {
@@ -87,7 +82,7 @@ class RoleLongDistanceHarvester implements IRole {
         var exitPos: RoomPosition = creep.room.find(exit as any)[0] as any;
 
         // move to exit
-        creep.moveTo(exitPos, { reusePath: 25 });
+        creep.moveTo(exitPos, { reusePath: defaultReusePath });
       }
     }
   }

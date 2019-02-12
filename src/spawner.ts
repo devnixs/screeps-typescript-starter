@@ -3,7 +3,7 @@ import { getSpawnerRequirements, RoleRequirement } from "spawner-requirements";
 class Spawner {
   run() {
     // Do the spawning logic once every 20 ticks
-    if (Game.time % 20 > 0) {
+    if (Game.time % 30 > 0) {
       return;
     }
 

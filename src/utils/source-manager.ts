@@ -1,4 +1,5 @@
 import { findAndCache } from "./finder";
+import { defaultReusePath } from "../constants";
 
 class SourceManager {
   harvestEnergyFromSource(creep: Creep) {
@@ -18,8 +19,15 @@ class SourceManager {
       return;
     }
 
-    if (creep.harvest(targetEnergySource) == ERR_NOT_IN_RANGE) {
-      creep.moveTo(targetEnergySource, { visualizePathStyle: { stroke: "#ffaa00" }, reusePath: 20 });
+    const distanceX = Math.abs(creep.pos.x - targetEnergySource.pos.x);
+    const distanceY = Math.abs(creep.pos.y - targetEnergySource.pos.y);
+    if (distanceX <= 1 && distanceY <= 1) {
+      const harvestResult = creep.harvest(targetEnergySource);
+      if (harvestResult !== OK) {
+        console.log("Failed to harvest : ", harvestResult);
+      }
+    } else {
+      creep.moveTo(targetEnergySource, { visualizePathStyle: { stroke: "#ffaa00" }, reusePath: defaultReusePath });
     }
   }
 }

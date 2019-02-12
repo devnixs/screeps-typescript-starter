@@ -1,4 +1,5 @@
 import { sourceManager } from "../utils/source-manager";
+import { defaultReusePath } from "../constants";
 import { roleHarvester } from "./harvester";
 
 interface IReparatorMemory extends CreepMemory {
@@ -34,7 +35,7 @@ class RoleReparator implements IRole {
 
     if (memory.repairing) {
       if (creep.repair(damaged) == ERR_NOT_IN_RANGE) {
-        creep.moveTo(damaged, { visualizePathStyle: { stroke: "#ffffff" }, reusePath: 25 });
+        creep.moveTo(damaged, { visualizePathStyle: { stroke: "#ffffff" }, reusePath: defaultReusePath });
       }
     } else {
       // withdraw energy from structures
@@ -48,7 +49,7 @@ class RoleReparator implements IRole {
       }) as StructureSpawn;
       if (target) {
         if (creep.withdraw(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-          creep.moveTo(target, { visualizePathStyle: { stroke: "#ffffff" }, reusePath: 25 });
+          creep.moveTo(target, { visualizePathStyle: { stroke: "#ffffff" }, reusePath: defaultReusePath });
         }
       }
     }

@@ -1,3 +1,4 @@
+import { defaultReusePath } from "../constants";
 import { sourceManager } from "../utils/source-manager";
 
 interface IUpgraderMemory extends CreepMemory {
@@ -18,7 +19,7 @@ class RoleUpgrader implements IRole {
 
     if (memory.upgrading) {
       if (creep.room.controller && creep.upgradeController(creep.room.controller) == ERR_NOT_IN_RANGE) {
-        creep.moveTo(creep.room.controller, { visualizePathStyle: { stroke: "#ffffff" }, reusePath: 25 });
+        creep.moveTo(creep.room.controller, { visualizePathStyle: { stroke: "#ffffff" }, reusePath: defaultReusePath });
       }
     } else {
       sourceManager.harvestEnergyFromSource(creep);

@@ -1,4 +1,5 @@
 import { sourceManager } from "../utils/source-manager";
+import { defaultReusePath } from "../constants";
 import { findAndCache } from "utils/finder";
 
 interface IHarvesterMemory extends CreepMemory {}
@@ -33,10 +34,10 @@ class RoleHarvester implements IRole {
 
       if (targetStructure) {
         if (creep.transfer(targetStructure, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-          creep.moveTo(targetStructure, { visualizePathStyle: { stroke: "#ffffff" }, reusePath: 25 });
+          creep.moveTo(targetStructure, { visualizePathStyle: { stroke: "#ffffff" }, reusePath: defaultReusePath });
         }
       } else {
-        creep.moveTo(Game.flags["worker_rest"], { reusePath: 25 });
+        creep.moveTo(Game.flags["worker_rest"], { reusePath: defaultReusePath });
       }
     }
   }

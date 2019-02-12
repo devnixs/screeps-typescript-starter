@@ -1,3 +1,5 @@
+import { defaultReusePath } from "../constants";
+
 interface IFighterMemory extends CreepMemory {
   assignedExplorerName: string | null;
 }
@@ -13,7 +15,7 @@ class RoleFighter implements IRole {
 
     if (hostile) {
       if (creep.attack(hostile) == ERR_NOT_IN_RANGE) {
-        creep.moveTo(hostile, { visualizePathStyle: { stroke: "#ff0000" }, reusePath: 25 });
+        creep.moveTo(hostile, { visualizePathStyle: { stroke: "#ff0000" }, reusePath: defaultReusePath });
       }
     } else {
       if (memory.assignedExplorerName) {
@@ -21,13 +23,13 @@ class RoleFighter implements IRole {
         if (!assignedExplorer) {
           memory.assignedExplorerName = null;
         } else {
-          creep.moveTo(assignedExplorer, { reusePath: 25 });
+          creep.moveTo(assignedExplorer, { reusePath: defaultReusePath });
         }
       } else {
         // move to flag
         var restFlag = creep.room.find(FIND_FLAGS, { filter: i => i.name === "fighter_rest" })[0];
         if (restFlag) {
-          creep.moveTo(restFlag, { reusePath: 25 });
+          creep.moveTo(restFlag, { reusePath: defaultReusePath });
         }
       }
     }

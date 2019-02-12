@@ -1,4 +1,5 @@
 import { sourceManager } from "../utils/source-manager";
+import { defaultReusePath } from "../constants";
 
 interface IExplorerMemory extends CreepMemory {
   selectedExit: RoomPosition | null;
@@ -9,7 +10,7 @@ class RoleExplorer implements IRole {
   run(creep: Creep) {
     var flag = Game.flags["explore_rest"];
     if (flag) {
-      creep.moveTo(flag, { reusePath: 25 });
+      creep.moveTo(flag, { reusePath: defaultReusePath });
     }
   }
 
@@ -28,7 +29,7 @@ class RoleExplorer implements IRole {
     }
 
     if (creep.claimController(creep.room.controller) === ERR_NOT_IN_RANGE) {
-      creep.moveTo(creep.room.controller, { reusePath: 25 });
+      creep.moveTo(creep.room.controller, { reusePath: defaultReusePath });
     }
   }
 
@@ -58,7 +59,7 @@ class RoleExplorer implements IRole {
     }
 
     creep.moveTo(new RoomPosition(memory.selectedExit.x, memory.selectedExit.y, memory.selectedExit.roomName), {
-      reusePath: 25
+      reusePath: defaultReusePath
     });
   }
 }

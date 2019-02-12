@@ -3,7 +3,7 @@ import { findEmptySpotCloseTo } from "utils/finder";
 class Architect {
   run() {
     // Do the architect logic once every 100 ticks
-    if (Game.time % 20 > 0) {
+    if (Game.time % 100 > 0) {
       return;
     }
 
@@ -20,7 +20,9 @@ class Architect {
     var constructionSites = room.find(FIND_CONSTRUCTION_SITES);
     if (constructionSites.length === 0) {
       if (this.createExtension(room) != OK) {
-        // this.createRoad(room);
+        if (this.createContainers(room) != OK) {
+          this.createRoad(room);
+        }
       }
     }
   }
@@ -33,6 +35,31 @@ class Architect {
     const spot = findEmptySpotCloseTo(spawn.pos, room);
     if (spot) {
       return room.createConstructionSite(spot.x, spot.y, STRUCTURE_EXTENSION);
+    } else {
+      return -1;
+    }
+  }
+
+  createContainers(room: Room) {
+    console.log("Creating container");
+    const spawn = room.find(FIND_MY_SPAWNS)[0];
+    if (!spawn) {
+      return -1;
+    }
+
+    const existingContainers = room.find(FIND_MY_STRUCTURES, { structureType: STRUCTURE_CONTAINER } as any);
+    console.log("Found " + existingContainers.length + "container(s)");
+
+    const gcl = room.controller ? room.controller.level : 1;
+
+    if (existingContainers.length >= gcl + 7) {
+      return -1;
+    }
+
+    const spot = findEmptySpotCloseTo(spawn.pos, room);
+    console.log("Found an empty spot");
+    if (spot) {
+      return room.createConstructionSite(spot.x, spot.y, STRUCTURE_CONTAINER);
     } else {
       return -1;
     }

@@ -79,19 +79,19 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       {
         percentage: 10,
         role: "harvester",
-        maxCount: 4,
+        maxCount: 3,
         body: [MOVE, WORK, CARRY, MOVE, WORK, CARRY, CARRY]
       },
       {
-        percentage: 4,
+        percentage: 5,
         role: "builder",
-        maxCount: 4,
+        maxCount: 2,
         body: [MOVE, WORK, CARRY, MOVE, WORK, CARRY, CARRY]
       },
       {
-        percentage: 2,
+        percentage: 3,
         role: "upgrader",
-        maxCount: 4,
+        maxCount: 3,
         body: [MOVE, WORK, CARRY, MOVE, WORK, CARRY, CARRY]
       },
       {
@@ -107,15 +107,15 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
         body: [TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK]
       },
       {
-        percentage: 5,
+        percentage: 3,
         role: "long-distance-harvester",
-        maxCount: 6,
+        maxCount: 2,
         body: [MOVE, WORK, CARRY, MOVE, WORK, CARRY, CARRY],
         additionalMemory: {
           homeSpawnPosition: spawn.pos,
           home: spawn.pos.roomName,
           role: "long-distance-harvester",
-          targetRoomName: (harvest1Flag && harvest1Flag.room && harvest1Flag.room.name) || "W8N7"
+          targetRoomName: (harvest1Flag && harvest1Flag.room && harvest1Flag.room.name) || "E27N48"
         } as ILongDistanceHarvesterMemory
       }
       /*       {
