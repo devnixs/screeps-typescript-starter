@@ -22,7 +22,7 @@ class RoleUpgrader implements IRole {
         creep.moveTo(creep.room.controller, { visualizePathStyle: { stroke: "#ffffff" }, reusePath: defaultReusePath });
       }
     } else {
-      sourceManager.harvestEnergyFromSource(creep);
+      sourceManager.getEnergy(creep);
     }
   }
 }

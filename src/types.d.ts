@@ -20,11 +20,14 @@ interface CreepMemory {
 
 interface RoomMemory {
   avoid: any;
+  damagedStructureId: string | null;
+  enemyId: string | null;
 }
 
 interface Memory {
   uuid: number;
   log: any;
+  existingTowerIds: string[] | undefined;
 }
 
 // `global` extension samples

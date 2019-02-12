@@ -4,8 +4,10 @@ export interface RoleRequirement {
   role: roles;
   percentage: number;
   maxCount?: number;
-  body: BodyPartConstant[];
+  exactBody?: BodyPartConstant[];
+  bodyTemplate?: BodyPartConstant[];
   additionalMemory?: any;
+  countAllRooms?: boolean;
 }
 
 // MOVE	            50	Moves the creep. Reduces creep fatigue by 2/tick. See movement.
@@ -33,7 +35,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
         percentage: 10,
         role: "harvester",
         maxCount: 4,
-        body: [MOVE, WORK, CARRY]
+        exactBody: [MOVE, WORK, CARRY]
       }
     ];
   }
@@ -47,70 +49,71 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
         percentage: 10,
         role: "harvester",
         maxCount: 4,
-        body: [MOVE, WORK, CARRY]
+        exactBody: [MOVE, WORK, CARRY]
       },
       {
         percentage: 4,
         role: "builder",
         maxCount: 4,
-        body: [MOVE, WORK, CARRY]
+        exactBody: [MOVE, WORK, CARRY]
       },
       {
         percentage: 2,
         role: "upgrader",
         maxCount: 4,
-        body: [MOVE, WORK, CARRY]
+        exactBody: [MOVE, WORK, CARRY]
       },
       {
         percentage: 2,
         role: "reparator",
         maxCount: 1,
-        body: [MOVE, WORK, CARRY]
+        exactBody: [MOVE, WORK, CARRY]
       },
       {
         percentage: 1,
         role: "fighter",
         maxCount: hasSafeMode ? 0 : 4,
-        body: [TOUGH, TOUGH, TOUGH, TOUGH, MOVE, MOVE, ATTACK, ATTACK]
+        exactBody: [TOUGH, TOUGH, TOUGH, TOUGH, MOVE, MOVE, ATTACK, ATTACK]
       }
     ];
-  } else if (extensionsCount <= 6) {
+  } else if (extensionsCount <= 9) {
     return [
       {
         percentage: 10,
         role: "harvester",
-        maxCount: 3,
-        body: [MOVE, WORK, CARRY, MOVE, WORK, CARRY, CARRY]
+        maxCount: 5,
+        bodyTemplate: [MOVE, WORK, CARRY]
       },
       {
-        percentage: 5,
+        percentage: 3,
         role: "builder",
         maxCount: 2,
-        body: [MOVE, WORK, CARRY, MOVE, WORK, CARRY, CARRY]
+        bodyTemplate: [MOVE, WORK, CARRY]
       },
       {
         percentage: 3,
         role: "upgrader",
-        maxCount: 3,
-        body: [MOVE, WORK, CARRY, MOVE, WORK, CARRY, CARRY]
+        maxCount: 5,
+        bodyTemplate: [MOVE, WORK, CARRY]
       },
       {
         percentage: 2,
         role: "reparator",
-        maxCount: 1,
-        body: [MOVE, WORK, CARRY, MOVE, WORK, CARRY, CARRY]
+        maxCount: 0, // handled by towers
+        exactBody: [MOVE, WORK, CARRY]
       },
       {
         percentage: 1,
         role: "fighter",
-        maxCount: hasSafeMode ? 0 : 4,
-        body: [TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK]
+        maxCount: hasSafeMode ? 0 : 2,
+        exactBody: [TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK]
       },
       {
-        percentage: 3,
+        percentage: 2,
         role: "long-distance-harvester",
-        maxCount: 2,
-        body: [MOVE, WORK, CARRY, MOVE, WORK, CARRY, CARRY],
+        maxCount: 5,
+        countAllRooms: true,
+        bodyTemplate: [MOVE, WORK, CARRY],
         additionalMemory: {
           homeSpawnPosition: spawn.pos,
           home: spawn.pos.roomName,
@@ -126,36 +129,37 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       } */
     ];
   } else {
+    // For 10 or more extensions
     return [
       {
         percentage: 10,
         role: "harvester",
         maxCount: 4,
-        body: [MOVE, WORK, CARRY, MOVE, WORK, CARRY, CARRY, WORK, CARRY, MOVE]
+        bodyTemplate: [MOVE, WORK, CARRY]
       },
       {
-        percentage: 4,
+        percentage: 2,
         role: "builder",
-        maxCount: 4,
-        body: [MOVE, WORK, CARRY, MOVE, WORK, CARRY, CARRY, WORK, CARRY, MOVE]
+        maxCount: 1,
+        bodyTemplate: [MOVE, WORK, CARRY]
       },
       {
         percentage: 2,
         role: "upgrader",
-        maxCount: 4,
-        body: [MOVE, WORK, CARRY, MOVE, WORK, CARRY, CARRY, WORK, CARRY, MOVE]
+        maxCount: 2,
+        bodyTemplate: [MOVE, WORK, CARRY]
       },
       {
         percentage: 2,
         role: "reparator",
-        maxCount: 1,
-        body: [MOVE, WORK, CARRY, MOVE, WORK, CARRY, CARRY, WORK, CARRY, MOVE]
+        maxCount: 0, // handled by towers
+        exactBody: [MOVE, WORK, CARRY]
       },
       {
         percentage: 1,
         role: "fighter",
-        maxCount: hasSafeMode ? 0 : 4,
-        body: [
+        maxCount: hasSafeMode ? 0 : 1,
+        exactBody: [
           TOUGH,
           TOUGH,
           TOUGH,
@@ -176,10 +180,23 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
         ]
       },
       {
+        percentage: 2,
+        role: "long-distance-harvester",
+        maxCount: 5,
+        countAllRooms: true,
+        bodyTemplate: [MOVE, WORK, CARRY],
+        additionalMemory: {
+          homeSpawnPosition: spawn.pos,
+          home: spawn.pos.roomName,
+          role: "long-distance-harvester",
+          targetRoomName: (harvest1Flag && harvest1Flag.room && harvest1Flag.room.name) || "E27N48"
+        } as ILongDistanceHarvesterMemory
+      },
+      {
         percentage: 1,
         role: "explorer",
-        maxCount: 1,
-        body: [MOVE, CLAIM]
+        maxCount: 0,
+        exactBody: [MOVE, CLAIM]
       }
     ];
   }

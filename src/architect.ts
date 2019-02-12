@@ -47,12 +47,14 @@ class Architect {
       return -1;
     }
 
-    const existingContainers = room.find(FIND_MY_STRUCTURES, { structureType: STRUCTURE_CONTAINER } as any);
+    const existingContainers = room.find(FIND_MY_STRUCTURES, {
+      filter: structure => (structure.structureType as any) === STRUCTURE_CONTAINER
+    });
     console.log("Found " + existingContainers.length + "container(s)");
 
     const gcl = room.controller ? room.controller.level : 1;
 
-    if (existingContainers.length >= gcl + 7) {
+    if (existingContainers.length >= 1) {
       return -1;
     }
 

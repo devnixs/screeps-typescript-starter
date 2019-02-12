@@ -31,35 +31,7 @@ class RoleLongDistanceHarvester implements IRole {
     if (memory.working == true) {
       // if in home room
       if (creep.room.name == memory.home) {
-        let structure: AnyStructure | undefined = findAndCache<FIND_STRUCTURES>(
-          creep,
-          "deposit_structure_id",
-          FIND_STRUCTURES,
-          (targetStructure: any) => targetStructure.energy < targetStructure.energyCapacity,
-          {
-            filter: (structure: StructureSpawn | StructureExtension | StructureTower) => {
-              return (
-                (structure.structureType == STRUCTURE_EXTENSION ||
-                  structure.structureType == STRUCTURE_SPAWN ||
-                  structure.structureType == STRUCTURE_TOWER) &&
-                structure.energy < structure.energyCapacity
-              );
-            }
-          }
-        ) as any;
-
-        if (structure == undefined) {
-          structure = creep.room.storage;
-        }
-
-        // if we found one
-        if (structure != undefined) {
-          // try to transfer energy, if it is not in range
-          if (creep.transfer(structure, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-            // move towards it
-            creep.moveTo(structure, { reusePath: defaultReusePath });
-          }
-        }
+        sourceManager.storeEnergy(creep);
       }
       // if not in home room...
       else {

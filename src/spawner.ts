@@ -1,5 +1,16 @@
 import { getSpawnerRequirements, RoleRequirement } from "spawner-requirements";
 
+const costs = {
+  [MOVE]: 50,
+  [WORK]: 100,
+  [CARRY]: 50,
+  [ATTACK]: 80,
+  [RANGED_ATTACK]: 150,
+  [HEAL]: 250,
+  [TOUGH]: 10,
+  [CLAIM]: 600
+};
+
 class Spawner {
   run() {
     // Do the spawning logic once every 20 ticks
@@ -12,17 +23,35 @@ class Spawner {
     }
   }
 
+  getBodyPartCombinationFromTemplate(parts: BodyPartConstant[], maxEnergy: number) {
+    const current: BodyPartConstant[] = [];
+    let cost = 0;
+
+    cost = _.sum(current.map(i => costs[i]));
+    let counter = 0;
+    while (cost <= maxEnergy) {
+      current.push(parts[counter % parts.length]);
+      counter++;
+      cost = _.sum(current.map(i => costs[i]));
+    }
+    current.pop();
+    return current;
+  }
+
   handleSingleSpawn(spawn: StructureSpawn) {
     const requirements = getSpawnerRequirements(spawn);
 
-    const creepsInThisRoom = spawn.room.find(FIND_MY_CREEPS);
-    const counts = _.countBy(creepsInThisRoom, i => i.memory.role);
+    // const creepsInThisRoom = spawn.room.find(FIND_MY_CREEPS);
+
+    const allCreeps = _.values(Game.creeps) as Creep[];
+
+    const counts = _.countBy(allCreeps, i => i.memory.role);
     const totalPercentage = _.sum(requirements.map(i => i.percentage));
     const debugMode = false;
 
     const roleInfos = requirements.map(role => {
       const currentCount = counts[role.role] || 0;
-      const currentPercentage = creepsInThisRoom.length > 0 ? currentCount / creepsInThisRoom.length : 0;
+      const currentPercentage = allCreeps.length > 0 ? currentCount / allCreeps.length : 0;
       const desiredPercentage = role.percentage / totalPercentage;
       if (debugMode) {
         console.log(
@@ -73,7 +102,22 @@ class Spawner {
     }
     const creepName = role.role + (creepsCounter + 1);
 
-    spawn.spawnCreep(role.body, creepName, {
+    const maxEnergyPossible = spawn.room.energyCapacityAvailable;
+
+    let body: BodyPartConstant[];
+    if (role.exactBody) {
+      console.log("Spawning role " + role.role, " with exact body ", role.exactBody);
+      body = role.exactBody;
+    } else if (role.bodyTemplate) {
+      console.log("Spawning role " + role.role, " with template ", role.bodyTemplate);
+      console.log("Max energy possible:", maxEnergyPossible);
+      body = this.getBodyPartCombinationFromTemplate(role.bodyTemplate, maxEnergyPossible);
+      console.log("Generated body", body);
+    } else {
+      return;
+    }
+
+    spawn.spawnCreep(body, creepName, {
       memory: {
         ...role.additionalMemory,
         role: role.role

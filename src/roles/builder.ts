@@ -28,7 +28,7 @@ class RoleBuilder implements IRole {
         roleHarvester.run(creep);
       }
     } else {
-      sourceManager.harvestEnergyFromSource(creep);
+      sourceManager.getEnergy(creep);
     }
   }
 }

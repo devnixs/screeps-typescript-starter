@@ -4,6 +4,7 @@ import { roleHarvester } from "./harvester";
 
 interface IReparatorMemory extends CreepMemory {
   repairing: boolean;
+  damagedId: string | null;
 }
 
 class RoleReparator implements IRole {
@@ -18,15 +19,29 @@ class RoleReparator implements IRole {
       creep.say("⚡ repair");
     }
 
-    var damagedOther = creep.pos.findClosestByRange(FIND_MY_STRUCTURES, {
-      filter: structure => structure.hits < structure.hitsMax
-    });
+    let damaged: AnyStructure | null = null;
+    if (memory.damagedId) {
+      damaged = Game.getObjectById(memory.damagedId);
+      if (damaged && damaged.hits === damaged.hitsMax) {
+        memory.damagedId = null;
+        damaged = null;
+      }
+    }
 
-    var damagedRoads = creep.pos.findClosestByRange(FIND_STRUCTURES, {
-      filter: structure => structure.hits < structure.hitsMax && structure.structureType == STRUCTURE_ROAD
-    });
+    if (!damaged) {
+      var damagedOther = creep.pos.findClosestByRange(FIND_MY_STRUCTURES, {
+        filter: structure => structure.hits < structure.hitsMax
+      });
 
-    const damaged = damagedOther || damagedRoads;
+      var damagedRoads = creep.pos.findClosestByRange(FIND_STRUCTURES, {
+        filter: structure =>
+          (structure.hits < structure.hitsMax && structure.structureType == STRUCTURE_ROAD) ||
+          structure.structureType == STRUCTURE_CONTAINER
+      });
+
+      damaged = damagedOther || damagedRoads;
+      memory.damagedId = damaged && damaged.id;
+    }
 
     if (!damaged) {
       roleHarvester.run(creep);
@@ -38,20 +53,7 @@ class RoleReparator implements IRole {
         creep.moveTo(damaged, { visualizePathStyle: { stroke: "#ffffff" }, reusePath: defaultReusePath });
       }
     } else {
-      // withdraw energy from structures
-      var target = creep.pos.findClosestByPath(FIND_STRUCTURES, {
-        filter: structure => {
-          return (
-            (structure.structureType == STRUCTURE_EXTENSION || structure.structureType == STRUCTURE_SPAWN) &&
-            structure.energy > 0
-          );
-        }
-      }) as StructureSpawn;
-      if (target) {
-        if (creep.withdraw(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-          creep.moveTo(target, { visualizePathStyle: { stroke: "#ffffff" }, reusePath: defaultReusePath });
-        }
-      }
+      sourceManager.getEnergy(creep);
     }
   }
 }

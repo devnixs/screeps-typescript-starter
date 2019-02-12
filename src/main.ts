@@ -10,6 +10,7 @@ import { roleExplorer } from "roles/explorer";
 import { architect } from "architect";
 import { roleLongDistanceHarvester } from "roles/longDistanceHarvester";
 import { profiler } from "./utils/profiler";
+import { roleTower } from "roles/tower";
 
 // profiler.enable();
 
@@ -59,6 +60,8 @@ export const loop = ErrorMapper.wrapLoop(() => {
       }
     }
 
+    roleTower.runAllTowers();
+
     architect.run();
 
     // Automatically delete memory of missing creeps
@@ -67,5 +70,12 @@ export const loop = ErrorMapper.wrapLoop(() => {
         delete Memory.creeps[name];
       }
     }
+
+    console.log("Bucket :" + Game.cpu.bucket);
+    console.log("Used :" + Game.cpu.getUsed());
+    console.log("Limit :" + Game.cpu.limit);
+    console.log("TickLimit :" + Game.cpu.tickLimit);
+
+    Memory.rooms = Memory.rooms || {};
   });
 });

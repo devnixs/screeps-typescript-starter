@@ -7,7 +7,7 @@ export function findAndCache<K extends FindConstant>(
 ): FindTypes[K] | null {
   const memory = creep.memory as any;
 
-  const expirationTimeout = 30; // ticks
+  const expirationTimeout = 15; // ticks
 
   let cachedElementKey: string | null = memory[cacheKey];
   let cachedElement: FindTypes[K] | null = cachedElementKey ? Game.getObjectById(cachedElementKey) : null;
@@ -57,10 +57,10 @@ export function findEmptySpotCloseTo(pos: SimplePos, room: Room) {
     for (let i = -1; i <= 1; i++) {
       for (let j = -1; j <= 1; j++) {
         const possibleX = current.x + i;
-        const possibleY = current.y + i;
+        const possibleY = current.y + j;
         if (Math.abs(i) + Math.abs(j) === 1 && possibleX >= 0 && possibleY >= 0 && possibleX < 50 && possibleY < 50) {
           if (!closedList.find(i => i.x === possibleX && i.y === possibleY)) {
-            openList.push({ x: possibleX, y: possibleY });
+            openList.unshift({ x: possibleX, y: possibleY });
           }
         }
       }
