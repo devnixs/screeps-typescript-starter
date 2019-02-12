@@ -10,6 +10,8 @@ export interface ILongDistanceHarvesterMemory extends CreepMemory {
   home: string;
   homeSpawnPosition: { x: number; y: number };
   targetRoomName: string;
+  targetRoomX: number | undefined;
+  targetRoomY: number | undefined;
 }
 
 class RoleLongDistanceHarvester implements IRole {
@@ -50,11 +52,19 @@ class RoleLongDistanceHarvester implements IRole {
       // if not in target room
       else {
         // find exit to target room
-        var exit = creep.room.findExitTo(memory.targetRoomName);
-        var exitPos: RoomPosition = creep.room.find(exit as any)[0] as any;
+        if (memory.targetRoomX === undefined) {
+          const flag = Game.flags[creep.memory.role + "_target"];
+          if (flag) {
+            memory.targetRoomX = flag.pos.x;
+            memory.targetRoomY = flag.pos.y;
+          }
+        }
 
-        // move to exit
-        creep.moveTo(exitPos, { reusePath: defaultReusePath });
+        if (memory.targetRoomX && memory.targetRoomY && memory.targetRoomName) {
+          creep.moveTo(new RoomPosition(memory.targetRoomX, memory.targetRoomY, memory.targetRoomName), {
+            reusePath: defaultReusePath
+          });
+        }
       }
     }
   }

@@ -40,7 +40,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     ];
   }
 
-  const harvest1Flag = Game.flags["harvest_1"];
+  const harvest1Flag = Game.flags["long-distance-harvester_target"];
   const extensionsCount = extensions.length;
 
   if (extensionsCount <= 2) {
@@ -118,7 +118,9 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
           homeSpawnPosition: spawn.pos,
           home: spawn.pos.roomName,
           role: "long-distance-harvester",
-          targetRoomName: (harvest1Flag && harvest1Flag.room && harvest1Flag.room.name) || "E27N48"
+          targetRoomName: (harvest1Flag && harvest1Flag.room && harvest1Flag.room.name) || "E27N48",
+          targetRoomX: (harvest1Flag && harvest1Flag.pos && harvest1Flag.pos.x) || 29,
+          targetRoomY: (harvest1Flag && harvest1Flag.pos && harvest1Flag.pos.y) || 7
         } as ILongDistanceHarvesterMemory
       }
       /*       {
@@ -134,7 +136,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       {
         percentage: 10,
         role: "harvester",
-        maxCount: 4,
+        maxCount: 5,
         bodyTemplate: [MOVE, WORK, CARRY]
       },
       {
@@ -146,7 +148,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       {
         percentage: 2,
         role: "upgrader",
-        maxCount: 2,
+        maxCount: 4,
         bodyTemplate: [MOVE, WORK, CARRY]
       },
       {
@@ -182,14 +184,16 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       {
         percentage: 2,
         role: "long-distance-harvester",
-        maxCount: 5,
+        maxCount: 6,
         countAllRooms: true,
         bodyTemplate: [MOVE, WORK, CARRY],
         additionalMemory: {
           homeSpawnPosition: spawn.pos,
           home: spawn.pos.roomName,
           role: "long-distance-harvester",
-          targetRoomName: (harvest1Flag && harvest1Flag.room && harvest1Flag.room.name) || "E27N48"
+          targetRoomName: (harvest1Flag && harvest1Flag.room && harvest1Flag.room.name) || "E27N48",
+          targetRoomX: (harvest1Flag && harvest1Flag.pos && harvest1Flag.pos.x) || 29,
+          targetRoomY: (harvest1Flag && harvest1Flag.pos && harvest1Flag.pos.y) || 7
         } as ILongDistanceHarvesterMemory
       },
       {

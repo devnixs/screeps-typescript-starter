@@ -60,7 +60,7 @@ export function findEmptySpotCloseTo(pos: SimplePos, room: Room) {
         const possibleY = current.y + j;
         if (Math.abs(i) + Math.abs(j) === 1 && possibleX >= 0 && possibleY >= 0 && possibleX < 50 && possibleY < 50) {
           if (!closedList.find(i => i.x === possibleX && i.y === possibleY)) {
-            openList.unshift({ x: possibleX, y: possibleY });
+            openList.push({ x: possibleX, y: possibleY });
           }
         }
       }
