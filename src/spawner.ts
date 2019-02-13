@@ -14,7 +14,7 @@ const costs = {
 class Spawner {
   run() {
     // Do the spawning logic once every 20 ticks
-    if (Game.time % 30 > 0) {
+    if (Game.time % 10 > 0) {
       return;
     }
 
@@ -23,7 +23,7 @@ class Spawner {
     }
   }
 
-  getBodyPartCombinationFromTemplate(parts: BodyPartConstant[], maxEnergy: number) {
+  getBodyPartCombinationFromTemplate(parts: BodyPartConstant[], maxEnergy: number, sortOrder?: BodyPartConstant[]) {
     const current: BodyPartConstant[] = [];
     let cost = 0;
 
@@ -35,7 +35,13 @@ class Spawner {
       cost = _.sum(current.map(i => costs[i]));
     }
     current.pop();
-    return current;
+
+    const sorted = sortOrder ? _.sortBy(current, bodyPart => sortOrder.indexOf(bodyPart)) : current;
+    return sorted;
+  }
+
+  getRoleSlug(role: string, subRole: string | undefined) {
+    return [role, subRole].filter(i => i).join("-");
   }
 
   handleSingleSpawn(spawn: StructureSpawn) {
@@ -45,19 +51,20 @@ class Spawner {
 
     const allCreeps = _.values(Game.creeps) as Creep[];
 
-    const counts = _.countBy(allCreeps, i => i.memory.role);
+    const counts = _.countBy(allCreeps, i => this.getRoleSlug(i.memory.role, i.memory.subRole));
     const totalPercentage = _.sum(requirements.map(i => i.percentage));
     const debugMode = false;
 
     const roleInfos = requirements.map(role => {
-      const currentCount = counts[role.role] || 0;
+      const roleSlug = this.getRoleSlug(role.role, role.subRole);
+      const currentCount = counts[roleSlug] || 0;
       const currentPercentage = allCreeps.length > 0 ? currentCount / allCreeps.length : 0;
       const desiredPercentage = role.percentage / totalPercentage;
       if (debugMode) {
         console.log(
-          `${role.role}(${currentCount}): has ${(currentPercentage * 100).toFixed(2)}% needs ${(
-            desiredPercentage * 100
-          ).toFixed(2)}%`
+          `${this.getRoleSlug(role.role, role.subRole)}(${currentCount}): has ${(currentPercentage * 100).toFixed(
+            2
+          )}% needs ${(desiredPercentage * 100).toFixed(2)}%`
         );
       }
       return {
@@ -80,10 +87,16 @@ class Spawner {
 
     if (debugMode) {
       console.log(
-        "Role needed to be created: " + (roleNeededToBeCreated ? roleNeededToBeCreated.requirement.role : "N/A")
+        "Role needed to be created: " +
+          (roleNeededToBeCreated
+            ? roleNeededToBeCreated.requirement.role + "-" + roleNeededToBeCreated.requirement.role
+            : "N/A")
       );
       console.log(
-        "Role that can be needed  : " + (roleThatCanBeCreated ? roleThatCanBeCreated.requirement.role : "N/A")
+        "Role that can be needed  : " +
+          (roleThatCanBeCreated
+            ? roleThatCanBeCreated.requirement.role + "-" + roleThatCanBeCreated.requirement.role
+            : "N/A")
       );
     }
 
@@ -106,21 +119,24 @@ class Spawner {
 
     let body: BodyPartConstant[];
     if (role.exactBody) {
-      console.log("Spawning role " + role.role, " with exact body ", role.exactBody);
       body = role.exactBody;
     } else if (role.bodyTemplate) {
-      console.log("Spawning role " + role.role, " with template ", role.bodyTemplate);
-      console.log("Max energy possible:", maxEnergyPossible);
-      body = this.getBodyPartCombinationFromTemplate(role.bodyTemplate, maxEnergyPossible);
-      console.log("Generated body", body);
+      const maxEnergy = role.capMaxEnergy || 1000000;
+      body = this.getBodyPartCombinationFromTemplate(
+        role.bodyTemplate,
+        Math.min(maxEnergyPossible, maxEnergy),
+        role.sortBody
+      );
     } else {
       return;
     }
 
+    // console.log("Abount to spawn : ", JSON.stringify(role));
     spawn.spawnCreep(body, creepName, {
       memory: {
         ...role.additionalMemory,
-        role: role.role
+        role: role.role,
+        subRole: role.subRole
       } as any
     });
   }

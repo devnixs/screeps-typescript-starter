@@ -21,7 +21,7 @@ class Architect {
     if (constructionSites.length === 0) {
       if (this.createExtension(room) != OK) {
         if (this.createContainers(room) != OK) {
-          this.createRoad(room);
+          // this.createRoad(room);
         }
       }
     }

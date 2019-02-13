@@ -8,6 +8,9 @@ export interface RoleRequirement {
   bodyTemplate?: BodyPartConstant[];
   additionalMemory?: any;
   countAllRooms?: boolean;
+  capMaxEnergy?: number;
+  sortBody?: BodyPartConstant[];
+  subRole?: string;
 }
 
 // MOVE	            50	Moves the creep. Reduces creep fatigue by 2/tick. See movement.
@@ -27,6 +30,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
   });
 
   const harvesters = spawn.room.find(FIND_MY_CREEPS).filter(i => i.memory.role === "harvester");
+  const towers = spawn.room.find(FIND_MY_STRUCTURES, { filter: i => i.structureType === "tower" });
 
   if (harvesters.length === 0) {
     // we need at least one harvester
@@ -40,168 +44,76 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     ];
   }
 
-  const harvest1Flag = Game.flags["long-distance-harvester_target"];
-  const extensionsCount = extensions.length;
-
-  if (extensionsCount <= 2) {
-    return [
-      {
-        percentage: 10,
-        role: "harvester",
-        maxCount: 4,
-        exactBody: [MOVE, WORK, CARRY]
-      },
-      {
-        percentage: 4,
-        role: "builder",
-        maxCount: 4,
-        exactBody: [MOVE, WORK, CARRY]
-      },
-      {
-        percentage: 2,
-        role: "upgrader",
-        maxCount: 4,
-        exactBody: [MOVE, WORK, CARRY]
-      },
-      {
-        percentage: 2,
-        role: "reparator",
-        maxCount: 1,
-        exactBody: [MOVE, WORK, CARRY]
-      },
-      {
-        percentage: 1,
-        role: "fighter",
-        maxCount: hasSafeMode ? 0 : 4,
-        exactBody: [TOUGH, TOUGH, TOUGH, TOUGH, MOVE, MOVE, ATTACK, ATTACK]
-      }
-    ];
-  } else if (extensionsCount <= 9) {
-    return [
-      {
-        percentage: 10,
-        role: "harvester",
-        maxCount: 5,
-        bodyTemplate: [MOVE, WORK, CARRY]
-      },
-      {
-        percentage: 3,
-        role: "builder",
-        maxCount: 2,
-        bodyTemplate: [MOVE, WORK, CARRY]
-      },
-      {
-        percentage: 3,
-        role: "upgrader",
-        maxCount: 5,
-        bodyTemplate: [MOVE, WORK, CARRY]
-      },
-      {
-        percentage: 2,
-        role: "reparator",
-        maxCount: 0, // handled by towers
-        exactBody: [MOVE, WORK, CARRY]
-      },
-      {
-        percentage: 1,
-        role: "fighter",
-        maxCount: hasSafeMode ? 0 : 2,
-        exactBody: [TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK]
-      },
-      {
-        percentage: 2,
+  return [
+    {
+      percentage: 10,
+      role: "harvester",
+      maxCount: 2,
+      bodyTemplate: [MOVE, WORK, CARRY]
+    },
+    {
+      percentage: 2,
+      role: "builder",
+      maxCount: 1,
+      bodyTemplate: [MOVE, WORK, CARRY]
+    },
+    {
+      percentage: 1,
+      role: "upgrader",
+      maxCount: 4,
+      bodyTemplate: [MOVE, WORK, CARRY]
+    },
+    {
+      percentage: 2,
+      role: "reparator",
+      maxCount: towers.length ? 0 : 1, // handled by towers
+      exactBody: [MOVE, WORK, CARRY]
+    },
+    {
+      percentage: 1,
+      role: "fighter",
+      maxCount: hasSafeMode ? 0 : 1,
+      bodyTemplate: [TOUGH, MOVE, ATTACK],
+      capMaxEnergy: 700,
+      sortBody: [TOUGH, MOVE, ATTACK]
+    },
+    {
+      percentage: 4,
+      role: "long-distance-harvester",
+      maxCount: 3,
+      countAllRooms: true,
+      bodyTemplate: [MOVE, WORK, CARRY],
+      subRole: "room1",
+      additionalMemory: {
+        homeSpawnPosition: spawn.pos,
+        home: spawn.pos.roomName,
         role: "long-distance-harvester",
-        maxCount: 5,
-        countAllRooms: true,
-        bodyTemplate: [MOVE, WORK, CARRY],
-        additionalMemory: {
-          homeSpawnPosition: spawn.pos,
-          home: spawn.pos.roomName,
-          role: "long-distance-harvester",
-          targetRoomName: (harvest1Flag && harvest1Flag.room && harvest1Flag.room.name) || "E27N48",
-          targetRoomX: (harvest1Flag && harvest1Flag.pos && harvest1Flag.pos.x) || 29,
-          targetRoomY: (harvest1Flag && harvest1Flag.pos && harvest1Flag.pos.y) || 7
-        } as ILongDistanceHarvesterMemory
-      }
-      /*       {
-        percentage: 1,
-        role: "explorer",
-        maxCount: 1,
-        body: [TOUGH, TOUGH, MOVE]
-      } */
-    ];
-  } else {
-    // For 10 or more extensions
-    return [
-      {
-        percentage: 10,
-        role: "harvester",
-        maxCount: 5,
-        bodyTemplate: [MOVE, WORK, CARRY]
-      },
-      {
-        percentage: 2,
-        role: "builder",
-        maxCount: 1,
-        bodyTemplate: [MOVE, WORK, CARRY]
-      },
-      {
-        percentage: 2,
-        role: "upgrader",
-        maxCount: 4,
-        bodyTemplate: [MOVE, WORK, CARRY]
-      },
-      {
-        percentage: 2,
-        role: "reparator",
-        maxCount: 0, // handled by towers
-        exactBody: [MOVE, WORK, CARRY]
-      },
-      {
-        percentage: 1,
-        role: "fighter",
-        maxCount: hasSafeMode ? 0 : 1,
-        exactBody: [
-          TOUGH,
-          TOUGH,
-          TOUGH,
-          TOUGH,
-          TOUGH,
-          TOUGH,
-          TOUGH,
-          TOUGH,
-          MOVE,
-          MOVE,
-          MOVE,
-          MOVE,
-          MOVE,
-          ATTACK,
-          ATTACK,
-          ATTACK,
-          ATTACK
-        ]
-      },
-      {
-        percentage: 2,
+        targetRoomName: "E27N48",
+        targetRoomX: 29,
+        targetRoomY: 7
+      } as ILongDistanceHarvesterMemory
+    },
+    {
+      percentage: 1,
+      role: "long-distance-harvester",
+      maxCount: 3,
+      countAllRooms: true,
+      bodyTemplate: [MOVE, WORK, CARRY],
+      subRole: "room2",
+      additionalMemory: {
+        homeSpawnPosition: spawn.pos,
+        home: spawn.pos.roomName,
         role: "long-distance-harvester",
-        maxCount: 6,
-        countAllRooms: true,
-        bodyTemplate: [MOVE, WORK, CARRY],
-        additionalMemory: {
-          homeSpawnPosition: spawn.pos,
-          home: spawn.pos.roomName,
-          role: "long-distance-harvester",
-          targetRoomName: (harvest1Flag && harvest1Flag.room && harvest1Flag.room.name) || "E27N48",
-          targetRoomX: (harvest1Flag && harvest1Flag.pos && harvest1Flag.pos.x) || 29,
-          targetRoomY: (harvest1Flag && harvest1Flag.pos && harvest1Flag.pos.y) || 7
-        } as ILongDistanceHarvesterMemory
-      },
-      {
-        percentage: 1,
-        role: "explorer",
-        maxCount: 0,
-        exactBody: [MOVE, CLAIM]
-      }
-    ];
-  }
+        targetRoomName: "E26N47",
+        targetRoomX: 26,
+        targetRoomY: 31
+      } as ILongDistanceHarvesterMemory
+    },
+    {
+      percentage: 1,
+      role: "explorer",
+      maxCount: 0,
+      exactBody: [MOVE, CLAIM]
+    }
+  ];
 }

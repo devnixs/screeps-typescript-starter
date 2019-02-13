@@ -14,6 +14,7 @@ type roles =
 interface CreepMemory {
   role: roles;
   guardsNames?: string[];
+  subRole?: string;
   _travel?: any;
   _trav?: any;
 }

@@ -10,8 +10,8 @@ export interface ILongDistanceHarvesterMemory extends CreepMemory {
   home: string;
   homeSpawnPosition: { x: number; y: number };
   targetRoomName: string;
-  targetRoomX: number | undefined;
-  targetRoomY: number | undefined;
+  targetRoomX: number;
+  targetRoomY: number;
 }
 
 class RoleLongDistanceHarvester implements IRole {
@@ -37,6 +37,26 @@ class RoleLongDistanceHarvester implements IRole {
       }
       // if not in home room...
       else {
+        // first let's see if a road needs to be built
+        const constructionSite = creep.pos.findClosestByRange(FIND_CONSTRUCTION_SITES);
+        if (constructionSite) {
+          if (creep.build(constructionSite) === ERR_NOT_IN_RANGE) {
+            creep.moveTo(constructionSite, { reusePath: defaultReusePath });
+          }
+          return;
+        }
+
+        const damagedRoad: StructureRoad = creep.pos.findInRange(FIND_STRUCTURES, 3, {
+          filter: structure => structure.structureType === "road" && structure.hits < structure.hitsMax
+        })[0] as any;
+
+        if (damagedRoad) {
+          if (creep.repair(damagedRoad) === ERR_NOT_IN_RANGE) {
+            creep.moveTo(damagedRoad, { reusePath: defaultReusePath });
+          }
+          return;
+        }
+
         // find exit to home room
         creep.moveTo(new RoomPosition(memory.homeSpawnPosition.x, memory.homeSpawnPosition.y, memory.home), {
           reusePath: defaultReusePath
@@ -47,22 +67,20 @@ class RoleLongDistanceHarvester implements IRole {
     else {
       // if in target room
       if (creep.room.name == memory.targetRoomName) {
-        sourceManager.harvestEnergyFromSource(creep);
+        const source = creep.room.lookForAt(
+          "source",
+          new RoomPosition(memory.targetRoomX, memory.targetRoomY, memory.targetRoomName)
+        )[0];
+        if (source) {
+          sourceManager.harvestEnergyFromSpecificSource(creep, source);
+        }
       }
       // if not in target room
       else {
-        // find exit to target room
-        if (memory.targetRoomX === undefined) {
-          const flag = Game.flags[creep.memory.role + "_target"];
-          if (flag) {
-            memory.targetRoomX = flag.pos.x;
-            memory.targetRoomY = flag.pos.y;
-          }
-        }
-
         if (memory.targetRoomX && memory.targetRoomY && memory.targetRoomName) {
           creep.moveTo(new RoomPosition(memory.targetRoomX, memory.targetRoomY, memory.targetRoomName), {
-            reusePath: defaultReusePath
+            reusePath: defaultReusePath,
+            visualizePathStyle: { stroke: "#ffaa00" }
           });
         }
       }

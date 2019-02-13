@@ -7,7 +7,7 @@ export function findAndCache<K extends FindConstant>(
 ): FindTypes[K] | null {
   const memory = creep.memory as any;
 
-  const expirationTimeout = 15; // ticks
+  const expirationTimeout = 10; // ticks
 
   let cachedElementKey: string | null = memory[cacheKey];
   let cachedElement: FindTypes[K] | null = cachedElementKey ? Game.getObjectById(cachedElementKey) : null;

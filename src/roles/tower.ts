@@ -100,8 +100,8 @@ class RoleTower {
 
     var damagedRoads = tower.pos.findClosestByRange(FIND_STRUCTURES, {
       filter: structure =>
-        (structure.hits < structure.hitsMax && structure.structureType == STRUCTURE_ROAD) ||
-        structure.structureType == STRUCTURE_CONTAINER
+        structure.hits < structure.hitsMax &&
+        (structure.structureType == STRUCTURE_ROAD || structure.structureType == STRUCTURE_CONTAINER)
     });
     return damagedRoads;
   }

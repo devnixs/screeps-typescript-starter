@@ -30,6 +30,22 @@ class SourceManager {
       creep.moveTo(targetEnergySource, { visualizePathStyle: { stroke: "#ffaa00" }, reusePath: defaultReusePath });
     }
   }
+  harvestEnergyFromSpecificSource(creep: Creep, source: Source) {
+    if (!source) {
+      return;
+    }
+
+    const distanceX = Math.abs(creep.pos.x - source.pos.x);
+    const distanceY = Math.abs(creep.pos.y - source.pos.y);
+    if (distanceX <= 1 && distanceY <= 1) {
+      const harvestResult = creep.harvest(source);
+      if (harvestResult !== OK) {
+        console.log("Failed to harvest : ", harvestResult);
+      }
+    } else {
+      creep.moveTo(source, { visualizePathStyle: { stroke: "#ffaa00" }, reusePath: defaultReusePath });
+    }
+  }
   getEnergy(creep: Creep) {
     const targetStructure = findAndCache<FIND_STRUCTURES>(
       creep,

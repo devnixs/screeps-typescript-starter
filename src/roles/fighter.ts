@@ -6,7 +6,12 @@ interface IFighterMemory extends CreepMemory {
 
 class RoleFighter implements IRole {
   run(creep: Creep) {
-    var hostile = creep.room.find(FIND_HOSTILE_CREEPS)[0];
+    var hostileRoom1 = creep.room.find(FIND_HOSTILE_CREEPS)[0];
+    var hostileRoom2 = Game.rooms["E26N47"].find(FIND_HOSTILE_CREEPS)[0];
+    var hostileRoom3 = Game.rooms["E27N48"].find(FIND_HOSTILE_CREEPS)[0];
+
+    var hostile = hostileRoom1 || hostileRoom2 || hostileRoom3;
+
     const memory: IFighterMemory = creep.memory as any;
 
     if (!memory.assignedExplorerName && Game.time % 30 === 0) {
