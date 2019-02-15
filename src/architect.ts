@@ -41,6 +41,11 @@ class Architect {
   }
 
   createContainers(room: Room) {
+    if (room.storage) {
+      // no need for containers.
+      return -1;
+    }
+
     console.log("Creating container");
     const spawn = room.find(FIND_MY_SPAWNS)[0];
     if (!spawn) {

@@ -58,9 +58,12 @@ class RoleLongDistanceHarvester implements IRole {
         }
 
         // find exit to home room
-        creep.moveTo(new RoomPosition(memory.homeSpawnPosition.x, memory.homeSpawnPosition.y, memory.home), {
-          reusePath: defaultReusePath
-        });
+        const moveResult = creep.moveTo(
+          new RoomPosition(memory.homeSpawnPosition.x, memory.homeSpawnPosition.y, memory.home),
+          {
+            reusePath: defaultReusePath
+          }
+        );
       }
     }
     // if creep is supposed to harvest energy from source

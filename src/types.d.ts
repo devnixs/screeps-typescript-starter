@@ -29,6 +29,7 @@ interface Memory {
   uuid: number;
   log: any;
   existingTowerIds: string[] | undefined;
+  noNotificationBefore: number | undefined;
 }
 
 // `global` extension samples

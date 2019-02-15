@@ -1,4 +1,6 @@
 import { defaultReusePath } from "../constants";
+import { notify } from "../utils/notify";
+import { roleLongDistanceHarvester } from "./longDistanceHarvester";
 
 interface IFighterMemory extends CreepMemory {
   assignedExplorerName: string | null;
@@ -6,11 +8,22 @@ interface IFighterMemory extends CreepMemory {
 
 class RoleFighter implements IRole {
   run(creep: Creep) {
-    var hostileRoom1 = creep.room.find(FIND_HOSTILE_CREEPS)[0];
-    var hostileRoom2 = Game.rooms["E26N47"].find(FIND_HOSTILE_CREEPS)[0];
-    var hostileRoom3 = Game.rooms["E27N48"].find(FIND_HOSTILE_CREEPS)[0];
+    const rooms = Object.keys(Game.rooms).map(i => Game.rooms[i]);
 
-    var hostile = hostileRoom1 || hostileRoom2 || hostileRoom3;
+    let hostile: Creep | null = null;
+    _.forEach(rooms, room => {
+      hostile = room.find(FIND_HOSTILE_CREEPS)[0];
+      // no need tok look for another hostile.
+      if (hostile) {
+        return false;
+      } else {
+        return true;
+      }
+    });
+
+    if (hostile) {
+      notify("Hostile creep detected (time=" + Game.time + ")! " + JSON.stringify(hostile), 200);
+    }
 
     const memory: IFighterMemory = creep.memory as any;
 

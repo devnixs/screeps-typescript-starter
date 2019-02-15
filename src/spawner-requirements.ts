@@ -60,7 +60,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     {
       percentage: 1,
       role: "upgrader",
-      maxCount: 4,
+      maxCount: 2,
       bodyTemplate: [MOVE, WORK, CARRY]
     },
     {
@@ -70,7 +70,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       exactBody: [MOVE, WORK, CARRY]
     },
     {
-      percentage: 1,
+      percentage: 5,
       role: "fighter",
       maxCount: hasSafeMode ? 0 : 1,
       bodyTemplate: [TOUGH, MOVE, ATTACK],
@@ -80,7 +80,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     {
       percentage: 4,
       role: "long-distance-harvester",
-      maxCount: 3,
+      maxCount: 2,
       countAllRooms: true,
       bodyTemplate: [MOVE, WORK, CARRY],
       subRole: "room1",
@@ -96,7 +96,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     {
       percentage: 1,
       role: "long-distance-harvester",
-      maxCount: 3,
+      maxCount: 2,
       countAllRooms: true,
       bodyTemplate: [MOVE, WORK, CARRY],
       subRole: "room2",
@@ -107,6 +107,22 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
         targetRoomName: "E26N47",
         targetRoomX: 26,
         targetRoomY: 31
+      } as ILongDistanceHarvesterMemory
+    },
+    {
+      percentage: 1,
+      role: "long-distance-harvester",
+      maxCount: 2,
+      countAllRooms: true,
+      bodyTemplate: [MOVE, WORK, CARRY],
+      subRole: "room3",
+      additionalMemory: {
+        homeSpawnPosition: spawn.pos,
+        home: spawn.pos.roomName,
+        role: "long-distance-harvester",
+        targetRoomName: "E26N48",
+        targetRoomX: 32,
+        targetRoomY: 46
       } as ILongDistanceHarvesterMemory
     },
     {

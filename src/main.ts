@@ -31,32 +31,38 @@ export const loop = ErrorMapper.wrapLoop(() => {
       return;
     }
 
+    let error: any = null;
+
     for (var name in Game.creeps) {
       var creep = Game.creeps[name];
       const memory = creep.memory;
-      if (memory.role == "harvester") {
-        roleHarvester.run(creep);
-      }
-      if (memory.role == "upgrader") {
-        roleUpgrader.run(creep);
-      }
-      if (memory.role == "builder") {
-        roleBuilder.run(creep);
-      }
-      if (memory.role == "ranged") {
-        roleRanged.run(creep);
-      }
-      if (memory.role == "fighter") {
-        roleFighter.run(creep);
-      }
-      if (memory.role == "reparator") {
-        roleReparator.run(creep);
-      }
-      if (memory.role == "explorer") {
-        roleExplorer.run(creep);
-      }
-      if (memory.role == "long-distance-harvester") {
-        roleLongDistanceHarvester.run(creep);
+      try {
+        if (memory.role == "harvester") {
+          roleHarvester.run(creep);
+        }
+        if (memory.role == "upgrader") {
+          roleUpgrader.run(creep);
+        }
+        if (memory.role == "builder") {
+          roleBuilder.run(creep);
+        }
+        if (memory.role == "ranged") {
+          roleRanged.run(creep);
+        }
+        if (memory.role == "fighter") {
+          roleFighter.run(creep);
+        }
+        if (memory.role == "reparator") {
+          roleReparator.run(creep);
+        }
+        if (memory.role == "explorer") {
+          roleExplorer.run(creep);
+        }
+        if (memory.role == "long-distance-harvester") {
+          roleLongDistanceHarvester.run(creep);
+        }
+      } catch (e) {
+        error = e;
       }
     }
 
@@ -77,5 +83,9 @@ export const loop = ErrorMapper.wrapLoop(() => {
     console.log("TickLimit :" + Game.cpu.tickLimit);
 
     Memory.rooms = Memory.rooms || {};
+
+    if (error) {
+      throw error;
+    }
   });
 });
