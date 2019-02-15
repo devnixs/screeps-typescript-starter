@@ -118,11 +118,12 @@ class SourceManager {
       (targetStructure: any) => targetStructure.energy < targetStructure.energyCapacity,
       {
         filter: (structure: StructureSpawn | StructureExtension | StructureTower) => {
+          const isExtOrSpawn =
+            structure.structureType == STRUCTURE_EXTENSION || structure.structureType == STRUCTURE_SPAWN;
+          const isTower = structure.structureType == STRUCTURE_TOWER;
           return (
-            (structure.structureType == STRUCTURE_EXTENSION ||
-              structure.structureType == STRUCTURE_SPAWN ||
-              structure.structureType == STRUCTURE_TOWER) &&
-            structure.energy < structure.energyCapacity
+            (isExtOrSpawn && structure.energy < structure.energyCapacity) ||
+            (isTower && structure.energy < structure.energyCapacity * 0.5) // we don't want to keep filling towers. Or the creep would keep doing this as the energy goes down every tick
           );
         }
       }

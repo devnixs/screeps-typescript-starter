@@ -1,4 +1,5 @@
 import { ILongDistanceHarvesterMemory } from "roles/longDistanceHarvester";
+import { IDismantlerMemory } from "roles/dismantler";
 
 export interface RoleRequirement {
   role: roles;
@@ -124,6 +125,27 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
         targetRoomX: 32,
         targetRoomY: 46
       } as ILongDistanceHarvesterMemory
+    },
+    {
+      percentage: 1,
+      role: "dismantler",
+      maxCount: 0,
+      countAllRooms: true,
+      bodyTemplate: [TOUGH, MOVE],
+      sortBody: [TOUGH, WORK, MOVE],
+      subRole: "room1",
+      capMaxEnergy: 60,
+      additionalMemory: {
+        homeRoom: spawn.pos.roomName,
+        targetStructureId: "5c114bae7935880bfeed5a9d",
+        targetRoomX: 7,
+        targetRoomY: 27,
+        homeRoomX: 47,
+        homeRoomY: 22,
+        targetRoomName: "E28N47",
+        isAttacking: false,
+        targetTowers: ["5c629039b23c6c6832d07889"]
+      } as IDismantlerMemory
     },
     {
       percentage: 1,

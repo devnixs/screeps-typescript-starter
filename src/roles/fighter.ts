@@ -12,6 +12,9 @@ class RoleFighter implements IRole {
 
     let hostile: Creep | null = null;
     _.forEach(rooms, room => {
+      if (room.controller && !room.controller.my) {
+        return;
+      }
       hostile = room.find(FIND_HOSTILE_CREEPS)[0];
       // no need tok look for another hostile.
       if (hostile) {

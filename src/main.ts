@@ -11,6 +11,7 @@ import { architect } from "architect";
 import { roleLongDistanceHarvester } from "roles/longDistanceHarvester";
 import { profiler } from "./utils/profiler";
 import { roleTower } from "roles/tower";
+import { roleDismantler } from "roles/dismantler";
 
 // profiler.enable();
 
@@ -57,6 +58,9 @@ export const loop = ErrorMapper.wrapLoop(() => {
         }
         if (memory.role == "explorer") {
           roleExplorer.run(creep);
+        }
+        if (memory.role == "dismantler") {
+          roleDismantler.run(creep);
         }
         if (memory.role == "long-distance-harvester") {
           roleLongDistanceHarvester.run(creep);

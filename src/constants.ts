@@ -1,1 +1,1 @@
-export const defaultReusePath = 10;
+export const defaultReusePath = 5;

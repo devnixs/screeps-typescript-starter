@@ -8,7 +8,8 @@ type roles =
   | "reparator"
   | "fighter"
   | "explorer"
-  | "long-distance-harvester";
+  | "long-distance-harvester"
+  | "dismantler";
 
 // memory extension samples
 interface CreepMemory {
@@ -23,6 +24,8 @@ interface RoomMemory {
   avoid: any;
   damagedStructureId: string | null;
   enemyId: string | null;
+  damagedCreepId: string | null;
+  lastTowerRefreshTime: number | undefined;
 }
 
 interface Memory {

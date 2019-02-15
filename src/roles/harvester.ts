@@ -20,7 +20,7 @@ class RoleHarvester implements IRole {
 
     if (!memory.isDepositing) {
       if (creep.room.energyAvailable < creep.room.energyCapacityAvailable) {
-        // take the energy from the containers because we need to fill the extensions quickly
+        // take the energy from the containers because we need to fill the extensions qui
         sourceManager.getEnergy(creep);
       } else {
         sourceManager.harvestEnergyFromSource(creep);
