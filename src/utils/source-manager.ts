@@ -1,4 +1,4 @@
-import { findAndCache } from "./finder";
+import { findAndCache, findRestSpot } from "./finder";
 import { defaultReusePath } from "../constants";
 
 class SourceManager {
@@ -27,11 +27,12 @@ class SourceManager {
     const distanceY = Math.abs(creep.pos.y - targetEnergySource.pos.y);
     if (distanceX <= 1 && distanceY <= 1) {
       const harvestResult = creep.harvest(targetEnergySource);
+
       if (harvestResult !== OK) {
-        console.log("Failed to harvest : ", harvestResult);
       }
     } else {
       creep.moveTo(targetEnergySource, { visualizePathStyle: { stroke: "#ffaa00" }, reusePath: defaultReusePath });
+      creep.harvest(targetEnergySource);
     }
   }
   harvestEnergyFromSpecificSource(creep: Creep, source: Source) {
@@ -44,10 +45,10 @@ class SourceManager {
     if (distanceX <= 1 && distanceY <= 1) {
       const harvestResult = creep.harvest(source);
       if (harvestResult !== OK) {
-        console.log("Failed to harvest : ", harvestResult);
       }
     } else {
       creep.moveTo(source, { visualizePathStyle: { stroke: "#ffaa00" }, reusePath: defaultReusePath });
+      creep.harvest(source);
     }
   }
 
@@ -58,6 +59,7 @@ class SourceManager {
     if (droppedEnergy) {
       if (creep.pickup(droppedEnergy) === ERR_NOT_IN_RANGE) {
         creep.moveTo(droppedEnergy, { visualizePathStyle: { stroke: "#ffaa00" }, reusePath: defaultReusePath });
+        creep.pickup(droppedEnergy);
       }
       return OK;
     }
@@ -69,6 +71,7 @@ class SourceManager {
     if (tombstone) {
       if (creep.withdraw(tombstone, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
         creep.moveTo(tombstone, { visualizePathStyle: { stroke: "#ffaa00" }, reusePath: defaultReusePath });
+        creep.withdraw(tombstone, RESOURCE_ENERGY);
       }
       return OK;
     }
@@ -83,10 +86,7 @@ class SourceManager {
       return;
     }
 
-    targetStructure =
-      creep.room.storage && creep.room.storage.store.energy < creep.room.storage.storeCapacity
-        ? creep.room.storage
-        : undefined;
+    targetStructure = creep.room.storage && creep.room.storage.store.energy > 0 ? creep.room.storage : undefined;
 
     if (!targetStructure) {
       targetStructure = findAndCache<FIND_STRUCTURES>(
@@ -105,6 +105,7 @@ class SourceManager {
     if (targetStructure) {
       if (creep.withdraw(targetStructure, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
         creep.moveTo(targetStructure, { visualizePathStyle: { stroke: "#ffaa00" }, reusePath: defaultReusePath });
+        creep.withdraw(targetStructure, RESOURCE_ENERGY);
       }
     } else {
       this.harvestEnergyFromSource(creep);
@@ -153,9 +154,15 @@ class SourceManager {
     if (targetStructure) {
       if (creep.transfer(targetStructure, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
         creep.moveTo(targetStructure, { visualizePathStyle: { stroke: "#ffffff" }, reusePath: defaultReusePath });
+        creep.transfer(targetStructure, RESOURCE_ENERGY);
       }
     } else {
-      creep.moveTo(Game.flags["worker_rest"], { reusePath: defaultReusePath });
+      const restSpot = findRestSpot(creep);
+      if (restSpot) {
+        creep.moveTo(restSpot, {
+          reusePath: defaultReusePath
+        });
+      }
     }
   }
 }

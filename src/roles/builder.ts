@@ -8,12 +8,24 @@ interface IBuilderMemory extends CreepMemory {
 
 class RoleBuilder implements IRole {
   run(creep: Creep) {
+    const memory: IBuilderMemory = creep.memory as any;
+
+    if (memory.subRole) {
+      const targetRoom = memory.subRole;
+      if (targetRoom !== creep.room.name) {
+        creep.moveTo(new RoomPosition(25, 25, targetRoom), {
+          visualizePathStyle: { stroke: "#ffffff" },
+          reusePath: defaultReusePath
+        });
+        return;
+      }
+    }
+
     var constructionSites = creep.room.find(FIND_CONSTRUCTION_SITES);
     if (constructionSites.length === 0) {
       roleHarvester.run(creep);
       return;
     }
-    const memory: IBuilderMemory = creep.memory as any;
     if (memory.building && creep.carry.energy == 0) {
       memory.building = false;
       creep.say("🔄 harvest");

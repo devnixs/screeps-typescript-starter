@@ -2,7 +2,7 @@ import { defaultReusePath } from "../constants";
 import { notify } from "../utils/notify";
 import { roleLongDistanceHarvester } from "./longDistanceHarvester";
 
-export interface IDismantlerMemory extends CreepMemory {
+export interface IPickaBooMemory extends CreepMemory {
   isAttacking: boolean;
   homeRoom: string;
   homeRoomX: number;
@@ -16,16 +16,9 @@ export interface IDismantlerMemory extends CreepMemory {
   targetTowers: string[];
 }
 
-class RoleDismantler implements IRole {
-  isAttackSquadReady() {
-    Memory.attackSquad = Memory.attackSquad || [];
-    const creepsInSquad = Memory.attackSquad.map(i => Game.getObjectById(i) as Creep);
-
-    // if(creepsInSquad.)
-  }
-
+class RolePickaBoo implements IRole {
   run(creep: Creep) {
-    var memory: IDismantlerMemory = creep.memory as any;
+    var memory: IPickaBooMemory = creep.memory as any;
     if (memory.isAttacking && creep.hits <= creep.hitsMax / 2) {
       memory.isAttacking = false;
     }
@@ -54,23 +47,7 @@ class RoleDismantler implements IRole {
           });
           return;
         } else {
-          if (creep.getActiveBodyparts(WORK) >= 0) {
-            var structure: AnyStructure | null;
-
-            structure = Game.getObjectById(memory.targetStructureId);
-
-            if (!structure) {
-              structure = creep.pos.findClosestByRange(FIND_HOSTILE_STRUCTURES);
-            }
-
-            if (!structure) {
-              return;
-            }
-
-            if (creep.dismantle(structure) == ERR_NOT_IN_RANGE) {
-              creep.moveTo(structure, { visualizePathStyle: { stroke: "#ff0000" }, reusePath: defaultReusePath });
-            }
-          }
+          // wait for our health to deplete
         }
       }
     } else {
@@ -86,4 +63,4 @@ class RoleDismantler implements IRole {
   }
 }
 
-export const roleDismantler = new RoleDismantler();
+export const rolePickaBoo = new RolePickaBoo();

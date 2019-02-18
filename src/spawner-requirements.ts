@@ -12,6 +12,7 @@ export interface RoleRequirement {
   capMaxEnergy?: number;
   sortBody?: BodyPartConstant[];
   subRole?: string;
+  onlyRoom?: string;
 }
 
 // MOVE	            50	Moves the creep. Reduces creep fatigue by 2/tick. See movement.
@@ -32,6 +33,11 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
 
   const harvesters = spawn.room.find(FIND_MY_CREEPS).filter(i => i.memory.role === "harvester");
   const towers = spawn.room.find(FIND_MY_STRUCTURES, { filter: i => i.structureType === "tower" });
+  const maxUpgraderCount = spawn.room.storage && spawn.room.storage.store.energy > 150000 ? 3 : 2;
+
+  const claimerCount = Game.flags["claimer_target"] ? 1 : 0;
+
+  console.log(maxUpgraderCount);
 
   if (harvesters.length === 0) {
     // we need at least one harvester
@@ -47,7 +53,13 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
 
   return [
     {
-      percentage: 10,
+      percentage: 20,
+      role: "harvester",
+      maxCount: 2,
+      bodyTemplate: [MOVE, WORK, CARRY]
+    },
+    {
+      percentage: 20,
       role: "harvester",
       maxCount: 2,
       bodyTemplate: [MOVE, WORK, CARRY]
@@ -55,13 +67,8 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     {
       percentage: 2,
       role: "builder",
+      subRole: "E25N48",
       maxCount: 1,
-      bodyTemplate: [MOVE, WORK, CARRY]
-    },
-    {
-      percentage: 1,
-      role: "upgrader",
-      maxCount: 2,
       bodyTemplate: [MOVE, WORK, CARRY]
     },
     {
@@ -71,11 +78,11 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       exactBody: [MOVE, WORK, CARRY]
     },
     {
-      percentage: 5,
+      percentage: 1,
       role: "fighter",
       maxCount: hasSafeMode ? 0 : 1,
       bodyTemplate: [TOUGH, MOVE, ATTACK],
-      capMaxEnergy: 700,
+      capMaxEnergy: 500,
       sortBody: [TOUGH, MOVE, ATTACK]
     },
     {
@@ -85,6 +92,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       countAllRooms: true,
       bodyTemplate: [MOVE, WORK, CARRY],
       subRole: "room1",
+      onlyRoom: "E27N47",
       additionalMemory: {
         homeSpawnPosition: spawn.pos,
         home: spawn.pos.roomName,
@@ -99,6 +107,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       role: "long-distance-harvester",
       maxCount: 2,
       countAllRooms: true,
+      onlyRoom: "E27N47",
       bodyTemplate: [MOVE, WORK, CARRY],
       subRole: "room2",
       additionalMemory: {
@@ -117,6 +126,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       countAllRooms: true,
       bodyTemplate: [MOVE, WORK, CARRY],
       subRole: "room3",
+      onlyRoom: "E27N47",
       additionalMemory: {
         homeSpawnPosition: spawn.pos,
         home: spawn.pos.roomName,
@@ -128,13 +138,26 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     },
     {
       percentage: 1,
-      role: "dismantler",
+      role: "upgrader",
+      maxCount: maxUpgraderCount,
+      bodyTemplate: [MOVE, WORK, CARRY]
+    },
+    {
+      percentage: 1,
+      role: "claimer",
+      maxCount: claimerCount,
+      exactBody: [MOVE, CLAIM]
+    },
+    {
+      percentage: 1,
+      role: "pickaboo",
       maxCount: 0,
       countAllRooms: true,
       bodyTemplate: [TOUGH, MOVE],
       sortBody: [TOUGH, WORK, MOVE],
       subRole: "room1",
       capMaxEnergy: 60,
+      onlyRoom: "E27N47",
       additionalMemory: {
         homeRoom: spawn.pos.roomName,
         targetStructureId: "5c114bae7935880bfeed5a9d",
@@ -149,9 +172,24 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     },
     {
       percentage: 1,
-      role: "explorer",
+      role: "dismantler",
       maxCount: 0,
-      exactBody: [MOVE, CLAIM]
+      countAllRooms: true,
+      bodyTemplate: [HEAL, MOVE, HEAL, MOVE, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, WORK],
+      sortBody: [TOUGH, WORK, HEAL, MOVE],
+      onlyRoom: "E27N47",
+      subRole: "room1",
+      additionalMemory: {
+        homeRoom: spawn.pos.roomName,
+        targetStructureId: "5c114bae7935880bfeed5a9d",
+        targetRoomX: 7,
+        targetRoomY: 27,
+        homeRoomX: 47,
+        homeRoomY: 22,
+        targetRoomName: "E28N47",
+        isAttacking: false,
+        targetTowers: ["5c629039b23c6c6832d07889"]
+      } as IDismantlerMemory
     }
   ];
 }

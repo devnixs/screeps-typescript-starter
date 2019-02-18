@@ -11,7 +11,8 @@ import { architect } from "architect";
 import { roleLongDistanceHarvester } from "roles/longDistanceHarvester";
 import { profiler } from "./utils/profiler";
 import { roleTower } from "roles/tower";
-import { roleDismantler } from "roles/dismantler";
+import { rolePickaBoo } from "roles/pickaboo";
+import { roleClaimer } from "roles/claimer";
 
 // profiler.enable();
 
@@ -21,10 +22,10 @@ export const loop = ErrorMapper.wrapLoop(() => {
   profiler.wrap(function() {
     spawner.run();
 
-    console.log("Bucket :" + Game.cpu.bucket);
+    /*     console.log("Bucket :" + Game.cpu.bucket);
     console.log("Used :" + Game.cpu.getUsed());
     console.log("Limit :" + Game.cpu.limit);
-    console.log("TickLimit :" + Game.cpu.tickLimit);
+    console.log("TickLimit :" + Game.cpu.tickLimit); */
 
     if (Game.cpu.tickLimit < 5) {
       console.log("Bucket :" + Game.cpu.bucket);
@@ -59,8 +60,11 @@ export const loop = ErrorMapper.wrapLoop(() => {
         if (memory.role == "explorer") {
           roleExplorer.run(creep);
         }
-        if (memory.role == "dismantler") {
-          roleDismantler.run(creep);
+        if (memory.role == "pickaboo") {
+          rolePickaBoo.run(creep);
+        }
+        if (memory.role == "claimer") {
+          roleClaimer.run(creep);
         }
         if (memory.role == "long-distance-harvester") {
           roleLongDistanceHarvester.run(creep);
@@ -81,10 +85,10 @@ export const loop = ErrorMapper.wrapLoop(() => {
       }
     }
 
-    console.log("Bucket :" + Game.cpu.bucket);
+    /*     console.log("Bucket :" + Game.cpu.bucket);
     console.log("Used :" + Game.cpu.getUsed());
     console.log("Limit :" + Game.cpu.limit);
-    console.log("TickLimit :" + Game.cpu.tickLimit);
+    console.log("TickLimit :" + Game.cpu.tickLimit); */
 
     Memory.rooms = Memory.rooms || {};
 

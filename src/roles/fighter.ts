@@ -1,6 +1,7 @@
 import { defaultReusePath } from "../constants";
 import { notify } from "../utils/notify";
 import { roleLongDistanceHarvester } from "./longDistanceHarvester";
+import { findEmptySpotCloseTo, findRestSpot } from "utils/finder";
 
 interface IFighterMemory extends CreepMemory {
   assignedExplorerName: string | null;
@@ -39,6 +40,22 @@ class RoleFighter implements IRole {
         creep.moveTo(hostile, { visualizePathStyle: { stroke: "#ff0000" }, reusePath: defaultReusePath });
       }
     } else {
+      const attackFlag = Game.flags["fighter_attack"];
+
+      if (attackFlag) {
+        if (attackFlag.room === creep.room) {
+          const targets = creep.room.lookForAt(LOOK_STRUCTURES, attackFlag);
+          const target = targets[0];
+          const attackResult = creep.attack(target);
+          if (attackResult === ERR_NOT_IN_RANGE) {
+            creep.moveTo(target, { visualizePathStyle: { stroke: "#ff0000" }, reusePath: defaultReusePath });
+          }
+        } else {
+          creep.moveTo(attackFlag);
+        }
+        return;
+      }
+
       if (memory.assignedExplorerName) {
         var assignedExplorer = Game.creeps[memory.assignedExplorerName];
         if (!assignedExplorer) {
@@ -47,10 +64,19 @@ class RoleFighter implements IRole {
           creep.moveTo(assignedExplorer, { reusePath: defaultReusePath });
         }
       } else {
-        // move to flag
-        var restFlag = creep.room.find(FIND_FLAGS, { filter: i => i.name === "fighter_rest" })[0];
-        if (restFlag) {
-          creep.moveTo(restFlag, { reusePath: defaultReusePath });
+        if (creep.room.name !== creep.memory.homeRoom) {
+          // go back home
+          creep.moveTo(new RoomPosition(25, 25, creep.memory.homeRoom || ""), {
+            reusePath: defaultReusePath
+          });
+          return;
+        }
+
+        const restSpot = findRestSpot(creep);
+        if (restSpot) {
+          creep.moveTo(restSpot, {
+            reusePath: defaultReusePath
+          });
         }
       }
     }

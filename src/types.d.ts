@@ -9,11 +9,15 @@ type roles =
   | "fighter"
   | "explorer"
   | "long-distance-harvester"
+  | "pickaboo"
+  | "healer"
+  | "claimer"
   | "dismantler";
 
 // memory extension samples
 interface CreepMemory {
   role: roles;
+  homeRoom?: string;
   guardsNames?: string[];
   subRole?: string;
   _travel?: any;
@@ -33,6 +37,7 @@ interface Memory {
   log: any;
   existingTowerIds: string[] | undefined;
   noNotificationBefore: number | undefined;
+  attackSquad: string[] | undefined;
 }
 
 // `global` extension samples

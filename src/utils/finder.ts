@@ -34,6 +34,30 @@ export function findAndCache<K extends FindConstant>(
   return cachedElement;
 }
 
+interface IRestPosition {
+  X: number;
+  Y: number;
+  roomName: string;
+}
+
+export function findRestSpot(creep: Creep) {
+  const memory = (creep.memory as any) as { rest: IRestPosition };
+
+  if (!memory.rest) {
+    const startPosition = { x: _.random(0, 49), y: _.random(0, 49) };
+    const emptySpot = findEmptySpotCloseTo(startPosition, creep.room);
+    if (emptySpot) {
+      memory.rest = { X: emptySpot.x, Y: emptySpot.y, roomName: creep.room.name };
+    }
+  }
+
+  if (memory.rest) {
+    return new RoomPosition(memory.rest.X, memory.rest.Y, memory.rest.roomName);
+  } else {
+    return null;
+  }
+}
+
 interface SimplePos {
   x: number;
   y: number;

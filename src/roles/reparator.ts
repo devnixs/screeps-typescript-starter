@@ -34,9 +34,7 @@ class RoleReparator implements IRole {
       });
 
       var damagedRoads = creep.pos.findClosestByRange(FIND_STRUCTURES, {
-        filter: structure =>
-          (structure.hits < structure.hitsMax && structure.structureType == STRUCTURE_ROAD) ||
-          structure.structureType == STRUCTURE_CONTAINER
+        filter: structure => structure.hits < structure.hitsMax && structure.structureType == STRUCTURE_ROAD
       });
 
       damaged = damagedOther || damagedRoads;
