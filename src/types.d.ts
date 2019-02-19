@@ -105,4 +105,5 @@ interface TravelState {
 
 interface Creep {
   travelTo(destination: HasPos | RoomPosition, ops?: TravelToOptions): number;
+  goTo(destination: HasPos | RoomPosition, ops?: MoveToOpts): number;
 }

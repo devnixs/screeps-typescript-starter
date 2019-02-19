@@ -33,11 +33,20 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
 
   const harvesters = spawn.room.find(FIND_MY_CREEPS).filter(i => i.memory.role === "harvester");
   const towers = spawn.room.find(FIND_MY_STRUCTURES, { filter: i => i.structureType === "tower" });
-  const maxUpgraderCount = spawn.room.storage && spawn.room.storage.store.energy > 150000 ? 3 : 2;
+  let maxUpgraderCount: number;
+  if (spawn.room.storage) {
+    maxUpgraderCount = spawn.room.storage.store.energy > 150000 ? 3 : 2;
+  } else {
+    const containers: StructureContainer[] = spawn.room.find(FIND_STRUCTURES, {
+      filter: i => i.structureType === "container"
+    }) as any;
+    const totalStorage = _.sum(containers.map(i => i.storeCapacity));
+    const totalEnergy = _.sum(containers.map(i => i.store.energy));
+
+    maxUpgraderCount = totalEnergy / totalStorage > 0.5 ? 4 : 2;
+  }
 
   const claimerCount = Game.flags["claimer_target"] ? 1 : 0;
-
-  console.log(maxUpgraderCount);
 
   if (harvesters.length === 0) {
     // we need at least one harvester
@@ -67,7 +76,6 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     {
       percentage: 2,
       role: "builder",
-      subRole: "E25N48",
       maxCount: 1,
       bodyTemplate: [MOVE, WORK, CARRY]
     },

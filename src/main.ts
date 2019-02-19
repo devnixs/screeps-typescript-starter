@@ -14,6 +14,8 @@ import { roleTower } from "roles/tower";
 import { rolePickaBoo } from "roles/pickaboo";
 import { roleClaimer } from "roles/claimer";
 
+import "./utils/navigator";
+
 // profiler.enable();
 
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
