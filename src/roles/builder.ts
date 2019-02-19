@@ -13,10 +13,7 @@ class RoleBuilder implements IRole {
     if (memory.subRole) {
       const targetRoom = memory.subRole;
       if (targetRoom !== creep.room.name) {
-        creep.moveTo(new RoomPosition(25, 25, targetRoom), {
-          visualizePathStyle: { stroke: "#ffffff" },
-          reusePath: defaultReusePath
-        });
+        creep.goTo(new RoomPosition(25, 25, targetRoom));
         return;
       }
     }
@@ -37,7 +34,7 @@ class RoleBuilder implements IRole {
 
     if (memory.building) {
       if (creep.build(constructionSites[0]) == ERR_NOT_IN_RANGE) {
-        creep.moveTo(constructionSites[0], { visualizePathStyle: { stroke: "#ffffff" }, reusePath: defaultReusePath });
+        creep.goTo(constructionSites[0]);
       }
     } else {
       sourceManager.getEnergy(creep);

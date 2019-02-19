@@ -27,12 +27,13 @@ export interface RoleRequirement {
 export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[] {
   const hasSafeMode = spawn.room.controller && spawn.room.controller.safeMode;
 
-  const extensions = spawn.room.find(FIND_MY_STRUCTURES, {
-    filter: { structureType: STRUCTURE_EXTENSION }
-  });
+  const maxEnergyInRoom = spawn.room.energyCapacityAvailable;
 
   const harvesters = spawn.room.find(FIND_MY_CREEPS).filter(i => i.memory.role === "harvester");
   const towers = spawn.room.find(FIND_MY_STRUCTURES, { filter: i => i.structureType === "tower" });
+  const extractors = spawn.room.find(FIND_MY_STRUCTURES, { filter: i => i.structureType === "extractor" });
+  const mineralWithReserve = spawn.room.find(FIND_MINERALS, { filter: i => i.mineralAmount > 0 });
+
   let maxUpgraderCount: number;
   if (spawn.room.storage) {
     maxUpgraderCount = spawn.room.storage.store.energy > 150000 ? 3 : 2;
@@ -40,10 +41,24 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     const containers: StructureContainer[] = spawn.room.find(FIND_STRUCTURES, {
       filter: i => i.structureType === "container"
     }) as any;
-    const totalStorage = _.sum(containers.map(i => i.storeCapacity));
-    const totalEnergy = _.sum(containers.map(i => i.store.energy));
 
-    maxUpgraderCount = totalEnergy / totalStorage > 0.5 ? 4 : 2;
+    if (containers.length === 0) {
+      maxUpgraderCount = 3;
+    } else {
+      const totalStorage = _.sum(containers.map(i => i.storeCapacity));
+      const totalEnergy = _.sum(containers.map(i => i.store.energy));
+
+      const ratio = totalEnergy / totalStorage;
+      if (ratio >= 0.9) {
+        maxUpgraderCount = 7;
+      } else if (ratio >= 0.5) {
+        maxUpgraderCount = 5;
+      } else if (ratio >= 0.3) {
+        maxUpgraderCount = 2;
+      } else {
+        maxUpgraderCount = 1;
+      }
+    }
   }
 
   const claimerCount = Game.flags["claimer_target"] ? 1 : 0;
@@ -64,20 +79,16 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     {
       percentage: 20,
       role: "harvester",
-      maxCount: 2,
-      bodyTemplate: [MOVE, WORK, CARRY]
-    },
-    {
-      percentage: 20,
-      role: "harvester",
-      maxCount: 2,
-      bodyTemplate: [MOVE, WORK, CARRY]
+      maxCount: maxEnergyInRoom > 1400 ? 2 : 3,
+      bodyTemplate: [MOVE, WORK, CARRY],
+      capMaxEnergy: 1800
     },
     {
       percentage: 2,
       role: "builder",
       maxCount: 1,
-      bodyTemplate: [MOVE, WORK, CARRY]
+      bodyTemplate: [MOVE, WORK, CARRY],
+      capMaxEnergy: 1800
     },
     {
       percentage: 2,
@@ -92,6 +103,13 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       bodyTemplate: [TOUGH, MOVE, ATTACK],
       capMaxEnergy: 500,
       sortBody: [TOUGH, MOVE, ATTACK]
+    },
+    {
+      percentage: 1,
+      role: "miner",
+      maxCount: extractors.length >= 1 && mineralWithReserve.length > 0 ? 1 : 0,
+      bodyTemplate: [MOVE, WORK, CARRY],
+      sortBody: [MOVE, WORK, CARRY]
     },
     {
       percentage: 4,
@@ -148,7 +166,8 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       percentage: 1,
       role: "upgrader",
       maxCount: maxUpgraderCount,
-      bodyTemplate: [MOVE, WORK, CARRY]
+      bodyTemplate: [MOVE, WORK, CARRY],
+      capMaxEnergy: 1800
     },
     {
       percentage: 1,

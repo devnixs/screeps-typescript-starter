@@ -59,7 +59,7 @@ class Architect {
 
     const gcl = room.controller ? room.controller.level : 1;
 
-    if (existingContainers.length >= gcl) {
+    if (existingContainers.length >= 1) {
       return -1;
     }
 

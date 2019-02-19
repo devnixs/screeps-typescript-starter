@@ -18,8 +18,9 @@ class RoleUpgrader implements IRole {
     }
 
     if (memory.upgrading) {
-      if (creep.room.controller && creep.upgradeController(creep.room.controller) == ERR_NOT_IN_RANGE) {
-        creep.moveTo(creep.room.controller, { visualizePathStyle: { stroke: "#ffffff" }, reusePath: defaultReusePath });
+      if (creep.room.controller) {
+        creep.upgradeController(creep.room.controller);
+        creep.goTo(creep.room.controller);
       }
     } else {
       sourceManager.getEnergy(creep);

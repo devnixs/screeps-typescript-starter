@@ -31,9 +31,32 @@ class SourceManager {
       if (harvestResult !== OK) {
       }
     } else {
-      creep.moveTo(targetEnergySource, { visualizePathStyle: { stroke: "#ffaa00" }, reusePath: defaultReusePath });
+      creep.goTo(targetEnergySource);
       creep.harvest(targetEnergySource);
     }
+  }
+  mineMineral(creep: Creep) {
+    const targetMineralDeposit = findAndCache<FIND_MINERALS>(
+      creep,
+      "harvest_mineral_id",
+      FIND_MINERALS,
+      (targetStructure: Mineral) => targetStructure.mineralAmount > 0,
+      {
+        filter: (structure: Mineral) => {
+          return structure.mineralAmount > 0;
+        }
+      }
+    );
+
+    if (!targetMineralDeposit) {
+      return -1;
+    }
+
+    if (creep.harvest(targetMineralDeposit) === ERR_NOT_IN_RANGE) {
+      creep.goTo(targetMineralDeposit);
+      creep.harvest(targetMineralDeposit);
+    }
+    return OK;
   }
   harvestEnergyFromSpecificSource(creep: Creep, source: Source) {
     if (!source) {
@@ -47,7 +70,7 @@ class SourceManager {
       if (harvestResult !== OK) {
       }
     } else {
-      creep.moveTo(source, { visualizePathStyle: { stroke: "#ffaa00" }, reusePath: defaultReusePath });
+      creep.goTo(source);
       creep.harvest(source);
     }
   }
@@ -58,7 +81,7 @@ class SourceManager {
     });
     if (droppedEnergy) {
       if (creep.pickup(droppedEnergy) === ERR_NOT_IN_RANGE) {
-        creep.moveTo(droppedEnergy, { visualizePathStyle: { stroke: "#ffaa00" }, reusePath: defaultReusePath });
+        creep.goTo(droppedEnergy);
         creep.pickup(droppedEnergy);
       }
       return OK;
@@ -70,7 +93,7 @@ class SourceManager {
 
     if (tombstone) {
       if (creep.withdraw(tombstone, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-        creep.moveTo(tombstone, { visualizePathStyle: { stroke: "#ffaa00" }, reusePath: defaultReusePath });
+        creep.goTo(tombstone);
         creep.withdraw(tombstone, RESOURCE_ENERGY);
       }
       return OK;
@@ -104,7 +127,7 @@ class SourceManager {
 
     if (targetStructure) {
       if (creep.withdraw(targetStructure, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-        creep.moveTo(targetStructure, { visualizePathStyle: { stroke: "#ffaa00" }, reusePath: defaultReusePath });
+        creep.goTo(targetStructure);
         creep.withdraw(targetStructure, RESOURCE_ENERGY);
       }
     } else {
@@ -153,15 +176,43 @@ class SourceManager {
 
     if (targetStructure) {
       if (creep.transfer(targetStructure, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-        creep.moveTo(targetStructure, { visualizePathStyle: { stroke: "#ffffff" }, reusePath: defaultReusePath });
+        creep.goTo(targetStructure);
         creep.transfer(targetStructure, RESOURCE_ENERGY);
       }
     } else {
       const restSpot = findRestSpot(creep);
       if (restSpot) {
-        creep.moveTo(restSpot, {
-          reusePath: defaultReusePath
-        });
+        creep.goTo(restSpot);
+      }
+    }
+  }
+  getCurrentCarryingMineral(creep: Creep) {
+    var carrying = Object.keys(creep.carry as any).filter(
+      i => i !== "energy" && creep.carry && (creep.carry as any)[i] > 0
+    )[0] as ResourceConstant | undefined;
+    return carrying;
+  }
+  storeMineral(creep: Creep) {
+    let targetStructure: AnyStructure | undefined = undefined;
+    if (!targetStructure) {
+      targetStructure = creep.room.storage;
+    }
+
+    var carrying = this.getCurrentCarryingMineral(creep);
+
+    if (!carrying) {
+      return;
+    }
+
+    if (targetStructure) {
+      if (creep.transfer(targetStructure, carrying) == ERR_NOT_IN_RANGE) {
+        creep.goTo(targetStructure);
+        creep.transfer(targetStructure, carrying);
+      }
+    } else {
+      const restSpot = findRestSpot(creep);
+      if (restSpot) {
+        creep.goTo(restSpot);
       }
     }
   }

@@ -63,7 +63,7 @@ class RoleReparator implements IRole {
 
     if (memory.repairing) {
       if (creep.repair(damaged) == ERR_NOT_IN_RANGE) {
-        creep.moveTo(damaged, { visualizePathStyle: { stroke: "#ffffff" }, reusePath: defaultReusePath });
+        creep.goTo(damaged);
       }
     } else {
       sourceManager.getEnergy(creep);

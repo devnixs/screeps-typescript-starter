@@ -15,6 +15,7 @@ import { rolePickaBoo } from "roles/pickaboo";
 import { roleClaimer } from "roles/claimer";
 
 import "./utils/navigator";
+import { roleMiner } from "roles/miner";
 
 // profiler.enable();
 
@@ -29,7 +30,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
     console.log("Limit :" + Game.cpu.limit);
     console.log("TickLimit :" + Game.cpu.tickLimit); */
 
-    if (Game.cpu.tickLimit < 5) {
+    if (Game.cpu.tickLimit < 50) {
       console.log("Bucket :" + Game.cpu.bucket);
       console.log("Bucket almost empty. Skipping tick.");
       return;
@@ -71,6 +72,9 @@ export const loop = ErrorMapper.wrapLoop(() => {
         if (memory.role == "long-distance-harvester") {
           roleLongDistanceHarvester.run(creep);
         }
+        if (memory.role == "miner") {
+          roleMiner.run(creep);
+        }
       } catch (e) {
         error = e;
       }
@@ -93,6 +97,10 @@ export const loop = ErrorMapper.wrapLoop(() => {
     console.log("TickLimit :" + Game.cpu.tickLimit); */
 
     Memory.rooms = Memory.rooms || {};
+
+    if (Game.cpu.getUsed() > 50) {
+      console.log("Used a lot of cpu : ", Game.cpu.getUsed());
+    }
 
     if (error) {
       throw error;

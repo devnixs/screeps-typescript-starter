@@ -37,7 +37,7 @@ class RoleFighter implements IRole {
 
     if (hostile) {
       if (creep.attack(hostile) == ERR_NOT_IN_RANGE) {
-        creep.moveTo(hostile, { visualizePathStyle: { stroke: "#ff0000" }, reusePath: defaultReusePath });
+        creep.goTo(hostile);
       }
     } else {
       const attackFlag = Game.flags["fighter_attack"];
@@ -48,10 +48,10 @@ class RoleFighter implements IRole {
           const target = targets[0];
           const attackResult = creep.attack(target);
           if (attackResult === ERR_NOT_IN_RANGE) {
-            creep.moveTo(target, { visualizePathStyle: { stroke: "#ff0000" }, reusePath: defaultReusePath });
+            creep.goTo(target);
           }
         } else {
-          creep.moveTo(attackFlag);
+          creep.goTo(attackFlag);
         }
         return;
       }
@@ -61,22 +61,18 @@ class RoleFighter implements IRole {
         if (!assignedExplorer) {
           memory.assignedExplorerName = null;
         } else {
-          creep.moveTo(assignedExplorer, { reusePath: defaultReusePath });
+          creep.goTo(assignedExplorer);
         }
       } else {
         if (creep.room.name !== creep.memory.homeRoom) {
           // go back home
-          creep.moveTo(new RoomPosition(25, 25, creep.memory.homeRoom || ""), {
-            reusePath: defaultReusePath
-          });
+          creep.goTo(new RoomPosition(25, 25, creep.memory.homeRoom || ""));
           return;
         }
 
         const restSpot = findRestSpot(creep);
         if (restSpot) {
-          creep.moveTo(restSpot, {
-            reusePath: defaultReusePath
-          });
+          creep.goTo(restSpot);
         }
       }
     }

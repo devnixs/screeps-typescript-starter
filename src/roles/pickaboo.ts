@@ -29,10 +29,7 @@ class RolePickaBoo implements IRole {
 
     if (memory.isAttacking) {
       if (creep.room.name !== memory.targetRoomName) {
-        creep.moveTo(new RoomPosition(memory.targetRoomX, memory.targetRoomY, memory.targetRoomName), {
-          reusePath: defaultReusePath,
-          visualizePathStyle: { stroke: "#ffaa00" }
-        });
+        creep.goTo(new RoomPosition(memory.targetRoomX, memory.targetRoomY, memory.targetRoomName));
       } else {
         const targetTowers: StructureTower[] = (memory.targetTowers || [])
           .map(i => Game.getObjectById(i))
@@ -41,10 +38,7 @@ class RolePickaBoo implements IRole {
         const combinedEnergy = _.sum(targetTowers.map(i => i.energy));
         if (combinedEnergy > 0) {
           // Abort!
-          creep.moveTo(new RoomPosition(memory.homeRoomX, memory.homeRoomY, memory.homeRoom), {
-            reusePath: defaultReusePath,
-            visualizePathStyle: { stroke: "#ffaa00" }
-          });
+          creep.goTo(new RoomPosition(memory.homeRoomX, memory.homeRoomY, memory.homeRoom));
           return;
         } else {
           // wait for our health to deplete
@@ -52,10 +46,7 @@ class RolePickaBoo implements IRole {
       }
     } else {
       if (creep.room.name !== memory.homeRoom) {
-        creep.moveTo(new RoomPosition(memory.homeRoomX, memory.homeRoomY, memory.homeRoom), {
-          reusePath: defaultReusePath,
-          visualizePathStyle: { stroke: "#ffaa00" }
-        });
+        creep.goTo(new RoomPosition(memory.homeRoomX, memory.homeRoomY, memory.homeRoom));
       } else {
         // just wait to be healed
       }

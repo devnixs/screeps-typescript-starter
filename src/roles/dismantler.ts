@@ -36,10 +36,7 @@ class RoleDismantler implements IRole {
 
     if (memory.isAttacking) {
       if (creep.room.name !== memory.targetRoomName) {
-        creep.moveTo(new RoomPosition(memory.targetRoomX, memory.targetRoomY, memory.targetRoomName), {
-          reusePath: defaultReusePath,
-          visualizePathStyle: { stroke: "#ffaa00" }
-        });
+        creep.goTo(new RoomPosition(memory.targetRoomX, memory.targetRoomY, memory.targetRoomName));
       } else {
         const targetTowers: StructureTower[] = (memory.targetTowers || [])
           .map(i => Game.getObjectById(i))
@@ -48,10 +45,7 @@ class RoleDismantler implements IRole {
         const combinedEnergy = _.sum(targetTowers.map(i => i.energy));
         if (combinedEnergy > 0) {
           // Abort!
-          creep.moveTo(new RoomPosition(memory.homeRoomX, memory.homeRoomY, memory.homeRoom), {
-            reusePath: defaultReusePath,
-            visualizePathStyle: { stroke: "#ffaa00" }
-          });
+          creep.goTo(new RoomPosition(memory.homeRoomX, memory.homeRoomY, memory.homeRoom));
           return;
         } else {
           if (creep.getActiveBodyparts(WORK) >= 0) {
@@ -68,17 +62,14 @@ class RoleDismantler implements IRole {
             }
 
             if (creep.dismantle(structure) == ERR_NOT_IN_RANGE) {
-              creep.moveTo(structure, { visualizePathStyle: { stroke: "#ff0000" }, reusePath: defaultReusePath });
+              creep.goTo(structure);
             }
           }
         }
       }
     } else {
       if (creep.room.name !== memory.homeRoom) {
-        creep.moveTo(new RoomPosition(memory.homeRoomX, memory.homeRoomY, memory.homeRoom), {
-          reusePath: defaultReusePath,
-          visualizePathStyle: { stroke: "#ffaa00" }
-        });
+        creep.goTo(new RoomPosition(memory.homeRoomX, memory.homeRoomY, memory.homeRoom));
       } else {
         // just wait to be healed
       }

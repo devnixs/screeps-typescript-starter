@@ -12,6 +12,7 @@ type roles =
   | "pickaboo"
   | "healer"
   | "claimer"
+  | "miner"
   | "dismantler";
 
 // memory extension samples

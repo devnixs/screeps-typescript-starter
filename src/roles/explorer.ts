@@ -10,7 +10,7 @@ class RoleExplorer implements IRole {
   run(creep: Creep) {
     var flag = Game.flags["explore_rest"];
     if (flag) {
-      creep.moveTo(flag, { reusePath: defaultReusePath });
+      creep.goTo(flag);
     }
   }
 
@@ -29,7 +29,7 @@ class RoleExplorer implements IRole {
     }
 
     if (creep.claimController(creep.room.controller) === ERR_NOT_IN_RANGE) {
-      creep.moveTo(creep.room.controller, { reusePath: defaultReusePath });
+      creep.goTo(creep.room.controller);
     }
   }
 
@@ -58,9 +58,7 @@ class RoleExplorer implements IRole {
       console.log("Explorer, selected exit:", selectedExit.x, selectedExit.y, selectedExit.roomName);
     }
 
-    creep.moveTo(new RoomPosition(memory.selectedExit.x, memory.selectedExit.y, memory.selectedExit.roomName), {
-      reusePath: defaultReusePath
-    });
+    creep.goTo(new RoomPosition(memory.selectedExit.x, memory.selectedExit.y, memory.selectedExit.roomName));
   }
 }
 

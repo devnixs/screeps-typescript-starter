@@ -41,7 +41,7 @@ class RoleLongDistanceHarvester implements IRole {
         const constructionSite = creep.pos.findClosestByRange(FIND_CONSTRUCTION_SITES);
         if (constructionSite) {
           if (creep.build(constructionSite) === ERR_NOT_IN_RANGE) {
-            creep.moveTo(constructionSite, { reusePath: defaultReusePath });
+            creep.goTo(constructionSite);
           }
           return;
         }
@@ -52,17 +52,14 @@ class RoleLongDistanceHarvester implements IRole {
 
         if (damagedRoad) {
           if (creep.repair(damagedRoad) === ERR_NOT_IN_RANGE) {
-            creep.moveTo(damagedRoad, { reusePath: defaultReusePath });
+            creep.goTo(damagedRoad);
           }
           return;
         }
 
         // find exit to home room
-        const moveResult = creep.moveTo(
-          new RoomPosition(memory.homeSpawnPosition.x, memory.homeSpawnPosition.y, memory.home),
-          {
-            reusePath: defaultReusePath
-          }
+        const moveResult = creep.goTo(
+          new RoomPosition(memory.homeSpawnPosition.x, memory.homeSpawnPosition.y, memory.home)
         );
       }
     }
@@ -81,10 +78,7 @@ class RoleLongDistanceHarvester implements IRole {
       // if not in target room
       else {
         if (memory.targetRoomX && memory.targetRoomY && memory.targetRoomName) {
-          creep.moveTo(new RoomPosition(memory.targetRoomX, memory.targetRoomY, memory.targetRoomName), {
-            reusePath: defaultReusePath,
-            visualizePathStyle: { stroke: "#ffaa00" }
-          });
+          creep.goTo(new RoomPosition(memory.targetRoomX, memory.targetRoomY, memory.targetRoomName));
         }
       }
     }

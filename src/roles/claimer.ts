@@ -18,10 +18,10 @@ class RoleClaimer implements IRole {
         return;
       }
       if (creep.claimController(flag.room.controller) === ERR_NOT_IN_RANGE) {
-        creep.moveTo(flag, { visualizePathStyle: { stroke: "#ffffff" }, reusePath: defaultReusePath });
+        creep.goTo(flag);
       }
     } else {
-      creep.moveTo(flag, { visualizePathStyle: { stroke: "#ffffff" }, reusePath: defaultReusePath });
+      creep.goTo(flag);
     }
   }
 }
