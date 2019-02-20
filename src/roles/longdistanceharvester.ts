@@ -1,10 +1,5 @@
-import { findAndCache } from "utils/finder";
-import { defaultReusePath } from "../constants";
 import { sourceManager } from "utils/source-manager";
 
-/* import { sourceManager } from "../utils/source-manager";
-import { findAndCache } from "utils/finder";
- */
 export interface ILongDistanceHarvesterMemory extends CreepMemory {
   working?: boolean;
   home: string;
@@ -18,13 +13,15 @@ class RoleLongDistanceHarvester implements IRole {
   run(creep: Creep) {
     const memory: ILongDistanceHarvesterMemory = creep.memory as any;
 
+    const totalCargoContent = _.sum(creep.carry);
+
     // if creep is bringing energy to a structure but has no energy left
-    if (memory.working == true && creep.carry.energy == 0) {
+    if (memory.working == true && totalCargoContent == 0) {
       // switch state
       memory.working = false;
     }
     // if creep is harvesting energy but is full
-    else if (!memory.working && creep.carry.energy == creep.carryCapacity) {
+    else if (!memory.working && totalCargoContent == creep.carryCapacity) {
       // switch state
       memory.working = true;
     }
@@ -33,7 +30,7 @@ class RoleLongDistanceHarvester implements IRole {
     if (memory.working == true) {
       // if in home room
       if (creep.room.name == memory.home) {
-        sourceManager.storeEnergy(creep);
+        sourceManager.store(creep);
       }
       // if not in home room...
       else {

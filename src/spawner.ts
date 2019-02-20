@@ -14,7 +14,7 @@ const costs = {
 class Spawner {
   run() {
     // Do the spawning logic once every 20 ticks
-    if (Game.time % 5 > 0) {
+    if (Game.time % 10 > 0) {
       return;
     }
 

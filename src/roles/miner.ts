@@ -1,6 +1,4 @@
 import { sourceManager } from "../utils/source-manager";
-import { defaultReusePath } from "../constants";
-import { findAndCache } from "utils/finder";
 import { roleHarvester } from "./harvester";
 
 interface IMinerMemory extends CreepMemory {
@@ -11,13 +9,13 @@ class RoleMiner implements IRole {
   run(creep: Creep) {
     const memory: IMinerMemory = creep.memory as any;
 
-    const carrying = sourceManager.getCurrentCarryingMineral(creep);
+    const totalCargoContent = _.sum(creep.carry);
 
-    if (memory.isDepositing && !carrying) {
+    if (memory.isDepositing && totalCargoContent === 0) {
       memory.isDepositing = false;
     }
 
-    if (!memory.isDepositing && carrying && creep.carry[carrying] === creep.carryCapacity) {
+    if (!memory.isDepositing && totalCargoContent === creep.carryCapacity) {
       memory.isDepositing = true;
     }
 
@@ -26,7 +24,7 @@ class RoleMiner implements IRole {
         return roleHarvester.run(creep);
       }
     } else {
-      sourceManager.storeMineral(creep);
+      sourceManager.store(creep);
     }
   }
 }

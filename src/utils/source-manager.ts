@@ -1,5 +1,4 @@
 import { findAndCache, findRestSpot } from "./finder";
-import { defaultReusePath } from "../constants";
 
 class SourceManager {
   harvestEnergyFromSource(creep: Creep) {
@@ -36,6 +35,10 @@ class SourceManager {
     }
   }
   mineMineral(creep: Creep) {
+    if (this.pickupDroppedMineral(creep) === OK) {
+      return;
+    }
+
     const targetMineralDeposit = findAndCache<FIND_MINERALS>(
       creep,
       "harvest_mineral_id",
@@ -97,6 +100,36 @@ class SourceManager {
         creep.withdraw(tombstone, RESOURCE_ENERGY);
       }
       return OK;
+    }
+
+    return -1;
+  }
+
+  pickupDroppedMineral(creep: Creep) {
+    const droppedEnergy = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES, {
+      filter: i => i.resourceType != RESOURCE_ENERGY
+    });
+    if (droppedEnergy) {
+      if (creep.pickup(droppedEnergy) === ERR_NOT_IN_RANGE) {
+        creep.goTo(droppedEnergy);
+        creep.pickup(droppedEnergy);
+      }
+      return OK;
+    }
+
+    const tombstone = creep.pos.findClosestByRange(FIND_TOMBSTONES, {
+      filter: tomb => tomb.store && this.getCurrentCarryingMineral(tomb.store)
+    });
+
+    if (tombstone) {
+      const element = this.getCurrentCarryingMineral(tombstone.store);
+      if (element) {
+        if (creep.withdraw(tombstone, element) === ERR_NOT_IN_RANGE) {
+          creep.goTo(tombstone);
+          creep.withdraw(tombstone, element);
+        }
+        return OK;
+      }
     }
 
     return -1;
@@ -186,19 +219,23 @@ class SourceManager {
       }
     }
   }
-  getCurrentCarryingMineral(creep: Creep) {
-    var carrying = Object.keys(creep.carry as any).filter(
-      i => i !== "energy" && creep.carry && (creep.carry as any)[i] > 0
-    )[0] as ResourceConstant | undefined;
+  getCurrentCarryingMineral(store: StoreDefinition) {
+    var carrying = Object.keys(store as any).filter(i => i !== "energy" && store && (store as any)[i] > 0)[0] as
+      | ResourceConstant
+      | undefined;
     return carrying;
   }
-  storeMineral(creep: Creep) {
+  getCurrentCarrying(store: StoreDefinition) {
+    var carrying = Object.keys(store as any).filter(i => (store as any)[i] > 0)[0] as ResourceConstant | undefined;
+    return carrying;
+  }
+  storeMinerals(creep: Creep) {
     let targetStructure: AnyStructure | undefined = undefined;
     if (!targetStructure) {
       targetStructure = creep.room.storage;
     }
 
-    var carrying = this.getCurrentCarryingMineral(creep);
+    var carrying = this.getCurrentCarrying(creep.carry);
 
     if (!carrying) {
       return;
@@ -214,6 +251,13 @@ class SourceManager {
       if (restSpot) {
         creep.goTo(restSpot);
       }
+    }
+  }
+  store(creep: Creep) {
+    if (creep.carry.energy > 0) {
+      return this.storeEnergy(creep);
+    } else {
+      return this.storeMinerals(creep);
     }
   }
 }

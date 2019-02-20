@@ -23,18 +23,17 @@ import { roleMiner } from "roles/miner";
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
 export const loop = ErrorMapper.wrapLoop(() => {
   profiler.wrap(function() {
-    spawner.run();
-
     /*     console.log("Bucket :" + Game.cpu.bucket);
     console.log("Used :" + Game.cpu.getUsed());
     console.log("Limit :" + Game.cpu.limit);
     console.log("TickLimit :" + Game.cpu.tickLimit); */
 
-    if (Game.cpu.tickLimit < 50) {
+    if (Game.cpu.tickLimit < 80) {
       console.log("Bucket :" + Game.cpu.bucket);
       console.log("Bucket almost empty. Skipping tick.");
       return;
     }
+    spawner.run();
 
     let error: any = null;
 
@@ -91,10 +90,12 @@ export const loop = ErrorMapper.wrapLoop(() => {
       }
     }
 
-    /*     console.log("Bucket :" + Game.cpu.bucket);
-    console.log("Used :" + Game.cpu.getUsed());
-    console.log("Limit :" + Game.cpu.limit);
-    console.log("TickLimit :" + Game.cpu.tickLimit); */
+    if (Game.time % 100 === 0) {
+      console.log("Bucket :" + Game.cpu.bucket);
+      console.log("Used :" + Game.cpu.getUsed());
+      //console.log("Limit :" + Game.cpu.limit);
+      //console.log("TickLimit :" + Game.cpu.tickLimit);
+    }
 
     Memory.rooms = Memory.rooms || {};
 

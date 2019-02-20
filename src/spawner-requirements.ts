@@ -36,7 +36,14 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
 
   let maxUpgraderCount: number;
   if (spawn.room.storage) {
-    maxUpgraderCount = spawn.room.storage.store.energy > 150000 ? 3 : 2;
+    const availableEnergy = spawn.room.storage.store.energy;
+    if (availableEnergy > 150000) {
+      maxUpgraderCount = 3;
+    } else if (availableEnergy > 20000) {
+      maxUpgraderCount = 2;
+    } else {
+      maxUpgraderCount = 1;
+    }
   } else {
     const containers: StructureContainer[] = spawn.room.find(FIND_STRUCTURES, {
       filter: i => i.structureType === "container"
@@ -108,7 +115,8 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       percentage: 1,
       role: "miner",
       maxCount: extractors.length >= 1 && mineralWithReserve.length > 0 ? 1 : 0,
-      bodyTemplate: [MOVE, WORK, CARRY],
+      bodyTemplate: [MOVE, WORK, CARRY, WORK, CARRY, WORK, CARRY],
+      capMaxEnergy: 1800,
       sortBody: [MOVE, WORK, CARRY]
     },
     {

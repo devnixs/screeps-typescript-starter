@@ -3,11 +3,12 @@ export function findAndCache<K extends FindConstant>(
   cacheKey: string,
   findConstant: FindConstant,
   keepAliveCheck: (element: FindTypes[K]) => boolean,
-  filter: FindPathOpts & FilterOptions<K> & { algorithm?: string }
+  filter: FindPathOpts & FilterOptions<K> & { algorithm?: string },
+  duration: number = 50
 ): FindTypes[K] | null {
   const memory = creep.memory as any;
 
-  const expirationTimeout = 10; // ticks
+  const expirationTimeout = duration; // ticks
 
   let cachedElementKey: string | null = memory[cacheKey];
   let cachedElement: FindTypes[K] | null = cachedElementKey ? Game.getObjectById(cachedElementKey) : null;
@@ -22,12 +23,16 @@ export function findAndCache<K extends FindConstant>(
     cachedElementKey = null;
   }
 
-  if (!cachedElement) {
+  const searchForElementAfterKey = "searchForElementAfter" + cacheKey;
+
+  if (!cachedElement && (!memory[searchForElementAfterKey] || memory[searchForElementAfterKey] <= Game.time)) {
     const foundElement: any = creep.pos.findClosestByPath(findConstant, filter);
     if (foundElement) {
       memory[cacheKey] = foundElement.id;
       memory[cacheKey + "_expiration"] = Game.time + expirationTimeout;
       cachedElement = foundElement;
+    } else {
+      memory[searchForElementAfterKey] = Game.time + 10;
     }
   }
 

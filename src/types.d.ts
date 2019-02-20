@@ -39,6 +39,8 @@ interface Memory {
   existingTowerIds: string[] | undefined;
   noNotificationBefore: number | undefined;
   attackSquad: string[] | undefined;
+  lastBucketQuantity: number | undefined;
+  lastBucketRefillTime: number | undefined;
 }
 
 // `global` extension samples
