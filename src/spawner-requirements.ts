@@ -1,5 +1,7 @@
 import { ILongDistanceHarvesterMemory } from "roles/longDistanceHarvester";
 import { IDismantlerMemory } from "roles/dismantler";
+import { requiredFightersForAnAttack } from "./constants/misc";
+import { requiredHealersForAnAttack } from "./constants/misc";
 
 export interface RoleRequirement {
   role: roles;
@@ -37,7 +39,9 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
   let maxUpgraderCount: number;
   if (spawn.room.storage) {
     const availableEnergy = spawn.room.storage.store.energy;
-    if (availableEnergy > 150000) {
+    if (availableEnergy > 200000) {
+      maxUpgraderCount = 4;
+    } else if (availableEnergy > 150000) {
       maxUpgraderCount = 3;
     } else if (availableEnergy > 20000) {
       maxUpgraderCount = 2;
@@ -106,10 +110,16 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     {
       percentage: 1,
       role: "fighter",
-      maxCount: hasSafeMode ? 0 : 1,
+      maxCount: hasSafeMode ? 0 : Game.flags["fighter_attack"] ? requiredFightersForAnAttack : 0,
       bodyTemplate: [TOUGH, MOVE, ATTACK],
-      capMaxEnergy: 500,
       sortBody: [TOUGH, MOVE, ATTACK]
+    },
+    {
+      percentage: 1,
+      role: "healer",
+      maxCount: Game.flags["fighter_attack"] ? requiredHealersForAnAttack : 0,
+      bodyTemplate: [HEAL, MOVE],
+      sortBody: [TOUGH, HEAL, MOVE]
     },
     {
       percentage: 1,
@@ -168,6 +178,40 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
         targetRoomName: "E26N48",
         targetRoomX: 32,
         targetRoomY: 46
+      } as ILongDistanceHarvesterMemory
+    },
+    {
+      percentage: 1,
+      role: "long-distance-harvester",
+      maxCount: maxEnergyInRoom > 1500 ? 2 : 3,
+      countAllRooms: true,
+      bodyTemplate: [MOVE, WORK, CARRY],
+      subRole: "room4",
+      onlyRoom: "E25N48",
+      additionalMemory: {
+        homeSpawnPosition: spawn.pos,
+        home: spawn.pos.roomName,
+        role: "long-distance-harvester",
+        targetRoomName: "E24N48",
+        targetRoomX: 24,
+        targetRoomY: 17
+      } as ILongDistanceHarvesterMemory
+    },
+    {
+      percentage: 1,
+      role: "long-distance-harvester",
+      maxCount: maxEnergyInRoom > 1500 ? 2 : 3,
+      countAllRooms: true,
+      bodyTemplate: [MOVE, WORK, CARRY],
+      subRole: "room5",
+      onlyRoom: "E25N48",
+      additionalMemory: {
+        homeSpawnPosition: spawn.pos,
+        home: spawn.pos.roomName,
+        role: "long-distance-harvester",
+        targetRoomName: "E24N48",
+        targetRoomX: 8,
+        targetRoomY: 7
       } as ILongDistanceHarvesterMemory
     },
     {

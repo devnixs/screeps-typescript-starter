@@ -1,4 +1,5 @@
 import { findAndCache, findRestSpot } from "./finder";
+import { wantsToSell } from "../constants/misc";
 
 class SourceManager {
   harvestEnergyFromSource(creep: Creep) {
@@ -174,17 +175,25 @@ class SourceManager {
       FIND_STRUCTURES,
       (targetStructure: any) => targetStructure.energy < targetStructure.energyCapacity,
       {
-        filter: (structure: StructureSpawn | StructureExtension | StructureTower) => {
+        filter: (structure: StructureSpawn | StructureExtension | StructureTower | StructureLab) => {
           const isExtOrSpawn =
             structure.structureType == STRUCTURE_EXTENSION || structure.structureType == STRUCTURE_SPAWN;
-          const isTower = structure.structureType == STRUCTURE_TOWER;
+
+          const isTowerOrLab = structure.structureType == STRUCTURE_TOWER || structure.structureType == STRUCTURE_LAB;
+
           return (
             (isExtOrSpawn && structure.energy < structure.energyCapacity) ||
-            (isTower && structure.energy < structure.energyCapacity * 0.5) // we don't want to keep filling towers. Or the creep would keep doing this as the energy goes down every tick
+            (isTowerOrLab && structure.energy < structure.energyCapacity * 0.5) // we don't want to keep filling towers. Or the creep would keep doing this as the energy goes down every tick
           );
         }
       }
     ) as any;
+
+    if (!targetStructure && creep.room.terminal) {
+      if (wantsToSell.energy && wantsToSell.energy > creep.room.terminal.store.energy) {
+        targetStructure = creep.room.terminal;
+      }
+    }
 
     if (!targetStructure) {
       targetStructure =
@@ -231,14 +240,23 @@ class SourceManager {
   }
   storeMinerals(creep: Creep) {
     let targetStructure: AnyStructure | undefined = undefined;
-    if (!targetStructure) {
-      targetStructure = creep.room.storage;
-    }
 
     var carrying = this.getCurrentCarrying(creep.carry);
 
     if (!carrying) {
       return;
+    }
+
+    if (!targetStructure && creep.room.terminal && wantsToSell[carrying]) {
+      const wantsToSellOfThisResource = wantsToSell[carrying] || 0;
+      const storedOfThisResource = creep.room.terminal.store[carrying] || 0;
+      if (storedOfThisResource < wantsToSellOfThisResource) {
+        targetStructure = creep.room.terminal;
+      }
+    }
+
+    if (!targetStructure) {
+      targetStructure = creep.room.storage;
     }
 
     if (targetStructure) {

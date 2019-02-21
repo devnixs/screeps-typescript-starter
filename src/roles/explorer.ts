@@ -1,6 +1,3 @@
-import { sourceManager } from "../utils/source-manager";
-import { defaultReusePath } from "../constants";
-
 interface IExplorerMemory extends CreepMemory {
   selectedExit: RoomPosition | null;
   currentRoomName: string | null;

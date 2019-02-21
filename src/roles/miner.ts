@@ -12,10 +12,12 @@ class RoleMiner implements IRole {
     const totalCargoContent = _.sum(creep.carry);
 
     if (memory.isDepositing && totalCargoContent === 0) {
+      creep.say("Mining");
       memory.isDepositing = false;
     }
 
     if (!memory.isDepositing && totalCargoContent === creep.carryCapacity) {
+      creep.say("Depositing");
       memory.isDepositing = true;
     }
 

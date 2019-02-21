@@ -1,6 +1,5 @@
 import { sourceManager } from "../utils/source-manager";
 import { roleHarvester } from "./harvester";
-import { defaultReusePath } from "../constants";
 
 interface IBuilderMemory extends CreepMemory {
   building: boolean;

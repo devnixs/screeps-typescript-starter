@@ -1,5 +1,3 @@
-import { defaultReusePath } from "../constants";
-
 interface IRangedMemory extends CreepMemory {}
 
 class RoleRanged implements IRole {

@@ -1,7 +1,3 @@
-import { defaultReusePath } from "../constants";
-import { notify } from "../utils/notify";
-import { roleLongDistanceHarvester } from "./longDistanceHarvester";
-
 export interface IDismantlerMemory extends CreepMemory {
   isAttacking: boolean;
   homeRoom: string;

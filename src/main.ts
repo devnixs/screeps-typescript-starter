@@ -16,6 +16,7 @@ import { roleClaimer } from "roles/claimer";
 
 import "./utils/navigator";
 import { roleMiner } from "roles/miner";
+import { roleHealer } from "roles/healer";
 
 // profiler.enable();
 
@@ -27,7 +28,6 @@ export const loop = ErrorMapper.wrapLoop(() => {
     console.log("Used :" + Game.cpu.getUsed());
     console.log("Limit :" + Game.cpu.limit);
     console.log("TickLimit :" + Game.cpu.tickLimit); */
-
     if (Game.cpu.tickLimit < 80) {
       console.log("Bucket :" + Game.cpu.bucket);
       console.log("Bucket almost empty. Skipping tick.");
@@ -67,6 +67,9 @@ export const loop = ErrorMapper.wrapLoop(() => {
         }
         if (memory.role == "claimer") {
           roleClaimer.run(creep);
+        }
+        if (memory.role == "healer") {
+          roleHealer.run(creep);
         }
         if (memory.role == "long-distance-harvester") {
           roleLongDistanceHarvester.run(creep);

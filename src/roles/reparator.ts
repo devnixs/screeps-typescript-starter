@@ -1,5 +1,4 @@
 import { sourceManager } from "../utils/source-manager";
-import { defaultReusePath } from "../constants";
 import { roleHarvester } from "./harvester";
 
 interface IReparatorMemory extends CreepMemory {

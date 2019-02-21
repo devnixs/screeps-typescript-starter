@@ -1,6 +1,3 @@
-import { defaultReusePath } from "../constants";
-import { sourceManager } from "../utils/source-manager";
-
 interface ITowerMemory extends CreepMemory {
   upgrading: boolean;
 }

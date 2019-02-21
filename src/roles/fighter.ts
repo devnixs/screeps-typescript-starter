@@ -1,6 +1,5 @@
-import { defaultReusePath } from "../constants";
+import { defaultReusePath, requiredHealersForAnAttack } from "../constants/misc";
 import { notify } from "../utils/notify";
-import { roleLongDistanceHarvester } from "./longDistanceHarvester";
 import { findEmptySpotCloseTo, findRestSpot } from "utils/finder";
 
 interface IFighterMemory extends CreepMemory {
@@ -41,14 +40,34 @@ class RoleFighter implements IRole {
       }
     } else {
       const attackFlag = Game.flags["fighter_attack"];
+      const healersReady = creep.pos.findInRange(FIND_MY_CREEPS, 4, { filter: i => i.memory.role === "healer" });
 
-      if (attackFlag) {
-        if (attackFlag.room === creep.room) {
-          const targets = creep.room.lookForAt(LOOK_STRUCTURES, attackFlag);
-          const target = targets[0];
-          const attackResult = creep.attack(target);
-          if (attackResult === ERR_NOT_IN_RANGE) {
-            creep.goTo(target);
+      if (attackFlag && healersReady.length >= requiredHealersForAnAttack) {
+        if (attackFlag.room && attackFlag.room.name === creep.room.name) {
+          // we need at least two healers close
+          const healersClose = creep.pos.findInRange(FIND_MY_CREEPS, 1, { filter: i => i.memory.role === "healer" });
+          console.log(creep.name + "> Found " + healersClose.length + " healers close");
+
+          const targetStructures = creep.room.lookForAt(LOOK_STRUCTURES, attackFlag);
+          const targetStructure = targetStructures[0];
+          if (targetStructure) {
+            if (creep.attack(targetStructure) === ERR_NOT_IN_RANGE) {
+              if (healersClose.length >= 2) {
+                creep.goTo(targetStructure);
+              }
+              creep.attack(targetStructure);
+            }
+          } else {
+            // look for an enemy
+            var hostileCreep = creep.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
+            if (hostileCreep) {
+              if (creep.attack(hostileCreep) === ERR_NOT_IN_RANGE) {
+                if (healersClose.length >= 2) {
+                  creep.goTo(hostileCreep);
+                }
+                creep.attack(hostileCreep);
+              }
+            }
           }
         } else {
           creep.goTo(attackFlag);
@@ -56,24 +75,15 @@ class RoleFighter implements IRole {
         return;
       }
 
-      if (memory.assignedExplorerName) {
-        var assignedExplorer = Game.creeps[memory.assignedExplorerName];
-        if (!assignedExplorer) {
-          memory.assignedExplorerName = null;
-        } else {
-          creep.goTo(assignedExplorer);
-        }
-      } else {
-        if (creep.room.name !== creep.memory.homeRoom) {
-          // go back home
-          creep.goTo(new RoomPosition(25, 25, creep.memory.homeRoom || ""));
-          return;
-        }
+      if (creep.room.name !== creep.memory.homeRoom) {
+        // go back home
+        creep.goTo(new RoomPosition(25, 25, creep.memory.homeRoom || ""));
+        return;
+      }
 
-        const restSpot = findRestSpot(creep);
-        if (restSpot) {
-          creep.goTo(restSpot);
-        }
+      const restSpot = findRestSpot(creep);
+      if (restSpot) {
+        creep.goTo(restSpot);
       }
     }
   }

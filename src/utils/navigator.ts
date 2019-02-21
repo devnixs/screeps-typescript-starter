@@ -1,4 +1,4 @@
-import { defaultReusePath } from "../constants";
+import { defaultReusePath } from "../constants/misc";
 
 function hashCode(str: string) {
   // java String#hashCode

@@ -1,6 +1,3 @@
-import { defaultReusePath } from "../constants";
-import { sourceManager } from "../utils/source-manager";
-
 interface IClaimerMemory extends CreepMemory {}
 
 class RoleClaimer implements IRole {
