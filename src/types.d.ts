@@ -13,6 +13,7 @@ type roles =
   | "healer"
   | "claimer"
   | "miner"
+  | "truck"
   | "dismantler";
 
 // memory extension samples
@@ -47,7 +48,7 @@ interface LabGroup {
 interface LabMemory {
   id: string;
   state: "waiting-for-resource" | "needs-emptying" | "running" | "idle";
-  needsResource: ResourceConstant | null;
+  needsResource: ResourceConstant;
   needsAmount: number;
   canRun: boolean;
 }

@@ -40,6 +40,15 @@ export class Chemist {
     sleepTime: 100 // sleep for this many ticks once you can't make anything
   };
 
+  static runForAllRooms() {
+    var rooms = _.values(Game.rooms) as Room[];
+    for (let i in rooms) {
+      const room = rooms[i];
+      const chemist = new Chemist(room);
+      chemist.run();
+    }
+  }
+
   run() {
     if (Game.time % 5 === 0) {
       this.checkLabs();
@@ -92,13 +101,10 @@ export class Chemist {
     group.remainingAmountToProduce = 0;
     group.labResult.state = "needs-emptying";
     group.labResult.needsAmount = 0;
-    group.labResult.needsResource = null;
     group.labSource1.state = "needs-emptying";
     group.labSource1.needsAmount = 0;
-    group.labSource1.needsResource = null;
     group.labSource2.state = "needs-emptying";
     group.labSource2.needsAmount = 0;
-    group.labSource2.needsResource = null;
   }
 
   checkLabs() {

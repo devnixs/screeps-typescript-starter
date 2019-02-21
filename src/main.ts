@@ -17,6 +17,8 @@ import { roleClaimer } from "roles/claimer";
 import "./utils/navigator";
 import { roleMiner } from "roles/miner";
 import { roleHealer } from "roles/healer";
+import { Chemist } from "chemist";
+import { roleTruck } from "roles/truck";
 
 // profiler.enable();
 
@@ -34,6 +36,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
       return;
     }
     spawner.run();
+    Chemist.runForAllRooms();
 
     let error: any = null;
 
@@ -70,6 +73,9 @@ export const loop = ErrorMapper.wrapLoop(() => {
         }
         if (memory.role == "healer") {
           roleHealer.run(creep);
+        }
+        if (memory.role == "truck") {
+          roleTruck.run(creep);
         }
         if (memory.role == "long-distance-harvester") {
           roleLongDistanceHarvester.run(creep);

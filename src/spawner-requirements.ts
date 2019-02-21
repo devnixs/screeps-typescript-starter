@@ -35,6 +35,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
   const towers = spawn.room.find(FIND_MY_STRUCTURES, { filter: i => i.structureType === "tower" });
   const extractors = spawn.room.find(FIND_MY_STRUCTURES, { filter: i => i.structureType === "extractor" });
   const mineralWithReserve = spawn.room.find(FIND_MINERALS, { filter: i => i.mineralAmount > 0 });
+  const labs = spawn.room.find(FIND_MY_STRUCTURES, { filter: i => i.structureType === "lab" });
 
   let maxUpgraderCount: number;
   if (spawn.room.storage) {
@@ -105,6 +106,12 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       percentage: 2,
       role: "reparator",
       maxCount: towers.length ? 0 : 1, // handled by towers
+      exactBody: [MOVE, WORK, CARRY]
+    },
+    {
+      percentage: 2,
+      role: "truck",
+      maxCount: labs.length ? 1 : 0,
       exactBody: [MOVE, WORK, CARRY]
     },
     {
