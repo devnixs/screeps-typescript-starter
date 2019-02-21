@@ -31,6 +31,25 @@ interface RoomMemory {
   enemyId: string | null;
   damagedCreepId: string | null;
   lastTowerRefreshTime: number | undefined;
+  labGroups: LabGroup[];
+}
+
+interface LabGroup {
+  lastActivity: number | undefined;
+  currentState: "idle" | "running" | "boosting";
+  currentTarget: ResourceConstant | undefined;
+  labResult: LabMemory;
+  labSource1: LabMemory;
+  labSource2: LabMemory;
+  remainingAmountToProduce: number;
+}
+
+interface LabMemory {
+  id: string;
+  state: "waiting-for-resource" | "needs-emptying" | "running" | "idle";
+  needsResource: ResourceConstant | null;
+  needsAmount: number;
+  canRun: boolean;
 }
 
 interface Memory {
