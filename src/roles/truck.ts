@@ -1,5 +1,9 @@
 import { sourceManager } from "../utils/source-manager";
 import { roleHarvester } from "./harvester";
+import { wantsToSell } from "../constants/misc";
+import { findRestSpot } from "utils/finder";
+
+interface ITruckDestination {}
 
 interface ITruckMemory extends CreepMemory {
   targetSource?: string;
@@ -7,7 +11,7 @@ interface ITruckMemory extends CreepMemory {
   jobResource: ResourceConstant;
   jobNeededAmount: number;
   isDepositing?: boolean;
-  noJob: boolean;
+  idle: boolean;
   lastJobRefreshTime: number | undefined;
 }
 
@@ -17,41 +21,81 @@ class RoleTruck implements IRole {
   }
 
   run(creep: Creep) {
+    debugger;
     const memory: ITruckMemory = creep.memory as any;
+    const totalCargoContent = _.sum(creep.carry);
 
-    if (creep.room.storage && !memory.noJob) {
+    if (creep.room.storage && !memory.idle) {
       this.setJob(creep);
       let target: AnyStructure;
       if (memory.isDepositing) {
         target = Game.getObjectById(memory.targetDestination) as AnyStructure;
+        if (!target) {
+          this.restartJob(creep);
+        }
         creep.goTo(target);
-        if (creep.transfer(target, memory.jobResource) === OK) {
+        if (totalCargoContent === 0 || creep.transfer(target, memory.jobResource) === OK) {
           memory.isDepositing = false;
 
           // job is complete.
-          memory.noJob = true;
-          this.setJob(creep);
+          this.restartJob(creep);
         }
       } else {
         target = Game.getObjectById(memory.targetSource) as AnyStructure;
+        if (!target) {
+          this.restartJob(creep);
+        }
         creep.goTo(target);
-        if (creep.withdraw(target, memory.jobResource, memory.jobNeededAmount) === OK) {
+
+        const currentlyInStock = creep.room.storage.store[memory.jobResource] || 0;
+
+        const withdrawResult = creep.withdraw(
+          target,
+          memory.jobResource,
+          Math.min(memory.jobNeededAmount, currentlyInStock)
+        );
+        if (withdrawResult === OK) {
           memory.isDepositing = true;
+        } else if (creep.pos.getRangeTo(target.pos.x, target.pos.y) <= 1) {
+          // if it fails but we're in range, abort the job.
+
+          this.restartJob(creep);
         }
       }
     } else {
-      if (Game.time % 10 === 0) {
+      const checkTime = "sim" in Game.rooms ? 1 : 10;
+      if (Game.time % checkTime === 0) {
         // periodically check for jobs
         this.setJob(creep);
       }
-      roleHarvester.run(creep);
+
+      if (memory.idle) {
+        const spot = findRestSpot(creep);
+        if (spot) {
+          creep.goTo(spot);
+        }
+      }
     }
+  }
+
+  restartJob(creep: Creep) {
+    const memory: ITruckMemory = creep.memory as any;
+    memory.idle = true;
+    this.setJob(creep);
+  }
+
+  getResource(store: StoreDefinition, res: string) {
+    return (store as any)[res] || 0;
+  }
+
+  getWantsToSellForThisRoom(room: string) {
+    return wantsToSell[room] || {};
   }
 
   setJob(creep: Creep) {
     const memory: ITruckMemory = creep.memory as any;
 
-    if (!memory.noJob && memory.lastJobRefreshTime && memory.lastJobRefreshTime + 100 > Game.time) {
+    if (!memory.idle && memory.lastJobRefreshTime && memory.lastJobRefreshTime + 100 > Game.time) {
       // don't do anything if we already have a job or if we are not stuck
       return;
     } else {
@@ -64,38 +108,84 @@ class RoleTruck implements IRole {
 
     var labs = this.getLabs(creep.room).map(i => ({ memory: i, obj: Game.getObjectById(i.id) as StructureLab }));
     var assets = storage.store;
-    var labsThatNeedsRefills = labs.filter(i => {
+    var labThatNeedsRefills = labs.filter(i => {
       if (!i.memory.needsResource) {
         return;
       }
       const availableResource = assets[i.memory.needsResource] || 0;
-      return i.memory.state === "waiting-for-resource" && availableResource > 0;
-    });
+      return (
+        i.memory.state === "waiting-for-resource" && availableResource > 0 && i.memory.needsAmount > i.obj.mineralAmount
+      );
+    })[0];
 
-    var labsThatNeedsEmptying = labs.filter(i => i.memory.state === "needs-emptying" && i.obj.mineralAmount > 0);
+    let terminalOversupply: string | undefined;
+    let terminalUndersupply: string | undefined;
 
-    if (totalCargoContent > 0) {
+    const wantsToSellForThisRoom = this.getWantsToSellForThisRoom(creep.room.name);
+
+    const terminal = creep.room.terminal;
+    if (terminal) {
+      const resources = _.uniq(Object.keys(wantsToSell).concat(Object.keys(terminal.store)));
+
+      terminalOversupply = resources.filter(
+        i => this.getResource(wantsToSellForThisRoom, i) < this.getResource(terminal.store, i)
+      )[0];
+      terminalUndersupply = resources.filter(
+        i =>
+          this.getResource(wantsToSellForThisRoom, i) > this.getResource(terminal.store, i) &&
+          this.getResource(storage.store, i) > 0
+      )[0];
+    }
+
+    var labThatNeedsEmptying = labs.filter(i => i.memory.state === "needs-emptying" && i.obj.mineralAmount > 0)[0];
+
+    var jobAvailable = labThatNeedsEmptying || labThatNeedsRefills || terminalOversupply || terminalUndersupply;
+
+    if (totalCargoContent > 0 && jobAvailable) {
       // if we carry something, deposit it before starting a new job.
       memory.targetDestination = storage.id;
       memory.jobResource = Object.keys(creep.carry).filter((i: any) => (creep.carry as any)[i] > 0)[0] as any;
       memory.jobNeededAmount = creep.carry[memory.jobResource] as any;
       memory.isDepositing = true;
-    } else if (labsThatNeedsRefills.length) {
-      const lab = labsThatNeedsRefills[0];
+      memory.idle = false;
+    } else if (labThatNeedsRefills) {
+      const lab = labThatNeedsRefills;
       memory.targetSource = storage.id;
       memory.targetDestination = lab.obj.id;
       memory.jobResource = lab.memory.needsResource;
-      memory.jobNeededAmount = lab.memory.needsAmount;
+      memory.jobNeededAmount = Math.min(lab.memory.needsAmount - lab.obj.mineralAmount, creep.carryCapacity);
       memory.isDepositing = false;
-    } else if (labsThatNeedsEmptying) {
-      const lab = labsThatNeedsEmptying[0];
+      memory.idle = false;
+    } else if (labThatNeedsEmptying) {
+      const lab = labThatNeedsEmptying;
       memory.targetSource = lab.obj.id;
       memory.targetDestination = storage.id;
       memory.jobResource = lab.obj.mineralType as ResourceConstant;
-      memory.jobNeededAmount = lab.obj.mineralAmount;
+      memory.jobNeededAmount = Math.min(lab.obj.mineralAmount, creep.carryCapacity);
       memory.isDepositing = false;
+      memory.idle = false;
+    } else if (terminalOversupply && terminal) {
+      memory.targetSource = terminal.id;
+      memory.targetDestination = storage.id;
+      memory.jobResource = terminalOversupply as ResourceConstant;
+      const oversupply =
+        this.getResource(terminal.store, terminalOversupply) -
+        this.getResource(wantsToSellForThisRoom, terminalOversupply);
+      memory.jobNeededAmount = Math.min(oversupply, creep.carryCapacity);
+      memory.isDepositing = false;
+      memory.idle = false;
+    } else if (terminalUndersupply && terminal) {
+      memory.targetSource = storage.id;
+      memory.targetDestination = terminal.id;
+      memory.jobResource = terminalUndersupply as ResourceConstant;
+      const underSupply =
+        this.getResource(wantsToSellForThisRoom, terminalUndersupply) -
+        this.getResource(terminal.store, terminalUndersupply);
+      memory.jobNeededAmount = Math.min(underSupply, creep.carryCapacity);
+      memory.isDepositing = false;
+      memory.idle = false;
     } else {
-      memory.noJob = true;
+      memory.idle = true;
     }
   }
 

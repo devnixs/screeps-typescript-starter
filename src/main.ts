@@ -30,6 +30,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
     console.log("Used :" + Game.cpu.getUsed());
     console.log("Limit :" + Game.cpu.limit);
     console.log("TickLimit :" + Game.cpu.tickLimit); */
+
     if (Game.cpu.tickLimit < 80) {
       console.log("Bucket :" + Game.cpu.bucket);
       console.log("Bucket almost empty. Skipping tick.");

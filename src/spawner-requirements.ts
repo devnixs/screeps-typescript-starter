@@ -40,7 +40,9 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
   let maxUpgraderCount: number;
   if (spawn.room.storage) {
     const availableEnergy = spawn.room.storage.store.energy;
-    if (availableEnergy > 200000) {
+    if (availableEnergy > 300000) {
+      maxUpgraderCount = 5;
+    } else if (availableEnergy > 200000) {
       maxUpgraderCount = 4;
     } else if (availableEnergy > 150000) {
       maxUpgraderCount = 3;
@@ -73,7 +75,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     }
   }
 
-  const claimerCount = Game.flags["claimer_target"] ? 1 : 0;
+  let claimerCount = Game.flags["claimer_target"] ? 1 : 0;
 
   if (harvesters.length === 0) {
     // we need at least one harvester
@@ -85,6 +87,11 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
         exactBody: [MOVE, WORK, CARRY]
       }
     ];
+  }
+
+  if ("sim" in Game.rooms) {
+    maxUpgraderCount = 0;
+    claimerCount = 0;
   }
 
   return [
@@ -112,7 +119,8 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       percentage: 2,
       role: "truck",
       maxCount: labs.length ? 1 : 0,
-      exactBody: [MOVE, WORK, CARRY]
+      exactBody: [MOVE, CARRY, CARRY],
+      capMaxEnergy: 300
     },
     {
       percentage: 1,

@@ -17,6 +17,10 @@ class Architect {
   }
 
   architectRoom(room: Room) {
+    if ("sim" in Game.rooms) {
+      return;
+    }
+
     var constructionSites = room.find(FIND_CONSTRUCTION_SITES);
     if (constructionSites.length === 0) {
       if (this.createExtension(room) != OK) {
