@@ -1,7 +1,8 @@
-export const defaultReusePath = 5;
+export const defaultReusePath = 15;
 
-export const requiredHealersForAnAttack = 5;
+export const requiredHealersForAnAttack = 1;
 export const requiredFightersForAnAttack = 1;
+export const requiredDismantlersForAnAttack = 1;
 
 // How much we should store in the terminal
 export const wantsToSell: { [roomName: string]: StoreDefinition } = {

@@ -1,6 +1,6 @@
 import { ILongDistanceHarvesterMemory } from "roles/longDistanceHarvester";
 import { IDismantlerMemory } from "roles/dismantler";
-import { requiredFightersForAnAttack } from "./constants/misc";
+import { requiredFightersForAnAttack, requiredDismantlersForAnAttack } from "./constants/misc";
 import { requiredHealersForAnAttack } from "./constants/misc";
 
 export interface RoleRequirement {
@@ -12,6 +12,7 @@ export interface RoleRequirement {
   additionalMemory?: any;
   countAllRooms?: boolean;
   capMaxEnergy?: number;
+  minEnergy?: number;
   sortBody?: BodyPartConstant[];
   subRole?: string;
   onlyRoom?: string;
@@ -123,18 +124,32 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       capMaxEnergy: 300
     },
     {
+      percentage: 10,
+      role: "dismantler",
+      maxCount: Game.flags["dismantler_attack"] ? requiredDismantlersForAnAttack : 0,
+      countAllRooms: true,
+      bodyTemplate: [TOUGH, TOUGH, TOUGH, WORK, WORK, RANGED_ATTACK, MOVE, MOVE],
+      sortBody: [TOUGH, WORK, MOVE, RANGED_ATTACK],
+      onlyRoom: "E27N47",
+      subRole: "room1",
+      additionalMemory: {} as IDismantlerMemory
+    },
+    {
+      percentage: 10,
+      role: "healer",
+      maxCount: Game.flags["fighter_attack"] || Game.flags["dismantler_attack"] ? requiredHealersForAnAttack : 0,
+      bodyTemplate: [HEAL, MOVE, HEAL, MOVE, HEAL, MOVE, HEAL, MOVE],
+      sortBody: [TOUGH, HEAL, MOVE],
+      onlyRoom: "E27N47",
+      capMaxEnergy: 1600,
+      minEnergy: 1300
+    },
+    {
       percentage: 1,
       role: "fighter",
       maxCount: hasSafeMode ? 0 : Game.flags["fighter_attack"] ? requiredFightersForAnAttack : 0,
       bodyTemplate: [TOUGH, MOVE, ATTACK],
       sortBody: [TOUGH, MOVE, ATTACK]
-    },
-    {
-      percentage: 1,
-      role: "healer",
-      maxCount: Game.flags["fighter_attack"] ? requiredHealersForAnAttack : 0,
-      bodyTemplate: [HEAL, MOVE],
-      sortBody: [TOUGH, HEAL, MOVE]
     },
     {
       percentage: 1,
@@ -252,38 +267,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       subRole: "room1",
       capMaxEnergy: 60,
       onlyRoom: "E27N47",
-      additionalMemory: {
-        homeRoom: spawn.pos.roomName,
-        targetStructureId: "5c114bae7935880bfeed5a9d",
-        targetRoomX: 7,
-        targetRoomY: 27,
-        homeRoomX: 47,
-        homeRoomY: 22,
-        targetRoomName: "E28N47",
-        isAttacking: false,
-        targetTowers: ["5c629039b23c6c6832d07889"]
-      } as IDismantlerMemory
-    },
-    {
-      percentage: 1,
-      role: "dismantler",
-      maxCount: 0,
-      countAllRooms: true,
-      bodyTemplate: [HEAL, MOVE, HEAL, MOVE, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, WORK],
-      sortBody: [TOUGH, WORK, HEAL, MOVE],
-      onlyRoom: "E27N47",
-      subRole: "room1",
-      additionalMemory: {
-        homeRoom: spawn.pos.roomName,
-        targetStructureId: "5c114bae7935880bfeed5a9d",
-        targetRoomX: 7,
-        targetRoomY: 27,
-        homeRoomX: 47,
-        homeRoomY: 22,
-        targetRoomName: "E28N47",
-        isAttacking: false,
-        targetTowers: ["5c629039b23c6c6832d07889"]
-      } as IDismantlerMemory
+      additionalMemory: {} as IDismantlerMemory
     }
   ];
 }

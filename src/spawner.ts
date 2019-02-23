@@ -14,7 +14,7 @@ const costs = {
 class Spawner {
   run() {
     // Do the spawning logic once every 20 ticks
-    if (Game.time % 10 > 0) {
+    if (Game.time % 5 > 0) {
       return;
     }
 
@@ -123,6 +123,10 @@ class Spawner {
 
     // const maxEnergyPossible = spawn.room.energyCapacityAvailable;
     const maxEnergyPossible = spawn.room.energyAvailable;
+
+    if (role.minEnergy && maxEnergyPossible < role.minEnergy) {
+      console.log("Not enough energy to create the body. Required=", role.minEnergy);
+    }
 
     if (debug) {
       console.log("Max energy possible : ", maxEnergyPossible);

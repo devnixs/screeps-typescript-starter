@@ -1,5 +1,4 @@
 import { findAndCache, findRestSpot } from "./finder";
-import { wantsToSell } from "../constants/misc";
 
 class SourceManager {
   harvestEnergyFromSource(creep: Creep) {

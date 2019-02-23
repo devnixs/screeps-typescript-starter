@@ -49,9 +49,18 @@ export function findRestSpot(creep: Creep) {
   const memory = (creep.memory as any) as { rest: IRestPosition };
 
   if (!memory.rest) {
-    const restFlag = Object.keys(Game.flags)
-      .filter(i => i.indexOf("rest_") === 0)
-      .map(i => Game.flags[i])[0];
+    const specificRestFlag = Object.keys(Game.flags)
+      .filter(i => i.indexOf(creep.memory.role + "_rest") === 0)
+      .map(i => Game.flags[i])
+      .filter(i => i && i.room && i.room.name === creep.room.name)[0];
+
+    const restFlag =
+      specificRestFlag ||
+      Object.keys(Game.flags)
+        .filter(i => i.indexOf("rest_") === 0)
+        .map(i => Game.flags[i])
+        .filter(i => i && i.room && i.room.name === creep.room.name)[0];
+
     if (restFlag) {
       memory.rest = { X: restFlag.pos.x, Y: restFlag.pos.y, roomName: creep.room.name };
     } else {

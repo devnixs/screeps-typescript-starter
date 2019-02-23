@@ -1,74 +1,70 @@
-export interface IDismantlerMemory extends CreepMemory {
-  isAttacking: boolean;
-  homeRoom: string;
-  homeRoomX: number;
-  homeRoomY: number;
+import { requiredHealersForAnAttack } from "../constants/misc";
+import { findRestSpot } from "../utils/finder";
+import { boostCreep } from "../utils/boost-manager";
 
-  targetRoomName: string;
-  targetRoomX: number;
-  targetRoomY: number;
-  targetStructureId: string;
-
-  targetTowers: string[];
-}
+export interface IDismantlerMemory extends CreepMemory {}
 
 class RoleDismantler implements IRole {
-  isAttackSquadReady() {
-    Memory.attackSquad = Memory.attackSquad || [];
-    const creepsInSquad = Memory.attackSquad.map(i => Game.getObjectById(i) as Creep);
-
-    // if(creepsInSquad.)
+  isCloseToExit(creep: Creep) {
+    return creep.pos.x <= 2 || creep.pos.y <= 2 || creep.pos.x >= 48 || creep.pos.y >= 48;
   }
-
   run(creep: Creep) {
-    var memory: IDismantlerMemory = creep.memory as any;
-    if (memory.isAttacking && creep.hits <= creep.hitsMax / 2) {
-      memory.isAttacking = false;
+    if (boostCreep(creep) === OK) {
+      // Don't do anything else
+      return;
     }
 
-    if (!memory.isAttacking && creep.hits === creep.hitsMax) {
-      memory.isAttacking = true;
+    let hostile: Creep | null = null;
+    hostile = creep.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
+
+    if (hostile) {
+      creep.rangedAttack(hostile);
     }
 
-    if (memory.isAttacking) {
-      if (creep.room.name !== memory.targetRoomName) {
-        creep.goTo(new RoomPosition(memory.targetRoomX, memory.targetRoomY, memory.targetRoomName));
-      } else {
-        const targetTowers: StructureTower[] = (memory.targetTowers || [])
-          .map(i => Game.getObjectById(i))
-          .filter(i => i) as any;
+    const attackFlag = Game.flags["dismantler_attack"];
+    const healersReady = creep.pos.findInRange(FIND_MY_CREEPS, 4, { filter: i => i.memory.role === "healer" });
 
-        const combinedEnergy = _.sum(targetTowers.map(i => i.energy));
-        if (combinedEnergy > 0) {
-          // Abort!
-          creep.goTo(new RoomPosition(memory.homeRoomX, memory.homeRoomY, memory.homeRoom));
-          return;
-        } else {
-          if (creep.getActiveBodyparts(WORK) >= 0) {
-            var structure: AnyStructure | null;
+    if (attackFlag && healersReady.length >= requiredHealersForAnAttack) {
+      if (attackFlag.room && attackFlag.room.name === creep.room.name) {
+        // we need at least two healers close
+        const healersClose = creep.pos.findInRange(FIND_MY_CREEPS, 1, { filter: i => i.memory.role === "healer" });
 
-            structure = Game.getObjectById(memory.targetStructureId);
+        const targetStructures = creep.room.lookForAt(LOOK_STRUCTURES, attackFlag);
+        let targetStructure = targetStructures[0];
 
-            if (!structure) {
-              structure = creep.pos.findClosestByRange(FIND_HOSTILE_STRUCTURES);
+        targetStructure =
+          targetStructure ||
+          creep.pos.findClosestByRange(FIND_HOSTILE_STRUCTURES, { filter: i => i.structureType === "tower" });
+
+        targetStructure =
+          targetStructure ||
+          creep.pos.findClosestByRange(FIND_HOSTILE_STRUCTURES, { filter: i => i.structureType === "spawn" });
+
+        if (targetStructure) {
+          if (creep.dismantle(targetStructure) === ERR_NOT_IN_RANGE) {
+            if (healersClose.length >= 2 || this.isCloseToExit(creep)) {
+              creep.goTo(targetStructure);
             }
-
-            if (!structure) {
-              return;
-            }
-
-            if (creep.dismantle(structure) == ERR_NOT_IN_RANGE) {
-              creep.goTo(structure);
-            }
+            creep.dismantle(targetStructure);
           }
         }
-      }
-    } else {
-      if (creep.room.name !== memory.homeRoom) {
-        creep.goTo(new RoomPosition(memory.homeRoomX, memory.homeRoomY, memory.homeRoom));
       } else {
-        // just wait to be healed
+        creep.goTo(attackFlag);
       }
+      return;
+    }
+
+    if (creep.room.name !== creep.memory.homeRoom) {
+      // go back home
+      creep.goTo(new RoomPosition(25, 25, creep.memory.homeRoom || ""));
+      return;
+    }
+
+    let restSpot: RoomPosition | null;
+    restSpot = Game.flags["dismantler_rest"] && Game.flags["dismantler_rest"].pos;
+    restSpot = restSpot || findRestSpot(creep);
+    if (restSpot) {
+      creep.goTo(restSpot);
     }
   }
 }

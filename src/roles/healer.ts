@@ -1,4 +1,5 @@
-import { findEmptySpotCloseTo, findRestSpot } from "utils/finder";
+import { findEmptySpotCloseTo, findRestSpot } from "../utils/finder";
+import { boostCreep } from "../utils/boost-manager";
 
 interface IHealerMemory extends CreepMemory {
   assignedExplorerName: string | null;
@@ -6,13 +7,18 @@ interface IHealerMemory extends CreepMemory {
 
 class RoleHealer implements IRole {
   run(creep: Creep) {
+    if (boostCreep(creep) === OK) {
+      // Don't do anything else
+      return;
+    }
+
     const memory: IHealerMemory = creep.memory as any;
 
-    const attackFlag = Game.flags["fighter_attack"];
+    const attackFlag = Game.flags["fighter_attack"] || Game.flags["dismantler_attack"];
     if (attackFlag && attackFlag.room && attackFlag.room.name === creep.room.name) {
       // we are in the right room
       const closeFigther = creep.pos.findClosestByRange(FIND_MY_CREEPS, {
-        filter: i => i.memory.role === "fighter"
+        filter: i => i.memory.role === "fighter" || i.memory.role === "dismantler"
       });
 
       const damagedCreep = creep.pos.findClosestByRange(FIND_MY_CREEPS, {
@@ -33,7 +39,7 @@ class RoleHealer implements IRole {
     } else if (attackFlag && attackFlag.room) {
       // we are not in the right room, but someone is
       const closeFigther = attackFlag.room.find(FIND_MY_CREEPS, {
-        filter: i => i.memory.role === "fighter"
+        filter: i => i.memory.role === "fighter" || i.memory.role === "dismantler"
       })[0];
 
       const damagedCreep = attackFlag.room.find(FIND_MY_CREEPS, {
@@ -50,7 +56,7 @@ class RoleHealer implements IRole {
       }
 
       let restSpot: RoomPosition | HasPos | null = creep.pos.findClosestByRange(FIND_MY_CREEPS, {
-        filter: i => i.memory.role === "fighter"
+        filter: i => i.memory.role === "fighter" || i.memory.role === "dismantler"
       });
 
       if (!restSpot) {

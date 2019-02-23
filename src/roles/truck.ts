@@ -23,7 +23,6 @@ class RoleTruck implements IRole {
   }
 
   run(creep: Creep) {
-    debugger;
     const memory: ITruckMemory = creep.memory as any;
     const totalCargoContent = _.sum(creep.carry);
 

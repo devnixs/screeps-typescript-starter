@@ -34,11 +34,13 @@ interface RoomMemory {
   damagedCreepId: string | null;
   lastTowerRefreshTime: number | undefined;
   labGroups: LabGroup[];
+
+  isBoostMode: boolean;
 }
 
 interface LabGroup {
   lastActivity: number | undefined;
-  currentState: "idle" | "running" | "boosting";
+  currentState: "idle" | "running";
   currentTarget: ResourceConstant | undefined;
   labResult: LabMemory;
   labSource1: LabMemory;
@@ -52,6 +54,9 @@ interface LabMemory {
   needsResource: ResourceConstant;
   needsAmount: number;
   canRun: boolean;
+
+  boostResource?: ResourceConstant;
+  boostBodyType?: BodyPartConstant;
 }
 
 interface Memory {

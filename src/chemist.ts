@@ -1,11 +1,12 @@
-import { REAGENTS, RESOURCE_IMPORTANCE } from "constants/resources";
+import { REAGENTS, RESOURCE_IMPORTANCE, boostResources } from "constants/resources";
 import { minMax } from "./utils/misc-utils";
+import { throws } from "assert";
 
 export const wantedStockAmounts: { [key: string]: number } = {
   UH: 0, // (+100 % attack)
   KO: 0, // (+100 % ranged attack)
   XGHO2: 0, // For toughness
-  XLHO2: 1000, // For healing
+  XLHO2: 2000, // For healing
   XZHO2: 0, // For speed
   XZH2O: 0, // For dismantling
   XKHO2: 0, // For ranged attackers
@@ -25,6 +26,17 @@ export const wantedStockAmounts: { [key: string]: number } = {
   [RESOURCE_GHODIUM_ALKALIDE]: 1000
 };
 
+export const wantedBoosts: { [roomName: string]: { [body: string]: ResourceConstant[] } } = {
+  E27N47: {
+    [HEAL]: [RESOURCE_CATALYZED_LEMERGIUM_ALKALIDE, RESOURCE_LEMERGIUM_ALKALIDE],
+    [TOUGH]: [RESOURCE_GHODIUM_ALKALIDE, RESOURCE_GHODIUM_OXIDE]
+  },
+  sim: {
+    [HEAL]: [RESOURCE_LEMERGIUM_OXIDE, RESOURCE_LEMERGIUM_ALKALIDE],
+    [TOUGH]: [RESOURCE_GHODIUM_OXIDE]
+  }
+};
+
 interface Reaction {
   target: ResourceConstant;
   source1: ResourceConstant;
@@ -33,11 +45,14 @@ interface Reaction {
 }
 
 const labProduceByTick = 5;
+export const boostResourceNeeded = 30;
 
 export class Chemist {
   assets: { [key: string]: number };
+  assetsWithAllLabs: { [key: string]: number };
   constructor(private room: Room) {
     this.assets = this.getAssets();
+    this.assetsWithAllLabs = this.getAssetsWithAllLabs();
   }
 
   static settings = {
@@ -61,11 +76,125 @@ export class Chemist {
       this.setupLabGroups();
     }
 
-    if (Game.time % 5 === 0) {
-      this.checkLabs();
-      this.assignJobs();
-      this.runLabs();
+    if (Game.time % 10 === 0) {
+      this.checkBoostMode();
     }
+
+    if (this.isBoostMode()) {
+      // boost mode
+      if (Game.time % 10 === 0) {
+        this.assignBoosts();
+      }
+      this.runAllBoostLabs();
+    } else {
+      // chemistry mode
+      if (Game.time % 5 === 0) {
+        this.checkLabs();
+        this.assignJobs();
+        this.runLabs();
+      }
+    }
+  }
+
+  checkBoostMode() {
+    const previousMode = this.room.memory.isBoostMode;
+    const newMode = !!Object.keys(Game.flags)
+      .filter(i => i.indexOf("boostmode_") === 0)
+      .map(i => Game.flags[i])
+      .filter(i => i && i.room && i.room.name === this.room.name)[0];
+
+    this.room.memory.isBoostMode = newMode;
+
+    if (previousMode && !newMode) {
+      this.stopBoostMode();
+    }
+    if (newMode && !previousMode) {
+      this.setupBoostMode();
+    }
+  }
+
+  isBoostMode() {
+    return !!this.room.memory.isBoostMode;
+  }
+
+  setupBoostMode() {
+    console.log("Swithing to boost mode");
+    this.labGroups.forEach(group => this.returnLabToIdleState(group));
+    this.assignBoosts();
+  }
+
+  runAllBoostLabs() {
+    const labs = this.labs;
+    labs.forEach(lab => this.runSingleBoostLab(lab));
+  }
+
+  runSingleBoostLab(labMemory: LabMemory) {
+    var lab = Game.getObjectById(labMemory.id) as StructureLab;
+
+    if (lab.mineralAmount > 0 && lab.mineralType !== labMemory.boostResource) {
+      labMemory.state = "needs-emptying";
+    } else if (lab.mineralAmount < labMemory.needsAmount && labMemory.boostResource) {
+      labMemory.state = "waiting-for-resource";
+      labMemory.needsResource = labMemory.boostResource;
+    } else {
+      labMemory.state = "running";
+    }
+
+    if (lab.mineralAmount >= boostResourceNeeded && lab.mineralType === labMemory.boostResource) {
+      const adjascentCreeps = lab.pos.findInRange(FIND_MY_CREEPS, 1);
+      const adjascentCreepsWithRightBody = adjascentCreeps.find(
+        i => !!i.body.find(bodyPart => bodyPart.type === labMemory.boostBodyType && !bodyPart.boost)
+      );
+      if (adjascentCreepsWithRightBody) {
+        lab.boostCreep(adjascentCreepsWithRightBody);
+      }
+    }
+  }
+
+  assignBoosts() {
+    debugger;
+    const boostsForThisRoom = wantedBoosts[this.room.name];
+    if (boostsForThisRoom) {
+      const boosts = Object.keys(boostsForThisRoom)
+        .map(bodyPart => {
+          const resources = boostsForThisRoom[bodyPart];
+          const resource = resources.filter(i => this.assetsWithAllLabs[i] > boostResourceNeeded)[0];
+          return {
+            bodyPart: bodyPart as BodyPartConstant,
+            resource: resource
+          };
+        })
+        .filter(i => i.resource);
+
+      if (boosts.length === 0) {
+        return;
+      }
+
+      const labs = this.labs;
+      for (let labIndex in labs) {
+        const lab = labs[labIndex];
+        const boost = boosts[labIndex];
+        if (boost) {
+          lab.boostResource = boost.resource;
+          lab.needsResource = boost.resource;
+          lab.needsAmount = boostResourceNeeded * 10;
+          lab.boostBodyType = boost.bodyPart;
+        } else {
+          // this lab is not useful
+          lab.state = "needs-emptying";
+          lab.boostResource = undefined;
+          lab.needsResource = "energy";
+          lab.needsAmount = 0;
+          lab.boostBodyType = undefined;
+        }
+      }
+    }
+  }
+
+  stopBoostMode() {
+    console.log("Stopping to boost mode");
+    // shutdown all labs groups
+    this.labGroups.forEach(group => this.returnLabToIdleState(group));
   }
 
   setupLabGroups() {
@@ -168,11 +297,14 @@ export class Chemist {
     group.currentTarget = undefined;
     group.remainingAmountToProduce = 0;
     group.labResult.state = "needs-emptying";
+    group.labResult.boostResource = undefined;
     group.labResult.needsAmount = 0;
     group.labSource1.state = "needs-emptying";
     group.labSource1.needsAmount = 0;
+    group.labSource1.boostResource = undefined;
     group.labSource2.state = "needs-emptying";
     group.labSource2.needsAmount = 0;
+    group.labSource2.boostResource = undefined;
   }
 
   checkLabs() {
@@ -244,8 +376,20 @@ export class Chemist {
     group.lastActivity = Game.time;
   }
 
+  get idleEmptyLabs() {
+    return this.labs.filter(
+      i =>
+        i.state === "idle" ||
+        (i.state === "needs-emptying" && (Game.getObjectById(i.id) as StructureLab).mineralAmount === 0)
+    );
+  }
+
   get labGroups() {
     return this.room.memory.labGroups || [];
+  }
+
+  get labs() {
+    return _.sortBy(_.flatten(this.labGroups.map(i => [i.labResult, i.labSource1, i.labSource2])), i => i.id);
   }
 
   get runningLabGroups() {
@@ -268,6 +412,23 @@ export class Chemist {
         ...resultLabAssets,
         (i: any, j: any) => (i || 0) + (j || 0)
       ) as { [key: string]: number };
+      // console.log("All assets are ", JSON.stringify(allAssets));
+
+      return allAssets;
+    }
+  }
+
+  getAssetsWithAllLabs() {
+    if (!this.room.storage) {
+      return {};
+    } else {
+      // resultLabs should be counted as assets
+      const labs = this.labs.map(i => Game.getObjectById(i.id)).filter(i => i) as StructureLab[];
+      const labAssets = labs.filter(i => i.mineralAmount > 0).map(i => ({ [i.mineralType as any]: i.mineralAmount }));
+
+      const allAssets = _.merge({}, this.room.storage.store, ...labAssets, (i: any, j: any) => (i || 0) + (j || 0)) as {
+        [key: string]: number;
+      };
       // console.log("All assets are ", JSON.stringify(allAssets));
 
       return allAssets;

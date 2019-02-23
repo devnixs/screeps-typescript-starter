@@ -33,7 +33,7 @@ Creep.prototype.goTo = function(destination: RoomPosition | { pos: RoomPosition 
     return ERR_INVALID_TARGET;
   }
 
-  let forceIgnoreCreeps = false;
+  let forceNoIgnoreCreeps = false;
 
   const currentPos = { x: this.pos.x, y: this.pos.y };
   if (currentPos.x === creep.memory.lastPos.x && currentPos.y === creep.memory.lastPos.y) {
@@ -44,13 +44,13 @@ Creep.prototype.goTo = function(destination: RoomPosition | { pos: RoomPosition 
   creep.memory.lastPos = currentPos;
 
   if (creep.memory.noMovementTicksCount > 5) {
-    forceIgnoreCreeps = true;
+    forceNoIgnoreCreeps = true;
   }
 
   if (creep.room.name !== target.roomName) {
     return creep.moveTo(target, {
-      ignoreCreeps: true,
-      reusePath: defaultReusePath,
+      ignoreCreeps: true && !forceNoIgnoreCreeps,
+      reusePath: forceNoIgnoreCreeps ? 0 : defaultReusePath,
       visualizePathStyle: { stroke: stringToColor(creep.memory.role) },
       ...options
     });
@@ -58,15 +58,15 @@ Creep.prototype.goTo = function(destination: RoomPosition | { pos: RoomPosition 
     if (!creep.pos.inRangeTo(target.x, target.y, 4)) {
       // if we're far, ignore creeps
       return creep.moveTo(target, {
-        ignoreCreeps: true,
-        reusePath: defaultReusePath,
+        ignoreCreeps: true && !forceNoIgnoreCreeps,
+        reusePath: forceNoIgnoreCreeps ? 0 : defaultReusePath,
         visualizePathStyle: { stroke: stringToColor(creep.memory.role) },
         ...options
       });
     } else {
       return creep.moveTo(target, {
-        ignoreCreeps: forceIgnoreCreeps || false,
-        reusePath: defaultReusePath,
+        ignoreCreeps: false,
+        reusePath: forceNoIgnoreCreeps ? 0 : defaultReusePath,
         visualizePathStyle: { stroke: stringToColor(creep.memory.role) },
         ...options
       });

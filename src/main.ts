@@ -19,6 +19,7 @@ import { roleMiner } from "roles/miner";
 import { roleHealer } from "roles/healer";
 import { Chemist } from "chemist";
 import { roleTruck } from "roles/truck";
+import { roleDismantler } from "roles/dismantler";
 
 // profiler.enable();
 
@@ -53,6 +54,9 @@ export const loop = ErrorMapper.wrapLoop(() => {
         }
         if (memory.role == "builder") {
           roleBuilder.run(creep);
+        }
+        if (memory.role == "dismantler") {
+          roleDismantler.run(creep);
         }
         if (memory.role == "ranged") {
           roleRanged.run(creep);
