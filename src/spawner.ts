@@ -162,8 +162,10 @@ class Spawner {
         ...role.additionalMemory,
         homeRoom: spawn.room.name,
         role: role.role,
-        subRole: role.subRole
-      } as any
+        subRole: role.subRole,
+        lastPos: { x: spawn.pos.x, y: spawn.pos.y },
+        noMovementTicksCount: 0
+      } as CreepMemory
     });
 
     if (debug) {

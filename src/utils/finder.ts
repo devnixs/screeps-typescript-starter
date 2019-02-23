@@ -49,10 +49,17 @@ export function findRestSpot(creep: Creep) {
   const memory = (creep.memory as any) as { rest: IRestPosition };
 
   if (!memory.rest) {
-    const startPosition = { x: _.random(5, 44), y: _.random(5, 44) };
-    const emptySpot = findEmptySpotCloseTo(startPosition, creep.room);
-    if (emptySpot) {
-      memory.rest = { X: emptySpot.x, Y: emptySpot.y, roomName: creep.room.name };
+    const restFlag = Object.keys(Game.flags)
+      .filter(i => i.indexOf("rest_") === 0)
+      .map(i => Game.flags[i])[0];
+    if (restFlag) {
+      memory.rest = { X: restFlag.pos.x, Y: restFlag.pos.y, roomName: creep.room.name };
+    } else {
+      const startPosition = { x: _.random(5, 44), y: _.random(5, 44) };
+      const emptySpot = findEmptySpotCloseTo(startPosition, creep.room);
+      if (emptySpot) {
+        memory.rest = { X: emptySpot.x, Y: emptySpot.y, roomName: creep.room.name };
+      }
     }
   }
 

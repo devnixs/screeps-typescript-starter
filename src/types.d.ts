@@ -19,11 +19,12 @@ type roles =
 // memory extension samples
 interface CreepMemory {
   role: roles;
-  homeRoom?: string;
-  guardsNames?: string[];
+  homeRoom: string;
   subRole?: string;
   _travel?: any;
   _trav?: any;
+  lastPos: { x: number; y: number };
+  noMovementTicksCount: number;
 }
 
 interface RoomMemory {

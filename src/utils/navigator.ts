@@ -33,6 +33,20 @@ Creep.prototype.goTo = function(destination: RoomPosition | { pos: RoomPosition 
     return ERR_INVALID_TARGET;
   }
 
+  let forceIgnoreCreeps = false;
+
+  const currentPos = { x: this.pos.x, y: this.pos.y };
+  if (currentPos.x === creep.memory.lastPos.x && currentPos.y === creep.memory.lastPos.y) {
+    creep.memory.noMovementTicksCount++;
+  } else {
+    creep.memory.noMovementTicksCount = 0;
+  }
+  creep.memory.lastPos = currentPos;
+
+  if (creep.memory.noMovementTicksCount > 5) {
+    forceIgnoreCreeps = true;
+  }
+
   if (creep.room.name !== target.roomName) {
     return creep.moveTo(target, {
       ignoreCreeps: true,
@@ -41,7 +55,7 @@ Creep.prototype.goTo = function(destination: RoomPosition | { pos: RoomPosition 
       ...options
     });
   } else {
-    if (!creep.pos.inRangeTo(target.x, target.y, 6)) {
+    if (!creep.pos.inRangeTo(target.x, target.y, 4)) {
       // if we're far, ignore creeps
       return creep.moveTo(target, {
         ignoreCreeps: true,
@@ -51,7 +65,7 @@ Creep.prototype.goTo = function(destination: RoomPosition | { pos: RoomPosition 
       });
     } else {
       return creep.moveTo(target, {
-        ignoreCreeps: false,
+        ignoreCreeps: forceIgnoreCreeps || false,
         reusePath: defaultReusePath,
         visualizePathStyle: { stroke: stringToColor(creep.memory.role) },
         ...options

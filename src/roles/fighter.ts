@@ -30,10 +30,6 @@ class RoleFighter implements IRole {
 
     const memory: IFighterMemory = creep.memory as any;
 
-    if (!memory.assignedExplorerName && Game.time % 30 === 0) {
-      this.lookForSomeoneToProtect(creep, memory);
-    }
-
     if (hostile) {
       if (creep.attack(hostile) == ERR_NOT_IN_RANGE) {
         creep.goTo(hostile);
@@ -85,19 +81,6 @@ class RoleFighter implements IRole {
       if (restSpot) {
         creep.goTo(restSpot);
       }
-    }
-  }
-
-  lookForSomeoneToProtect(creep: Creep, memory: IFighterMemory) {
-    const allCreeps: Creep[] = _.values(Game.creeps);
-    const explorerWithNoGuards = allCreeps.find(
-      i => i.memory.role === "explorer" && (!i.memory.guardsNames || !i.memory.guardsNames.length)
-    );
-    if (explorerWithNoGuards) {
-      explorerWithNoGuards.memory.guardsNames = explorerWithNoGuards.memory.guardsNames || [];
-      explorerWithNoGuards.memory.guardsNames.push(creep.name);
-
-      memory.assignedExplorerName = explorerWithNoGuards.name;
     }
   }
 }

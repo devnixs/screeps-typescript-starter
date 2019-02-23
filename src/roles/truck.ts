@@ -13,6 +13,8 @@ interface ITruckMemory extends CreepMemory {
   isDepositing?: boolean;
   idle: boolean;
   lastJobRefreshTime: number | undefined;
+
+  isDepositingEnergy: boolean;
 }
 
 class RoleTruck implements IRole {
@@ -32,34 +34,36 @@ class RoleTruck implements IRole {
         target = Game.getObjectById(memory.targetDestination) as AnyStructure;
         if (!target) {
           this.restartJob(creep);
-        }
-        creep.goTo(target);
-        if (totalCargoContent === 0 || creep.transfer(target, memory.jobResource) === OK) {
-          memory.isDepositing = false;
+        } else {
+          creep.goTo(target);
+          if (totalCargoContent === 0 || creep.transfer(target, memory.jobResource) === OK) {
+            memory.isDepositing = false;
 
-          // job is complete.
-          this.restartJob(creep);
+            // job is complete.
+            this.restartJob(creep);
+          }
         }
       } else {
         target = Game.getObjectById(memory.targetSource) as AnyStructure;
         if (!target) {
           this.restartJob(creep);
-        }
-        creep.goTo(target);
+        } else {
+          creep.goTo(target);
 
-        const currentlyInStock = creep.room.storage.store[memory.jobResource] || 0;
+          const currentlyInStock = creep.room.storage.store[memory.jobResource] || 0;
 
-        const withdrawResult = creep.withdraw(
-          target,
-          memory.jobResource,
-          Math.min(memory.jobNeededAmount, currentlyInStock)
-        );
-        if (withdrawResult === OK) {
-          memory.isDepositing = true;
-        } else if (creep.pos.getRangeTo(target.pos.x, target.pos.y) <= 1) {
-          // if it fails but we're in range, abort the job.
+          const withdrawResult = creep.withdraw(
+            target,
+            memory.jobResource,
+            Math.min(memory.jobNeededAmount, currentlyInStock)
+          );
+          if (withdrawResult === OK) {
+            memory.isDepositing = true;
+          } else if (creep.pos.getRangeTo(target.pos.x, target.pos.y) <= 1) {
+            // if it fails but we're in range, abort the job.
 
-          this.restartJob(creep);
+            this.restartJob(creep);
+          }
         }
       }
     } else {
@@ -70,11 +74,55 @@ class RoleTruck implements IRole {
       }
 
       if (memory.idle) {
-        const spot = findRestSpot(creep);
-        if (spot) {
-          creep.goTo(spot);
+        if (this.runEnergyTruck(creep) !== OK) {
+          this.goToRestSpot(creep);
         }
       }
+    }
+  }
+
+  goToRestSpot(creep: Creep) {
+    var restSpot = findRestSpot(creep);
+    if (restSpot) {
+      creep.goTo(restSpot);
+      return OK;
+    } else {
+      return -1;
+    }
+  }
+
+  runEnergyTruck(creep: Creep) {
+    const memory: ITruckMemory = creep.memory as any;
+    const totalCargoContent = _.sum(creep.carry);
+    if (totalCargoContent > creep.carry.energy) {
+      // has other than energy
+      sourceManager.storeMinerals(creep);
+      return OK;
+    }
+
+    const getStructureThatNeedsEnergy = sourceManager.getStructureThatNeedsEnergy(creep);
+    if (!getStructureThatNeedsEnergy) {
+      if (creep.carry.energy > 0) {
+        // empty energy first
+        return sourceManager.storeEnergy(creep);
+      } else {
+        // No need to do anything
+        return -1;
+      }
+    }
+
+    if (!memory.isDepositingEnergy && creep.carry.energy === creep.carryCapacity) {
+      memory.isDepositingEnergy = true;
+    }
+
+    if (memory.isDepositingEnergy && creep.carry.energy === 0) {
+      memory.isDepositingEnergy = false;
+    }
+
+    if (memory.isDepositingEnergy) {
+      return sourceManager.storeEnergy(creep);
+    } else {
+      return sourceManager.getEnergy(creep);
     }
   }
 
@@ -125,7 +173,7 @@ class RoleTruck implements IRole {
 
     const terminal = creep.room.terminal;
     if (terminal) {
-      const resources = _.uniq(Object.keys(wantsToSell).concat(Object.keys(terminal.store)));
+      const resources = _.uniq(Object.keys(wantsToSellForThisRoom).concat(Object.keys(terminal.store)));
 
       terminalOversupply = resources.filter(
         i => this.getResource(wantsToSellForThisRoom, i) < this.getResource(terminal.store, i)
@@ -137,6 +185,8 @@ class RoleTruck implements IRole {
       )[0];
     }
 
+    var droppedResource = creep.room.find(FIND_DROPPED_RESOURCES)[0];
+
     var labThatNeedsEmptying = labs.filter(i => i.memory.state === "needs-emptying" && i.obj.mineralAmount > 0)[0];
 
     var jobAvailable = labThatNeedsEmptying || labThatNeedsRefills || terminalOversupply || terminalUndersupply;
@@ -147,6 +197,13 @@ class RoleTruck implements IRole {
       memory.jobResource = Object.keys(creep.carry).filter((i: any) => (creep.carry as any)[i] > 0)[0] as any;
       memory.jobNeededAmount = creep.carry[memory.jobResource] as any;
       memory.isDepositing = true;
+      memory.idle = false;
+    } else if (droppedResource) {
+      memory.targetSource = droppedResource.id;
+      memory.targetDestination = storage.id;
+      memory.jobResource = droppedResource.resourceType;
+      memory.jobNeededAmount = droppedResource.amount;
+      memory.isDepositing = false;
       memory.idle = false;
     } else if (labThatNeedsRefills) {
       const lab = labThatNeedsRefills;

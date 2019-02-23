@@ -41,7 +41,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
   if (spawn.room.storage) {
     const availableEnergy = spawn.room.storage.store.energy;
     if (availableEnergy > 300000) {
-      maxUpgraderCount = 5;
+      maxUpgraderCount = 6;
     } else if (availableEnergy > 200000) {
       maxUpgraderCount = 4;
     } else if (availableEnergy > 150000) {
@@ -159,7 +159,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
         targetRoomName: "E27N48",
         targetRoomX: 29,
         targetRoomY: 7
-      } as ILongDistanceHarvesterMemory
+      } as Partial<ILongDistanceHarvesterMemory>
     },
     {
       percentage: 1,
@@ -176,7 +176,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
         targetRoomName: "E26N47",
         targetRoomX: 26,
         targetRoomY: 31
-      } as ILongDistanceHarvesterMemory
+      } as Partial<ILongDistanceHarvesterMemory>
     },
     {
       percentage: 1,
@@ -193,7 +193,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
         targetRoomName: "E26N48",
         targetRoomX: 32,
         targetRoomY: 46
-      } as ILongDistanceHarvesterMemory
+      } as Partial<ILongDistanceHarvesterMemory>
     },
     {
       percentage: 1,
@@ -210,7 +210,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
         targetRoomName: "E24N48",
         targetRoomX: 24,
         targetRoomY: 17
-      } as ILongDistanceHarvesterMemory
+      } as Partial<ILongDistanceHarvesterMemory>
     },
     {
       percentage: 1,
@@ -227,7 +227,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
         targetRoomName: "E24N48",
         targetRoomX: 8,
         targetRoomY: 7
-      } as ILongDistanceHarvesterMemory
+      } as Partial<ILongDistanceHarvesterMemory>
     },
     {
       percentage: 1,

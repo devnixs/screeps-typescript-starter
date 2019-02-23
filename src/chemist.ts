@@ -5,7 +5,7 @@ export const wantedStockAmounts: { [key: string]: number } = {
   UH: 0, // (+100 % attack)
   KO: 0, // (+100 % ranged attack)
   XGHO2: 0, // For toughness
-  XLHO2: 0, // For healing
+  XLHO2: 1000, // For healing
   XZHO2: 0, // For speed
   XZH2O: 0, // For dismantling
   XKHO2: 0, // For ranged attackers
@@ -299,10 +299,15 @@ export class Chemist {
   getReaction(mineral: ResourceConstant, amount: number): Reaction {
     const [source1, source2] = this.getIngredients(mineral);
 
+    const availableAmount1 = this.getAssetStock(source1);
+    const availableAmount2 = this.getAssetStock(source2);
+
+    var maximumAmount = _.min([availableAmount1, availableAmount2, Chemist.settings.maxBatchSize]);
+
     return {
       source1,
       source2,
-      amount: minMax(amount, Chemist.settings.minBatchSize, Chemist.settings.maxBatchSize),
+      amount: minMax(amount, Chemist.settings.minBatchSize, maximumAmount),
       target: mineral
     };
   }

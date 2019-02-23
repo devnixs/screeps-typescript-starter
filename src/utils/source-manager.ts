@@ -140,7 +140,7 @@ class SourceManager {
     let targetStructure: AnyStructure | undefined = undefined;
 
     if (this.pickupDroppedEnergy(creep) === OK) {
-      return;
+      return OK;
     }
 
     targetStructure = creep.room.storage && creep.room.storage.store.energy > 0 ? creep.room.storage : undefined;
@@ -164,11 +164,15 @@ class SourceManager {
         creep.goTo(targetStructure);
         creep.withdraw(targetStructure, RESOURCE_ENERGY);
       }
+      return OK;
+    } else if (creep.getActiveBodyparts(WORK) > 0) {
+      return this.harvestEnergyFromSource(creep);
     } else {
-      this.harvestEnergyFromSource(creep);
+      return -1;
     }
   }
-  storeEnergy(creep: Creep) {
+
+  getStructureThatNeedsEnergy(creep: Creep) {
     let targetStructure: AnyStructure | undefined = findAndCache<FIND_STRUCTURES>(
       creep,
       "deposit_structure_id",
@@ -188,12 +192,11 @@ class SourceManager {
         }
       }
     ) as any;
+    return targetStructure;
+  }
 
-    if (!targetStructure && creep.room.terminal) {
-      if (wantsToSell.energy && wantsToSell.energy > creep.room.terminal.store.energy) {
-        targetStructure = creep.room.terminal;
-      }
-    }
+  storeEnergy(creep: Creep) {
+    let targetStructure = this.getStructureThatNeedsEnergy(creep);
 
     if (!targetStructure) {
       targetStructure =
@@ -227,6 +230,7 @@ class SourceManager {
         creep.goTo(restSpot);
       }
     }
+    return OK;
   }
   getCurrentCarryingMineral(store: StoreDefinition) {
     var carrying = Object.keys(store as any).filter(i => i !== "energy" && store && (store as any)[i] > 0)[0] as
@@ -245,14 +249,6 @@ class SourceManager {
 
     if (!carrying) {
       return;
-    }
-
-    if (!targetStructure && creep.room.terminal && wantsToSell[carrying]) {
-      const wantsToSellOfThisResource = wantsToSell[carrying] || 0;
-      const storedOfThisResource = creep.room.terminal.store[carrying] || 0;
-      if (storedOfThisResource < wantsToSellOfThisResource) {
-        targetStructure = creep.room.terminal;
-      }
     }
 
     if (!targetStructure) {
