@@ -1,5 +1,10 @@
 import { wantedBoosts, boostResourceNeeded } from "../chemist";
 
+// limit boosts to N parts
+const boostsLimitations: { [key: string]: number } = {
+  [TOUGH]: 2
+};
+
 export function boostCreep(creep: Creep) {
   debugger;
   if (creep.room.name !== creep.memory.homeRoom) {
@@ -7,6 +12,13 @@ export function boostCreep(creep: Creep) {
   }
   const bodyPartsThatNeedBoosts = Object.keys(wantedBoosts[creep.room.name] || {});
   const nonBoostedBodyPartsThatNeedBoosts = creep.body
+    .filter((i, index) => {
+      if (boostsLimitations[i.type]) {
+        return index <= boostsLimitations[i.type];
+      } else {
+        return true;
+      }
+    })
     .filter(i => !i.boost)
     .map(i => i.type)
     .filter(i => bodyPartsThatNeedBoosts.indexOf(i) >= 0);

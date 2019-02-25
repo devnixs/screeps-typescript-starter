@@ -20,6 +20,7 @@ import { roleHealer } from "roles/healer";
 import { Chemist } from "chemist";
 import { roleTruck } from "roles/truck";
 import { roleDismantler } from "roles/dismantler";
+import { LinkManager } from "utils/link-manager";
 
 // profiler.enable();
 
@@ -39,6 +40,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
     }
     spawner.run();
     Chemist.runForAllRooms();
+    LinkManager.runForAllRooms();
 
     let error: any = null;
 
@@ -115,6 +117,15 @@ export const loop = ErrorMapper.wrapLoop(() => {
 
     if (Game.cpu.getUsed() > 50) {
       console.log("Used a lot of cpu : ", Game.cpu.getUsed());
+    }
+
+    // shutdown attack
+    if (Game.time >= 4536722 && Game.flags["boostmode_1"]) {
+      Game.flags["boostmode_1"].remove();
+    }
+
+    if (Game.time >= 4536722 + 3000 && Game.flags["dismantler_attack"]) {
+      Game.flags["dismantler_attack"].remove();
     }
 
     if (error) {

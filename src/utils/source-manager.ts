@@ -1,4 +1,5 @@
 import { findAndCache, findRestSpot } from "./finder";
+import { LinkManager } from "./link-manager";
 
 class SourceManager {
   harvestEnergyFromSource(creep: Creep) {
@@ -142,7 +143,18 @@ class SourceManager {
       return OK;
     }
 
-    targetStructure = creep.room.storage && creep.room.storage.store.energy > 0 ? creep.room.storage : undefined;
+    const linkToWithdrawEnergy = LinkManager.getLinksToWithdrawEnergy(creep.pos)[0];
+    if (
+      linkToWithdrawEnergy &&
+      linkToWithdrawEnergy.link &&
+      linkToWithdrawEnergy.link.energy >= creep.carryCapacity - creep.carry.energy
+    ) {
+      targetStructure = linkToWithdrawEnergy.link;
+    }
+
+    if (!targetStructure) {
+      targetStructure = creep.room.storage && creep.room.storage.store.energy > 0 ? creep.room.storage : undefined;
+    }
 
     if (!targetStructure) {
       targetStructure = findAndCache<FIND_STRUCTURES>(
@@ -191,11 +203,17 @@ class SourceManager {
         }
       }
     ) as any;
+
     return targetStructure;
   }
 
   storeEnergy(creep: Creep) {
     let targetStructure = this.getStructureThatNeedsEnergy(creep);
+
+    if (!targetStructure) {
+      const link = LinkManager.getLinksThatCanReceiveEnergy(creep.pos)[0];
+      targetStructure = link && link.link;
+    }
 
     if (!targetStructure) {
       targetStructure =

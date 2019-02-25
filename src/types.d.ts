@@ -36,6 +36,15 @@ interface RoomMemory {
   labGroups: LabGroup[];
 
   isBoostMode: boolean;
+
+  links: LinkMemory[];
+}
+
+interface LinkMemory {
+  id: string;
+  type: "input" | "input-output" | "output";
+  state: "idle" | "needs-emptying" | "needs-refill";
+  needsAmount?: number;
 }
 
 interface LabGroup {

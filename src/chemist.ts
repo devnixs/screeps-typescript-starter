@@ -6,7 +6,7 @@ export const wantedStockAmounts: { [key: string]: number } = {
   UH: 0, // (+100 % attack)
   KO: 0, // (+100 % ranged attack)
   XGHO2: 0, // For toughness
-  XLHO2: 2000, // For healing
+  XLHO2: 9000, // For healing
   XZHO2: 0, // For speed
   XZH2O: 0, // For dismantling
   XKHO2: 0, // For ranged attackers
@@ -17,7 +17,7 @@ export const wantedStockAmounts: { [key: string]: number } = {
   XKH2O: 0, // For carry
   XGH2O: 0, // For upgraders
   [RESOURCE_LEMERGIUM_OXIDE]: 1000,
-  [RESOURCE_GHODIUM_OXIDE]: 1000,
+  [RESOURCE_GHODIUM_OXIDE]: 3000,
   [RESOURCE_GHODIUM]: 1000,
   [RESOURCE_HYDROXIDE]: 1000,
   [RESOURCE_ZYNTHIUM_KEANITE]: 1000,

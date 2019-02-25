@@ -24,10 +24,10 @@ class RoleDismantler implements IRole {
     const attackFlag = Game.flags["dismantler_attack"];
     const healersReady = creep.pos.findInRange(FIND_MY_CREEPS, 4, { filter: i => i.memory.role === "healer" });
 
-    if (attackFlag && healersReady.length >= requiredHealersForAnAttack) {
+    if (attackFlag && (healersReady.length >= requiredHealersForAnAttack || this.isCloseToExit(creep))) {
       if (attackFlag.room && attackFlag.room.name === creep.room.name) {
         // we need at least two healers close
-        const healersClose = creep.pos.findInRange(FIND_MY_CREEPS, 1, { filter: i => i.memory.role === "healer" });
+        const healersClose = creep.pos.findInRange(FIND_MY_CREEPS, 2, { filter: i => i.memory.role === "healer" });
 
         const targetStructures = creep.room.lookForAt(LOOK_STRUCTURES, attackFlag);
         let targetStructure = targetStructures[0];
@@ -39,6 +39,14 @@ class RoleDismantler implements IRole {
         targetStructure =
           targetStructure ||
           creep.pos.findClosestByRange(FIND_HOSTILE_STRUCTURES, { filter: i => i.structureType === "spawn" });
+
+        targetStructure =
+          targetStructure ||
+          creep.pos.findClosestByRange(FIND_HOSTILE_CONSTRUCTION_SITES, { filter: i => i.structureType === "tower" });
+
+        targetStructure =
+          targetStructure ||
+          creep.pos.findClosestByRange(FIND_HOSTILE_STRUCTURES, { filter: i => i.structureType !== "rampart" });
 
         if (targetStructure) {
           if (creep.dismantle(targetStructure) === ERR_NOT_IN_RANGE) {

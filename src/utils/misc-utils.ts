@@ -8,6 +8,10 @@ export function color(str: string, color: string): string {
   return `<font color='${color}'>${str}</font>`;
 }
 
+export function roundTo(n: number, v: number) {
+  return n - (n % v);
+}
+
 // Correct generalization of the modulo operator to negative numbers
 export function mod(n: number, m: number): number {
   return ((n % m) + m) % m;

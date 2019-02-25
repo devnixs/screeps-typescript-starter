@@ -188,7 +188,20 @@ class RoleTruck implements IRole {
 
     var labThatNeedsEmptying = labs.filter(i => i.memory.state === "needs-emptying" && i.obj.mineralAmount > 0)[0];
 
-    var jobAvailable = labThatNeedsEmptying || labThatNeedsRefills || terminalOversupply || terminalUndersupply;
+    var linkThatNeedsEmptying =
+      creep.room.memory.links && creep.room.memory.links.find(i => i.state == "needs-emptying");
+
+    var linkThatNeedsRefill =
+      creep.room.memory.links &&
+      creep.room.memory.links.find(i => i.state == "needs-refill" && i.type === "input-output");
+
+    var jobAvailable =
+      labThatNeedsEmptying ||
+      labThatNeedsRefills ||
+      terminalOversupply ||
+      terminalUndersupply ||
+      linkThatNeedsEmptying ||
+      linkThatNeedsRefill;
 
     if (totalCargoContent > 0 && jobAvailable) {
       // if we carry something, deposit it before starting a new job.
@@ -238,6 +251,22 @@ class RoleTruck implements IRole {
         this.getResource(wantsToSellForThisRoom, terminalUndersupply) -
         this.getResource(terminal.store, terminalUndersupply);
       memory.jobNeededAmount = Math.min(underSupply, creep.carryCapacity);
+      memory.isDepositing = false;
+      memory.idle = false;
+    } else if (linkThatNeedsEmptying && linkThatNeedsEmptying.needsAmount !== undefined) {
+      memory.targetSource = linkThatNeedsEmptying.id;
+      memory.targetDestination = storage.id;
+      memory.jobResource = "energy";
+      const overSupply = linkThatNeedsEmptying.needsAmount;
+      memory.jobNeededAmount = Math.min(overSupply, creep.carryCapacity);
+      memory.isDepositing = false;
+      memory.idle = false;
+    } else if (linkThatNeedsRefill && linkThatNeedsRefill.needsAmount !== undefined) {
+      memory.targetSource = storage.id;
+      memory.targetDestination = linkThatNeedsRefill.id;
+      memory.jobResource = "energy";
+      const overSupply = linkThatNeedsRefill.needsAmount;
+      memory.jobNeededAmount = Math.min(overSupply, creep.carryCapacity);
       memory.isDepositing = false;
       memory.idle = false;
     } else {

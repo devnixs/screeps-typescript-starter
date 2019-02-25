@@ -1,6 +1,6 @@
 export const defaultReusePath = 15;
 
-export const requiredHealersForAnAttack = 1;
+export const requiredHealersForAnAttack = 2;
 export const requiredFightersForAnAttack = 1;
 export const requiredDismantlersForAnAttack = 1;
 

@@ -37,6 +37,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
   const extractors = spawn.room.find(FIND_MY_STRUCTURES, { filter: i => i.structureType === "extractor" });
   const mineralWithReserve = spawn.room.find(FIND_MINERALS, { filter: i => i.mineralAmount > 0 });
   const labs = spawn.room.find(FIND_MY_STRUCTURES, { filter: i => i.structureType === "lab" });
+  const links = spawn.room.find(FIND_MY_STRUCTURES, { filter: i => i.structureType === "link" });
 
   let maxUpgraderCount: number;
   if (spawn.room.storage) {
@@ -119,12 +120,12 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     {
       percentage: 2,
       role: "truck",
-      maxCount: labs.length ? 1 : 0,
+      maxCount: labs.length || links.length ? 1 : 0,
       exactBody: [MOVE, CARRY, CARRY],
       capMaxEnergy: 300
     },
     {
-      percentage: 10,
+      percentage: 20,
       role: "dismantler",
       maxCount: Game.flags["dismantler_attack"] ? requiredDismantlersForAnAttack : 0,
       countAllRooms: true,
@@ -135,7 +136,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       additionalMemory: {} as IDismantlerMemory
     },
     {
-      percentage: 10,
+      percentage: 20,
       role: "healer",
       maxCount: Game.flags["fighter_attack"] || Game.flags["dismantler_attack"] ? requiredHealersForAnAttack : 0,
       bodyTemplate: [HEAL, MOVE, HEAL, MOVE, HEAL, MOVE, HEAL, MOVE],
@@ -184,6 +185,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       onlyRoom: "E27N47",
       bodyTemplate: [MOVE, WORK, CARRY],
       subRole: "room2",
+      capMaxEnergy: 1800,
       additionalMemory: {
         homeSpawnPosition: spawn.pos,
         home: spawn.pos.roomName,
@@ -201,6 +203,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       bodyTemplate: [MOVE, WORK, CARRY],
       subRole: "room3",
       onlyRoom: "E27N47",
+      capMaxEnergy: 1800,
       additionalMemory: {
         homeSpawnPosition: spawn.pos,
         home: spawn.pos.roomName,
@@ -244,6 +247,40 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
         targetRoomY: 7
       } as Partial<ILongDistanceHarvesterMemory>
     },
+    /*     {
+      percentage: 1,
+      role: "long-distance-harvester",
+      maxCount: 2,
+      countAllRooms: true,
+      onlyRoom: "E27N47",
+      bodyTemplate: [MOVE, WORK, CARRY],
+      subRole: "room6",
+      additionalMemory: {
+        homeSpawnPosition: spawn.pos,
+        home: spawn.pos.roomName,
+        role: "long-distance-harvester",
+        targetRoomName: "E28N47",
+        targetRoomX: 13,
+        targetRoomY: 27
+      } as Partial<ILongDistanceHarvesterMemory>
+    },
+    {
+      percentage: 1,
+      role: "long-distance-harvester",
+      maxCount: 2,
+      countAllRooms: true,
+      onlyRoom: "E27N47",
+      bodyTemplate: [MOVE, WORK, CARRY],
+      subRole: "room7",
+      additionalMemory: {
+        homeSpawnPosition: spawn.pos,
+        home: spawn.pos.roomName,
+        role: "long-distance-harvester",
+        targetRoomName: "E28N47",
+        targetRoomX: 35,
+        targetRoomY: 20
+      } as Partial<ILongDistanceHarvesterMemory>
+    }, */
     {
       percentage: 1,
       role: "upgrader",

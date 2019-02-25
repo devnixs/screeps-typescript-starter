@@ -16,6 +16,7 @@ class RoleHealer implements IRole {
 
     const attackFlag = Game.flags["fighter_attack"] || Game.flags["dismantler_attack"];
     if (attackFlag && attackFlag.room && attackFlag.room.name === creep.room.name) {
+      // console.log("Healer: is in attack room");
       // we are in the right room
       const closeFigther = creep.pos.findClosestByRange(FIND_MY_CREEPS, {
         filter: i => i.memory.role === "fighter" || i.memory.role === "dismantler"
@@ -27,6 +28,7 @@ class RoleHealer implements IRole {
       const healTarget = damagedCreep || closeFigther;
 
       if (healTarget) {
+        // console.log("Healer: has heal target");
         if (healTarget.pos.getRangeTo(creep) <= 1) {
           creep.heal(healTarget);
         } else if (healTarget.pos.getRangeTo(creep) <= 3) {
@@ -51,7 +53,9 @@ class RoleHealer implements IRole {
         creep.goTo(healTarget);
       }
     } else {
+      // console.log("Healer: 2");
       if (creep.room.name !== creep.memory.homeRoom) {
+        // console.log("Healer: going home");
         this.goHome(creep);
       }
 
@@ -63,6 +67,7 @@ class RoleHealer implements IRole {
         restSpot = findRestSpot(creep);
       }
       if (restSpot) {
+        // console.log("Healer:going to rest spot : ", JSON.stringify(restSpot));
         creep.goTo(restSpot);
       }
     }
