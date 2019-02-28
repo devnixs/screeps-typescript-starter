@@ -119,6 +119,15 @@ export const loop = ErrorMapper.wrapLoop(() => {
       console.log("Used a lot of cpu : ", Game.cpu.getUsed());
     }
 
+    /*     if (Game.time % 37 === 0) {
+      Memory.cpuUsages.push(Game.cpu.getUsed());
+      if (Memory.cpuUsages.length > 20) {
+        Memory.cpuUsages.shift();
+      }
+      console.log("Average CPU : ", _.sum(Memory.cpuUsages) / Memory.cpuUsages.length);
+    }
+ */
+    /*
     // shutdown attack
     if (Game.time >= 4536722 && Game.flags["boostmode_1"]) {
       Game.flags["boostmode_1"].remove();
@@ -126,7 +135,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
 
     if (Game.time >= 4536722 + 3000 && Game.flags["dismantler_attack"]) {
       Game.flags["dismantler_attack"].remove();
-    }
+    } */
 
     if (error) {
       throw error;

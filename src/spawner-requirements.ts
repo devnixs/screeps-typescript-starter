@@ -38,6 +38,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
   const mineralWithReserve = spawn.room.find(FIND_MINERALS, { filter: i => i.mineralAmount > 0 });
   const labs = spawn.room.find(FIND_MY_STRUCTURES, { filter: i => i.structureType === "lab" });
   const links = spawn.room.find(FIND_MY_STRUCTURES, { filter: i => i.structureType === "link" });
+  const constructionSites = spawn.room.find(FIND_MY_CONSTRUCTION_SITES);
 
   let maxUpgraderCount: number;
   if (spawn.room.storage) {
@@ -100,22 +101,23 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     {
       percentage: 20,
       role: "harvester",
-      maxCount: maxEnergyInRoom > 1400 ? 2 : 3,
+      maxCount: maxEnergyInRoom > 1400 ? 3 : 3,
       bodyTemplate: [MOVE, WORK, CARRY],
       capMaxEnergy: 1800
     },
     {
       percentage: 2,
       role: "builder",
-      maxCount: 1,
+      maxCount: constructionSites.length ? 1 : 0,
       bodyTemplate: [MOVE, WORK, CARRY],
       capMaxEnergy: 1800
     },
     {
       percentage: 2,
       role: "reparator",
-      maxCount: towers.length ? 0 : 1, // handled by towers
-      exactBody: [MOVE, WORK, CARRY]
+      maxCount: 1, // handled by towers
+      bodyTemplate: [MOVE, WORK, CARRY],
+      capMaxEnergy: 800
     },
     {
       percentage: 2,
@@ -221,6 +223,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       bodyTemplate: [MOVE, WORK, CARRY],
       subRole: "room4",
       onlyRoom: "E25N48",
+      capMaxEnergy: 1200,
       additionalMemory: {
         homeSpawnPosition: spawn.pos,
         home: spawn.pos.roomName,
@@ -238,6 +241,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       bodyTemplate: [MOVE, WORK, CARRY],
       subRole: "room5",
       onlyRoom: "E25N48",
+      capMaxEnergy: 1200,
       additionalMemory: {
         homeSpawnPosition: spawn.pos,
         home: spawn.pos.roomName,

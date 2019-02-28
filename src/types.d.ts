@@ -76,6 +76,8 @@ interface Memory {
   attackSquad: string[] | undefined;
   lastBucketQuantity: number | undefined;
   lastBucketRefillTime: number | undefined;
+
+  cpuUsages: number[];
 }
 
 // `global` extension samples

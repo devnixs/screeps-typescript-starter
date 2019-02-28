@@ -123,8 +123,9 @@ class RoleTower {
   }
 
   private getDamagedStructureInRoom(tower: StructureTower): AnyStructure | null {
+    // only repair really damaged stuff
     var damagedOther = tower.pos.findClosestByRange(FIND_MY_STRUCTURES, {
-      filter: structure => structure.hits < structure.hitsMax
+      filter: structure => structure.hits < structure.hitsMax / 2
     });
     if (damagedOther) {
       return damagedOther;
@@ -132,7 +133,7 @@ class RoleTower {
 
     var damagedRoads = tower.pos.findClosestByRange(FIND_STRUCTURES, {
       filter: structure =>
-        structure.hits < structure.hitsMax &&
+        structure.hits < structure.hitsMax / 2 &&
         (structure.structureType == STRUCTURE_ROAD || structure.structureType == STRUCTURE_CONTAINER)
     });
     return damagedRoads;

@@ -51,11 +51,17 @@ class RoleTruck implements IRole {
 
           const currentlyInStock = creep.room.storage.store[memory.jobResource] || 0;
 
-          const withdrawResult = creep.withdraw(
+          let withdrawResult = creep.withdraw(
             target,
             memory.jobResource,
             Math.min(memory.jobNeededAmount, currentlyInStock)
           );
+
+          if (withdrawResult === ERR_INVALID_TARGET) {
+            // maybe it's a dropped resource
+            withdrawResult = creep.pickup(target as any);
+          }
+
           if (withdrawResult === OK) {
             memory.isDepositing = true;
           } else if (creep.pos.getRangeTo(target.pos.x, target.pos.y) <= 1) {
@@ -214,7 +220,7 @@ class RoleTruck implements IRole {
       memory.targetSource = droppedResource.id;
       memory.targetDestination = storage.id;
       memory.jobResource = droppedResource.resourceType;
-      memory.jobNeededAmount = droppedResource.amount;
+      memory.jobNeededAmount = Math.min(droppedResource.amount, creep.carryCapacity);
       memory.isDepositing = false;
       memory.idle = false;
     } else if (labThatNeedsRefills) {

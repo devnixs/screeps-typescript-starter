@@ -83,6 +83,27 @@ export class LinkManager {
     return inputLinks;
   }
 
+  static getInputOutputLinkThatCanReceiveEnergy(pos: RoomPosition) {
+    const linkMemories = Game.rooms[pos.roomName].memory.links || [];
+    const inputLinks = linkMemories
+      .filter(i => i.state === "needs-refill" && i.type === "input-output")
+      .map(i => ({ link: Game.getObjectById(i.id) as StructureLink, amount: i.needsAmount, type: i.type }))
+      .filter(i => i.link && i.link.energy < i.link.energyCapacity);
+
+    return inputLinks[0];
+  }
+
+  static getInputLinkThatCanReceiveEnergy(pos: RoomPosition) {
+    const linkMemories = Game.rooms[pos.roomName].memory.links || [];
+    const inputLinks = linkMemories
+      .filter(i => i.state === "needs-refill" && i.type === "input")
+      .map(i => ({ link: Game.getObjectById(i.id) as StructureLink, amount: i.needsAmount, type: i.type }))
+      .filter(i => i.link && i.link.energy < i.link.energyCapacity)
+      .filter(i => i.link.pos.inRangeTo(pos.x, pos.y, 3));
+
+    return inputLinks[0];
+  }
+
   static getLinksToWithdrawEnergy(pos: RoomPosition) {
     const linkMemories = Game.rooms[pos.roomName].memory.links || [];
     const inputLinks = linkMemories

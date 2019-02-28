@@ -37,7 +37,8 @@ class SourceManager {
   }
   mineMineral(creep: Creep) {
     if (this.pickupDroppedMineral(creep) === OK) {
-      return;
+      console.log("miner is picking up dropped minerals");
+      return OK;
     }
 
     const targetMineralDeposit = findAndCache<FIND_MINERALS>(
@@ -53,7 +54,13 @@ class SourceManager {
     );
 
     if (!targetMineralDeposit) {
+      console.log("Found no minerals to mine");
       return -1;
+    }
+
+    if (creep.carry.energy > 0) {
+      this.storeEnergy(creep);
+      return OK;
     }
 
     if (creep.harvest(targetMineralDeposit) === ERR_NOT_IN_RANGE) {
@@ -107,13 +114,13 @@ class SourceManager {
   }
 
   pickupDroppedMineral(creep: Creep) {
-    const droppedEnergy = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES, {
+    const droppedResource = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES, {
       filter: i => i.resourceType != RESOURCE_ENERGY
     });
-    if (droppedEnergy) {
-      if (creep.pickup(droppedEnergy) === ERR_NOT_IN_RANGE) {
-        creep.goTo(droppedEnergy);
-        creep.pickup(droppedEnergy);
+    if (droppedResource) {
+      if (creep.pickup(droppedResource) === ERR_NOT_IN_RANGE) {
+        creep.goTo(droppedResource);
+        creep.pickup(droppedResource);
       }
       return OK;
     }
@@ -123,9 +130,12 @@ class SourceManager {
     });
 
     if (tombstone) {
+      console.log(3);
       const element = this.getCurrentCarryingMineral(tombstone.store);
       if (element) {
+        console.log(4);
         if (creep.withdraw(tombstone, element) === ERR_NOT_IN_RANGE) {
+          console.log(5);
           creep.goTo(tombstone);
           creep.withdraw(tombstone, element);
         }
@@ -208,11 +218,21 @@ class SourceManager {
   }
 
   storeEnergy(creep: Creep) {
-    let targetStructure = this.getStructureThatNeedsEnergy(creep);
+    let targetStructure: AnyStructure | undefined = undefined;
+    const inputLink = LinkManager.getInputLinkThatCanReceiveEnergy(creep.pos);
+
+    if (inputLink) {
+      // if the link is very close, use it first
+      targetStructure = inputLink && inputLink.link;
+    }
 
     if (!targetStructure) {
-      const link = LinkManager.getLinksThatCanReceiveEnergy(creep.pos)[0];
-      targetStructure = link && link.link;
+      targetStructure = this.getStructureThatNeedsEnergy(creep);
+    }
+
+    if (!targetStructure) {
+      const inputOutputLink = LinkManager.getInputOutputLinkThatCanReceiveEnergy(creep.pos);
+      targetStructure = inputOutputLink && inputOutputLink.link;
     }
 
     if (!targetStructure) {

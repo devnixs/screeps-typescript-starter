@@ -18,7 +18,7 @@ class RoleReparator implements IRole {
       creep.say("⚡ repair");
     }
 
-    const wallCap = 100000;
+    const wallCap = 20000;
 
     let damaged: AnyStructure | null = null;
     if (memory.damagedId) {
