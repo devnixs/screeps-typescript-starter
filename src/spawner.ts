@@ -18,8 +18,14 @@ class Spawner {
       return;
     }
 
-    for (const spawnName in Game.spawns) {
-      this.handleSingleSpawn(Game.spawns[spawnName]);
+    const idleSpawns = Object.keys(Game.spawns)
+      .map(i => Game.spawns[i])
+      .filter(i => !i.spawning);
+
+    const firstSpawnForEachRoom = _.uniq(idleSpawns, i => i.room.name);
+
+    for (const spawnIndex in firstSpawnForEachRoom) {
+      this.handleSingleSpawn(firstSpawnForEachRoom[spawnIndex]);
     }
   }
 

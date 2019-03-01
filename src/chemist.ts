@@ -1,30 +1,6 @@
 import { REAGENTS, RESOURCE_IMPORTANCE, boostResources } from "constants/resources";
 import { minMax } from "./utils/misc-utils";
-import { throws } from "assert";
-
-export const wantedStockAmounts: { [key: string]: number } = {
-  UH: 0, // (+100 % attack)
-  KO: 0, // (+100 % ranged attack)
-  XGHO2: 0, // For toughness
-  XLHO2: 9000, // For healing
-  XZHO2: 0, // For speed
-  XZH2O: 0, // For dismantling
-  XKHO2: 0, // For ranged attackers
-  XUH2O: 0, // For attacking
-  XLH2O: 0, // For repair (or build)
-  LH: 0, // (+50 % build and repair)
-  XUHO2: 0, // For harvest
-  XKH2O: 0, // For carry
-  XGH2O: 0, // For upgraders
-  [RESOURCE_LEMERGIUM_OXIDE]: 1000,
-  [RESOURCE_GHODIUM_OXIDE]: 3000,
-  [RESOURCE_GHODIUM]: 1000,
-  [RESOURCE_HYDROXIDE]: 1000,
-  [RESOURCE_ZYNTHIUM_KEANITE]: 1000,
-  [RESOURCE_UTRIUM_LEMERGITE]: 1000,
-  [RESOURCE_LEMERGIUM_ALKALIDE]: 1000,
-  [RESOURCE_GHODIUM_ALKALIDE]: 1000
-};
+import { desiredStocks } from "constants/misc";
 
 export const wantedBoosts: { [roomName: string]: { [body: string]: ResourceConstant[] } } = {
   E27N47: {
@@ -439,13 +415,19 @@ export class Chemist {
     return this.assets[res] || 0;
   }
 
+  desiredStocks(resource: _ResourceConstantSansEnergy) {
+    const wantedStocks = desiredStocks || {};
+    return wantedStocks[resource] || 0;
+  }
+
   getPossibleReactions() {
-    const allNeededResources = Object.keys(wantedStockAmounts).filter(
-      i => wantedStockAmounts[i] > this.getAssetStock(i as ResourceConstant)
+    const allNeededResources = Object.keys(this.desiredStocks).filter(
+      i => this.desiredStocks(i as any) > this.getAssetStock(i as ResourceConstant)
     ) as ResourceConstant[];
+
     const resourcesByImportance = _.sortBy(allNeededResources, i => RESOURCE_IMPORTANCE.indexOf(i));
     const reactions = resourcesByImportance.map(i =>
-      this.getReaction(i, wantedStockAmounts[i] - this.getAssetStock(i))
+      this.getReaction(i, this.desiredStocks(i as any) - this.getAssetStock(i))
     );
     const possibleReactions = reactions.filter(
       i =>

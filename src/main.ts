@@ -21,8 +21,9 @@ import { Chemist } from "chemist";
 import { roleTruck } from "roles/truck";
 import { roleDismantler } from "roles/dismantler";
 import { LinkManager } from "utils/link-manager";
+import { Merchant } from "merchant";
 
-// profiler.enable();
+profiler.enable();
 
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
@@ -41,12 +42,17 @@ export const loop = ErrorMapper.wrapLoop(() => {
     spawner.run();
     Chemist.runForAllRooms();
     LinkManager.runForAllRooms();
+    Merchant.runForAllRooms();
 
     let error: any = null;
 
     for (var name in Game.creeps) {
       var creep = Game.creeps[name];
       const memory = creep.memory;
+      if (creep.spawning) {
+        continue;
+      }
+
       try {
         if (memory.role == "harvester") {
           roleHarvester.run(creep);
@@ -97,7 +103,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
 
     roleTower.runAllTowers();
 
-    architect.run();
+    // architect.run();
 
     // Automatically delete memory of missing creeps
     for (const name in Memory.creeps) {

@@ -59,7 +59,7 @@ export class LinkManager {
   }
 
   doTransfers() {
-    const links = this.links;
+    const links = this.links.filter(i => i.linkObj.cooldown === 0);
     for (let index in links) {
       const link = links[index];
       if (link.linkMemory.type === "input" && link.linkObj.energy > 0) {

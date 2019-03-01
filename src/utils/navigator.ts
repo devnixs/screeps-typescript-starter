@@ -51,7 +51,6 @@ Creep.prototype.goTo = function(destination: RoomPosition | { pos: RoomPosition 
     return creep.moveTo(target, {
       ignoreCreeps: true && !forceNoIgnoreCreeps,
       reusePath: forceNoIgnoreCreeps ? 0 : defaultReusePath,
-      visualizePathStyle: { stroke: stringToColor(creep.memory.role) },
       ...options
     });
   } else {
@@ -60,14 +59,12 @@ Creep.prototype.goTo = function(destination: RoomPosition | { pos: RoomPosition 
       return creep.moveTo(target, {
         ignoreCreeps: true && !forceNoIgnoreCreeps,
         reusePath: forceNoIgnoreCreeps ? 0 : defaultReusePath,
-        visualizePathStyle: { stroke: stringToColor(creep.memory.role) },
         ...options
       });
     } else {
       return creep.moveTo(target, {
         ignoreCreeps: false,
         reusePath: forceNoIgnoreCreeps ? 0 : defaultReusePath,
-        visualizePathStyle: { stroke: stringToColor(creep.memory.role) },
         ...options
       });
     }
