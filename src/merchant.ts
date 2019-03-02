@@ -69,7 +69,7 @@ export class Merchant {
       // we need at least 5 orders
       // take the most interesting one
       const bestOrder = _.sortBy(buyOrders, i => -1 * i.price)[0];
-      const tradeAmount = Math.max(Math.min(bestOrder.remainingAmount, amount), maxTradeAmount);
+      const tradeAmount = Math.min(bestOrder.remainingAmount, amount, maxTradeAmount);
 
       const result = Game.market.deal(bestOrder.id, tradeAmount, this.room.name);
       if (result === OK) {
@@ -94,7 +94,7 @@ export class Merchant {
       const availableCredits = Game.market.credits - minCredits;
       const howMuchWeCanBuy = Math.floor(availableCredits / bestOrder.price);
 
-      const tradeAmount = Math.max(Math.min(bestOrder.remainingAmount, amount, howMuchWeCanBuy), maxTradeAmount);
+      const tradeAmount = Math.min(bestOrder.remainingAmount, amount, howMuchWeCanBuy, maxTradeAmount);
 
       const result = Game.market.deal(bestOrder.id, tradeAmount, this.room.name);
       if (result === OK) {

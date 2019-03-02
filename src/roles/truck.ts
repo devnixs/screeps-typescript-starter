@@ -74,6 +74,8 @@ class RoleTruck implements IRole {
 
           if (withdrawResult === OK) {
             memory.isDepositing = true;
+          } else if (withdrawResult === ERR_FULL) {
+            this.restartJob(creep, { forceEmptying: true });
           } else if (creep.pos.getRangeTo(target.pos.x, target.pos.y) <= 1) {
             // if it fails but we're in range, abort the job.
 
@@ -141,11 +143,11 @@ class RoleTruck implements IRole {
     }
   }
 
-  restartJob(creep: Creep) {
+  restartJob(creep: Creep, { forceEmptying }: { forceEmptying?: boolean } = { forceEmptying: false }) {
     const memory: ITruckMemory = creep.memory as any;
     memory.idle = true;
     memory.jobTag = undefined;
-    this.setJob(creep);
+    this.setJob(creep, { assumeEmpty: !forceEmptying });
   }
 
   getResource(store: StoreDefinition | StoreDefinitionWithoutEnergy, res: string) {
@@ -175,7 +177,12 @@ class RoleTruck implements IRole {
     }
 
     var labs = this.getLabs(creep.room).map(i => ({ memory: i, obj: Game.getObjectById(i.id) as StructureLab }));
-    var labThatNeedsEmptying = labs.filter(i => i.memory.state === "needs-emptying" && i.obj.mineralAmount > 0)[0];
+    var labThatNeedsEmptying = labs.filter(
+      i =>
+        i.memory.state === "needs-emptying" &&
+        i.obj.mineralAmount > 0 &&
+        (i.obj.cooldown === 0 || i.obj.mineralAmount > 300)
+    )[0];
 
     var assets = storage.store;
     var labThatNeedsRefills = labs.filter(i => {
@@ -311,7 +318,7 @@ class RoleTruck implements IRole {
     return null;
   }
 
-  setJob(creep: Creep) {
+  setJob(creep: Creep, { assumeEmpty }: { assumeEmpty?: boolean } = { assumeEmpty: false }) {
     const memory: ITruckMemory = creep.memory as any;
 
     if (!memory.idle && memory.lastJobRefreshTime && memory.lastJobRefreshTime + 100 > Game.time) {
@@ -327,7 +334,7 @@ class RoleTruck implements IRole {
     const carrying = Object.keys(creep.carry).find(i => (creep.carry as any)[i] > 0) as ResourceConstant | undefined;
     const storage = creep.room.storage;
 
-    if (storage && totalCargoContent > 0 && job && carrying && job.jobResource != carrying) {
+    if (!assumeEmpty && storage && totalCargoContent > 0 && job && carrying) {
       // if we carry something, deposit it before starting a new job.
       job = {
         jobNeededAmount: creep.carry[memory.jobResource] as any,
@@ -339,11 +346,12 @@ class RoleTruck implements IRole {
     }
 
     if (job) {
+      creep.say(job.jobTag);
       memory.targetSource = job.targetSource;
       memory.targetDestination = job.targetDestination;
       memory.jobResource = job.jobResource;
       memory.jobNeededAmount = Math.min(job.jobNeededAmount, creep.carryCapacity);
-      memory.isDepositing = false;
+      memory.isDepositing = !job.targetSource;
       memory.idle = false;
       memory.jobTag = job.jobTag;
     } else {

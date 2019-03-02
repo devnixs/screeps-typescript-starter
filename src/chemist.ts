@@ -1,6 +1,7 @@
 import { REAGENTS, RESOURCE_IMPORTANCE, boostResources } from "constants/resources";
 import { minMax } from "./utils/misc-utils";
 import { desiredStocks } from "constants/misc";
+import { cpus } from "os";
 
 export const wantedBoosts: { [roomName: string]: { [body: string]: ResourceConstant[] } } = {
   E27N47: {
@@ -324,6 +325,9 @@ export class Chemist {
 
   assignJobs() {
     var availableGroups = this.room.memory.labGroups.filter(i => i.currentState === "idle");
+    if (availableGroups.length === 0) {
+      return;
+    }
     var possibleReactions = this.getPossibleReactions();
 
     for (let grpIndex in availableGroups) {
@@ -388,7 +392,6 @@ export class Chemist {
         ...resultLabAssets,
         (i: any, j: any) => (i || 0) + (j || 0)
       ) as { [key: string]: number };
-      // console.log("All assets are ", JSON.stringify(allAssets));
 
       return allAssets;
     }
@@ -421,9 +424,9 @@ export class Chemist {
   }
 
   getPossibleReactions() {
-    const allNeededResources = Object.keys(this.desiredStocks).filter(
-      i => this.desiredStocks(i as any) > this.getAssetStock(i as ResourceConstant)
-    ) as ResourceConstant[];
+    const allNeededResources = Object.keys(desiredStocks)
+      .filter(i => this.isCraftable(i as ResourceConstant))
+      .filter(i => this.desiredStocks(i as any) > this.getAssetStock(i as ResourceConstant)) as ResourceConstant[];
 
     const resourcesByImportance = _.sortBy(allNeededResources, i => RESOURCE_IMPORTANCE.indexOf(i));
     const reactions = resourcesByImportance.map(i =>
@@ -437,6 +440,10 @@ export class Chemist {
     );
 
     return possibleReactions;
+  }
+
+  isCraftable(mineral: ResourceConstant) {
+    return !!REAGENTS[mineral];
   }
 
   getReaction(mineral: ResourceConstant, amount: number): Reaction {
