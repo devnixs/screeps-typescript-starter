@@ -1,5 +1,6 @@
 import { sourceManager } from "../utils/source-manager";
-import { roleHarvester } from "./harvester";
+import { findRestSpot } from "utils/finder";
+import { profiler } from "../utils/profiler";
 
 interface IBuilderMemory extends CreepMemory {
   building: boolean;
@@ -19,8 +20,7 @@ class RoleBuilder implements IRole {
 
     var constructionSites = creep.room.find(FIND_CONSTRUCTION_SITES);
     if (constructionSites.length === 0) {
-      roleHarvester.run(creep);
-      return;
+      return this.goToRest(creep);
     }
     if (memory.building && creep.carry.energy == 0) {
       memory.building = false;
@@ -35,8 +35,15 @@ class RoleBuilder implements IRole {
       if (creep.build(constructionSites[0]) == ERR_NOT_IN_RANGE) {
         creep.goTo(constructionSites[0]);
       }
-    } else {
-      sourceManager.getEnergy(creep);
+    } else if (sourceManager.getEnergy(creep) !== OK) {
+      return this.goToRest(creep);
+    }
+  }
+
+  goToRest(creep: Creep) {
+    const restSpot = findRestSpot(creep);
+    if (restSpot) {
+      creep.goTo(restSpot);
     }
   }
 }

@@ -11,7 +11,7 @@ export class LinkManager {
   run() {
     const debugMode = false;
 
-    if (Game.time % 100 === 0 || debugMode) {
+    if (Game.time % 100 === 0 || debugMode || !this.room.memory.links) {
       this.assignLinks();
     }
 

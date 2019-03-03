@@ -1,7 +1,8 @@
 import { sourceManager } from "../utils/source-manager";
 import { roleHarvester } from "./harvester";
 import { wantsToSell, desiredStocks, desiredEnergyInTerminal } from "../constants/misc";
-import { findRestSpot } from "utils/finder";
+import { findRestSpot, findNonEmptyResourceInStore } from "utils/finder";
+import { profiler } from "../utils/profiler";
 
 interface ITruckDestination {}
 
@@ -59,7 +60,11 @@ class RoleTruck implements IRole {
         } else {
           creep.goTo(target);
 
-          const currentlyInStock = creep.room.storage.store[memory.jobResource] || 0;
+          let currentlyInStock = 100000;
+          const store = (target as any).store;
+          if (store) {
+            currentlyInStock = store[memory.jobResource] || 0;
+          }
 
           let withdrawResult = creep.withdraw(
             target,
@@ -84,15 +89,15 @@ class RoleTruck implements IRole {
         }
       }
     } else {
-      const checkTime = "sim" in Game.rooms ? 1 : 10;
-      if (Game.time % checkTime === 0) {
-        // periodically check for jobs
-        this.setJob(creep);
-      }
-
       if (memory.idle) {
         if (this.runEnergyTruck(creep) !== OK) {
           this.goToRestSpot(creep);
+
+          const checkTime = "sim" in Game.rooms ? 1 : 10;
+          if (Game.time % checkTime === 0) {
+            // periodically check for jobs
+            this.setJob(creep);
+          }
         }
       }
     }
@@ -163,10 +168,10 @@ class RoleTruck implements IRole {
   }
 
   getJobs(creep: Creep): IJob | null {
-    const storage = creep.room.storage as StructureStorage;
+    const storage = creep.room.storage as StructureStorage | undefined;
     var droppedResource = creep.room.find(FIND_DROPPED_RESOURCES)[0];
 
-    if (droppedResource) {
+    if (droppedResource && droppedResource.amount > 20 && storage) {
       return {
         targetSource: droppedResource.id,
         targetDestination: storage.id,
@@ -174,6 +179,23 @@ class RoleTruck implements IRole {
         jobNeededAmount: droppedResource.amount,
         jobTag: "dropped-resource-" + droppedResource.id
       };
+    }
+
+    const filledContainer: StructureContainer | undefined = creep.room.find(FIND_STRUCTURES, {
+      filter: i => i.structureType === "container" && _.sum(i.store) >= i.storeCapacity / 2
+    })[0] as StructureContainer;
+
+    if (filledContainer && storage) {
+      const resourceType = findNonEmptyResourceInStore(filledContainer.store);
+      if (resourceType) {
+        return {
+          jobNeededAmount: filledContainer.store[resourceType] as any,
+          jobResource: resourceType,
+          jobTag: "empty-container-" + filledContainer.id,
+          targetSource: filledContainer.id,
+          targetDestination: storage.id
+        };
+      }
     }
 
     var labs = this.getLabs(creep.room).map(i => ({ memory: i, obj: Game.getObjectById(i.id) as StructureLab }));
@@ -184,135 +206,139 @@ class RoleTruck implements IRole {
         (i.obj.cooldown === 0 || i.obj.mineralAmount > 300)
     )[0];
 
-    var assets = storage.store;
-    var labThatNeedsRefills = labs.filter(i => {
-      if (!i.memory.needsResource) {
-        return;
+    if (storage) {
+      var assets = storage.store;
+      var labThatNeedsRefills = labs.filter(i => {
+        if (!i.memory.needsResource) {
+          return;
+        }
+        const availableResource = assets[i.memory.needsResource] || 0;
+        return (
+          i.memory.state === "waiting-for-resource" &&
+          availableResource > 0 &&
+          i.memory.needsAmount > i.obj.mineralAmount
+        );
+      })[0];
+
+      if (labThatNeedsRefills) {
+        const lab = labThatNeedsRefills;
+        return {
+          targetSource: storage.id,
+          targetDestination: lab.obj.id,
+          jobResource: lab.memory.needsResource,
+          jobNeededAmount: lab.memory.needsAmount - lab.obj.mineralAmount,
+          jobTag: "refill-lab-" + lab.obj.id
+        };
       }
-      const availableResource = assets[i.memory.needsResource] || 0;
-      return (
-        i.memory.state === "waiting-for-resource" && availableResource > 0 && i.memory.needsAmount > i.obj.mineralAmount
-      );
-    })[0];
 
-    if (labThatNeedsRefills) {
-      const lab = labThatNeedsRefills;
-      return {
-        targetSource: storage.id,
-        targetDestination: lab.obj.id,
-        jobResource: lab.memory.needsResource,
-        jobNeededAmount: lab.memory.needsAmount - lab.obj.mineralAmount,
-        jobTag: "refill-lab-" + lab.obj.id
-      };
-    }
+      if (labThatNeedsEmptying) {
+        const lab = labThatNeedsEmptying;
+        return {
+          targetSource: lab.obj.id,
+          targetDestination: storage.id,
+          jobResource: lab.obj.mineralType as ResourceConstant,
+          jobNeededAmount: lab.obj.mineralAmount,
+          jobTag: "empty-lab-" + lab.obj.id
+        };
+      }
 
-    if (labThatNeedsEmptying) {
-      const lab = labThatNeedsEmptying;
-      return {
-        targetSource: lab.obj.id,
-        targetDestination: storage.id,
-        jobResource: lab.obj.mineralType as ResourceConstant,
-        jobNeededAmount: lab.obj.mineralAmount,
-        jobTag: "empty-lab-" + lab.obj.id
-      };
-    }
+      let terminalOversupply: string | undefined;
+      let terminalUndersupply: string | undefined;
 
-    let terminalOversupply: string | undefined;
-    let terminalUndersupply: string | undefined;
+      const wantsToKeepForThisRoom = this.getWantsToKeepForThisRoom(creep.room.name);
 
-    const wantsToKeepForThisRoom = this.getWantsToKeepForThisRoom(creep.room.name);
+      const terminal = creep.room.terminal;
 
-    const terminal = creep.room.terminal;
+      if (
+        terminal &&
+        terminal.store.energy < desiredEnergyInTerminal &&
+        storage &&
+        storage.store.energy >= desiredEnergyInTerminal
+      ) {
+        return {
+          targetSource: storage.id,
+          targetDestination: terminal.id,
+          jobResource: "energy",
+          jobNeededAmount: desiredEnergyInTerminal - terminal.store.energy,
+          jobTag: "refill-terminal-energy"
+        };
+      }
 
-    if (
-      terminal &&
-      terminal.store.energy < desiredEnergyInTerminal &&
-      storage &&
-      storage.store.energy >= desiredEnergyInTerminal
-    ) {
-      return {
-        targetSource: storage.id,
-        targetDestination: terminal.id,
-        jobResource: "energy",
-        jobNeededAmount: desiredEnergyInTerminal - terminal.store.energy,
-        jobTag: "refill-terminal-energy"
-      };
-    }
+      if (terminal) {
+        const resources = _.uniq(Object.keys(wantsToKeepForThisRoom).concat(Object.keys(terminal.store)));
 
-    if (terminal) {
-      const resources = _.uniq(Object.keys(wantsToKeepForThisRoom).concat(Object.keys(terminal.store)));
+        terminalOversupply = resources.filter(
+          i =>
+            i !== "energy" &&
+            this.getResource(terminal.store, i) > 0 &&
+            this.getResource(storage.store, i) < this.getResource(wantsToKeepForThisRoom, i)
+        )[0];
 
-      terminalOversupply = resources.filter(
-        i =>
-          i !== "energy" &&
-          this.getResource(terminal.store, i) > 0 &&
-          this.getResource(storage.store, i) < this.getResource(wantsToKeepForThisRoom, i)
-      )[0];
+        terminalUndersupply = resources.filter(
+          i => i !== "energy" && this.getResource(storage.store, i) > this.getResource(wantsToKeepForThisRoom, i)
+        )[0];
+      }
 
-      terminalUndersupply = resources.filter(
-        i => i !== "energy" && this.getResource(storage.store, i) > this.getResource(wantsToKeepForThisRoom, i)
-      )[0];
-    }
+      if (terminalOversupply && terminal) {
+        const needsAmount =
+          this.getResource(wantsToKeepForThisRoom, terminalOversupply) -
+          this.getResource(storage.store, terminalOversupply);
 
-    if (terminalOversupply && terminal) {
-      const needsAmount =
-        this.getResource(wantsToKeepForThisRoom, terminalOversupply) -
-        this.getResource(storage.store, terminalOversupply);
+        const terminalHasAmount = this.getResource(terminal.store, terminalOversupply);
 
-      const terminalHasAmount = this.getResource(terminal.store, terminalOversupply);
+        const overSupply = Math.min(needsAmount, terminalHasAmount);
 
-      const overSupply = Math.min(needsAmount, terminalHasAmount);
+        return {
+          targetSource: terminal.id,
+          targetDestination: storage.id,
+          jobResource: terminalOversupply as ResourceConstant,
+          jobNeededAmount: overSupply,
+          jobTag: "empty-terminal-" + terminalOversupply
+        };
+      }
 
-      return {
-        targetSource: terminal.id,
-        targetDestination: storage.id,
-        jobResource: terminalOversupply as ResourceConstant,
-        jobNeededAmount: overSupply,
-        jobTag: "empty-terminal-" + terminalOversupply
-      };
-    }
+      if (terminalUndersupply && terminal) {
+        const underSupply =
+          this.getResource(storage.store, terminalUndersupply) -
+          this.getResource(wantsToKeepForThisRoom, terminalUndersupply);
 
-    if (terminalUndersupply && terminal) {
-      const underSupply =
-        this.getResource(storage.store, terminalUndersupply) -
-        this.getResource(wantsToKeepForThisRoom, terminalUndersupply);
+        return {
+          targetSource: storage.id,
+          targetDestination: terminal.id,
+          jobResource: terminalUndersupply as ResourceConstant,
+          jobNeededAmount: underSupply,
+          jobTag: "refill-terminal-" + terminalOversupply
+        };
+      }
 
-      return {
-        targetSource: storage.id,
-        targetDestination: terminal.id,
-        jobResource: terminalUndersupply as ResourceConstant,
-        jobNeededAmount: underSupply,
-        jobTag: "refill-terminal-" + terminalOversupply
-      };
-    }
+      var linkThatNeedsEmptying =
+        creep.room.memory.links && creep.room.memory.links.find(i => i.state == "needs-emptying");
 
-    var linkThatNeedsEmptying =
-      creep.room.memory.links && creep.room.memory.links.find(i => i.state == "needs-emptying");
+      var linkThatNeedsRefill =
+        creep.room.memory.links &&
+        creep.room.memory.links.find(i => i.state == "needs-refill" && i.type === "input-output");
 
-    var linkThatNeedsRefill =
-      creep.room.memory.links &&
-      creep.room.memory.links.find(i => i.state == "needs-refill" && i.type === "input-output");
+      if (linkThatNeedsEmptying && linkThatNeedsEmptying.needsAmount !== undefined) {
+        const overSupply = linkThatNeedsEmptying.needsAmount;
+        return {
+          targetSource: linkThatNeedsEmptying.id,
+          targetDestination: storage.id,
+          jobResource: "energy",
+          jobNeededAmount: Math.min(overSupply, creep.carryCapacity),
+          jobTag: "empty-link-" + linkThatNeedsEmptying.id
+        };
+      }
 
-    if (linkThatNeedsEmptying && linkThatNeedsEmptying.needsAmount !== undefined) {
-      const overSupply = linkThatNeedsEmptying.needsAmount;
-      return {
-        targetSource: linkThatNeedsEmptying.id,
-        targetDestination: storage.id,
-        jobResource: "energy",
-        jobNeededAmount: Math.min(overSupply, creep.carryCapacity),
-        jobTag: "empty-link-" + linkThatNeedsEmptying.id
-      };
-    }
-
-    if (linkThatNeedsRefill && linkThatNeedsRefill.needsAmount !== undefined) {
-      const overSupply = linkThatNeedsRefill.needsAmount;
-      return {
-        targetSource: storage.id,
-        targetDestination: linkThatNeedsRefill.id,
-        jobResource: "energy",
-        jobNeededAmount: overSupply,
-        jobTag: "refill-link-" + linkThatNeedsRefill.id
-      };
+      if (linkThatNeedsRefill && linkThatNeedsRefill.needsAmount !== undefined) {
+        const overSupply = linkThatNeedsRefill.needsAmount;
+        return {
+          targetSource: storage.id,
+          targetDestination: linkThatNeedsRefill.id,
+          jobResource: "energy",
+          jobNeededAmount: overSupply,
+          jobTag: "refill-link-" + linkThatNeedsRefill.id
+        };
+      }
     }
 
     return null;

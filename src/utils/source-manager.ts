@@ -74,15 +74,12 @@ class SourceManager {
       return;
     }
 
-    const distanceX = Math.abs(creep.pos.x - source.pos.x);
-    const distanceY = Math.abs(creep.pos.y - source.pos.y);
-    if (distanceX <= 1 && distanceY <= 1) {
+    if (creep.pos.isNearTo(source)) {
       const harvestResult = creep.harvest(source);
       if (harvestResult !== OK) {
       }
     } else {
       creep.goTo(source);
-      creep.harvest(source);
     }
   }
 
@@ -163,21 +160,23 @@ class SourceManager {
     }
 
     if (!targetStructure) {
-      targetStructure = creep.room.storage && creep.room.storage.store.energy > 0 ? creep.room.storage : undefined;
-    }
-
-    if (!targetStructure) {
       targetStructure = findAndCache<FIND_STRUCTURES>(
         creep,
         "harvest_container_id",
         FIND_STRUCTURES,
-        (targetStructure: any) => targetStructure.store.energy > 0,
+        (targetStructure: any) => targetStructure.store.energy >= targetStructure.storeCapacity / 2,
         {
           filter: (structure: StructureContainer) => {
-            return structure.structureType == STRUCTURE_CONTAINER && structure.store.energy > 0;
+            return (
+              structure.structureType == STRUCTURE_CONTAINER && structure.store.energy >= structure.storeCapacity / 2
+            );
           }
         }
       ) as any;
+    }
+
+    if (!targetStructure) {
+      targetStructure = creep.room.storage && creep.room.storage.store.energy > 0 ? creep.room.storage : undefined;
     }
 
     if (targetStructure) {
@@ -187,7 +186,7 @@ class SourceManager {
       }
       return OK;
     } else if (creep.getActiveBodyparts(WORK) > 0) {
-      return this.harvestEnergyFromSource(creep);
+      return -1;
     } else {
       return -1;
     }
@@ -215,6 +214,28 @@ class SourceManager {
     ) as any;
 
     return targetStructure;
+  }
+
+  storeInCloseContainer(creep: Creep) {
+    const closeContainer: StructureContainer | undefined = creep.pos.findInRange(FIND_STRUCTURES, 1, {
+      filter: i => i.structureType === "container"
+    })[0] as any;
+
+    if (closeContainer) {
+      const isFull = _.sum(closeContainer.store) >= closeContainer.storeCapacity;
+      if (isFull) {
+        return -1;
+      } else {
+        const creepCarrying = Object.keys(creep.carry).find(i => (creep.carry as any)[i] > 0) as ResourceConstant;
+        if (creepCarrying) {
+          return creep.transfer(closeContainer, creepCarrying);
+        } else {
+          return -1;
+        }
+      }
+    } else {
+      return -1;
+    }
   }
 
   storeEnergy(creep: Creep) {

@@ -1,4 +1,5 @@
 import { sourceManager } from "../utils/source-manager";
+import { profiler } from "../utils/profiler";
 
 interface IUpgraderMemory extends CreepMemory {
   upgrading: boolean;

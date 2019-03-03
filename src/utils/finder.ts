@@ -1,3 +1,5 @@
+import { profiler } from "../utils/profiler";
+
 export function findAndCache<K extends FindConstant>(
   creep: Creep,
   cacheKey: string,
@@ -37,6 +39,10 @@ export function findAndCache<K extends FindConstant>(
   }
 
   return cachedElement;
+}
+
+export function findNonEmptyResourceInStore(store: StoreDefinition): ResourceConstant | undefined {
+  return Object.keys(store).find(i => (store as any)[i] > 0) as any;
 }
 
 interface IRestPosition {

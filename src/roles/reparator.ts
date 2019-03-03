@@ -1,5 +1,7 @@
 import { sourceManager } from "../utils/source-manager";
 import { roleHarvester } from "./harvester";
+import { findRestSpot } from "utils/finder";
+import { profiler } from "../utils/profiler";
 
 interface IReparatorMemory extends CreepMemory {
   repairing: boolean;
@@ -47,25 +49,35 @@ class RoleReparator implements IRole {
         filter: structure => structure.hits < structure.hitsMax && structure.structureType == STRUCTURE_ROAD
       });
 
+      var damagedContainers = creep.pos.findClosestByRange(FIND_STRUCTURES, {
+        filter: structure => structure.hits < structure.hitsMax && structure.structureType == STRUCTURE_CONTAINER
+      });
+
       var damagedWalls = creep.pos.findClosestByRange(FIND_STRUCTURES, {
         filter: structure => structure.hits <= wallCap && structure.structureType == STRUCTURE_WALL
       });
 
-      damaged = damagedOther || damagedRoads || damagedWalls;
+      damaged = damagedOther || damagedRoads || damagedContainers || damagedWalls;
       memory.damagedId = damaged && damaged.id;
     }
 
     if (!damaged) {
-      roleHarvester.run(creep);
-      return;
+      return this.goToRest(creep);
     }
 
     if (memory.repairing) {
       if (creep.repair(damaged) == ERR_NOT_IN_RANGE) {
         creep.goTo(damaged);
       }
-    } else {
-      sourceManager.getEnergy(creep);
+    } else if (sourceManager.getEnergy(creep) !== OK) {
+      return this.goToRest(creep);
+    }
+  }
+
+  goToRest(creep: Creep) {
+    const restSpot = findRestSpot(creep);
+    if (restSpot) {
+      creep.goTo(restSpot);
     }
   }
 }

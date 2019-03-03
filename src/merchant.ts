@@ -108,19 +108,24 @@ export class Merchant {
   }
 
   static runForAllRooms() {
-    for (let roomName in Game.rooms) {
-      const room = Game.rooms[roomName];
-      if (
-        room.controller &&
-        room.controller &&
-        room.controller.my &&
-        room.terminal &&
-        room.terminal.cooldown === 0 &&
-        room.storage
-      ) {
-        const manager = new Merchant(room);
-        manager.run();
-      }
+    const roomNames = Object.keys(Game.rooms)
+      .map(room => Game.rooms[room])
+      .filter(
+        room =>
+          room.controller &&
+          room.controller &&
+          room.controller.my &&
+          room.terminal &&
+          room.terminal.cooldown === 0 &&
+          room.storage
+      );
+
+    const shuffled = _.shuffle(roomNames);
+
+    for (let roomIndex in shuffled) {
+      const room = shuffled[roomIndex];
+      const manager = new Merchant(room);
+      manager.run();
     }
   }
 }

@@ -1,4 +1,5 @@
 import { sourceManager } from "utils/source-manager";
+import { profiler } from "../utils/profiler";
 
 export interface ILongDistanceHarvesterMemory extends CreepMemory {
   working?: boolean;

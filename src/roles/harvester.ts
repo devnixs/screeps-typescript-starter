@@ -1,4 +1,5 @@
 import { sourceManager } from "../utils/source-manager";
+import { profiler } from "../utils/profiler";
 
 interface IHarvesterMemory extends CreepMemory {
   isDepositing?: boolean;
@@ -23,10 +24,30 @@ class RoleHarvester implements IRole {
       // take the energy from the containers because we need to fill the extensions quickly
       // sourceManager.getEnergy(creep);
       // } else {
-      sourceManager.harvestEnergyFromSource(creep);
+      const specificSource: Source | null = memory.subRole ? Game.getObjectById(memory.subRole) : null;
+      if (specificSource) {
+        sourceManager.harvestEnergyFromSpecificSource(creep, specificSource);
+      } else {
+        sourceManager.harvestEnergyFromSource(creep);
+      }
       // }
     } else {
-      sourceManager.store(creep);
+      if (this.buildContainer(creep) === OK) {
+        return;
+      } else if (sourceManager.storeInCloseContainer(creep) === OK) {
+        return;
+      } else {
+        sourceManager.store(creep);
+      }
+    }
+  }
+
+  buildContainer(creep: Creep) {
+    const closeContainerToBuild: ConstructionSite[] = creep.pos.findInRange(FIND_CONSTRUCTION_SITES, 1);
+    if (closeContainerToBuild.length) {
+      return creep.build(closeContainerToBuild[0]);
+    } else {
+      return -1;
     }
   }
 }

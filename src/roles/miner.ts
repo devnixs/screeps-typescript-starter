@@ -1,5 +1,6 @@
 import { sourceManager } from "../utils/source-manager";
 import { roleHarvester } from "./harvester";
+import { profiler } from "../utils/profiler";
 
 interface IMinerMemory extends CreepMemory {
   isDepositing?: boolean;

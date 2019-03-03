@@ -1,4 +1,5 @@
 import { wantedBoosts, boostResourceNeeded } from "../chemist";
+import { profiler } from "../utils/profiler";
 
 // limit boosts to N parts
 const boostsLimitations: { [key: string]: number } = {

@@ -1,3 +1,5 @@
+import { profiler } from "../utils/profiler";
+
 interface ITowerMemory extends CreepMemory {
   upgrading: boolean;
 }

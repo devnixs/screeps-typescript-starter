@@ -29,8 +29,13 @@ class Spawner {
     }
   }
 
-  getBodyPartCombinationFromTemplate(parts: BodyPartConstant[], maxEnergy: number, sortOrder?: BodyPartConstant[]) {
-    const current: BodyPartConstant[] = [];
+  getBodyPartCombinationFromTemplate(
+    parts: BodyPartConstant[],
+    prependBodyTemplate: BodyPartConstant[] | undefined,
+    maxEnergy: number,
+    sortOrder?: BodyPartConstant[]
+  ) {
+    const current: BodyPartConstant[] = prependBodyTemplate ? prependBodyTemplate.concat() : [];
     let cost = 0;
 
     cost = _.sum(current.map(i => costs[i]));
@@ -42,7 +47,8 @@ class Spawner {
     }
     current.pop();
 
-    if (current.length < parts.length) {
+    const minParts = parts.length + (prependBodyTemplate ? prependBodyTemplate.length : 0);
+    if (current.length < minParts) {
       // We want at least one repetition
       return null;
     } else {
@@ -151,6 +157,7 @@ class Spawner {
       const maxEnergy = role.capMaxEnergy || 1000000;
       body = this.getBodyPartCombinationFromTemplate(
         role.bodyTemplate,
+        role.bodyTemplatePrepend,
         Math.min(maxEnergyPossible, maxEnergy),
         role.sortBody
       );

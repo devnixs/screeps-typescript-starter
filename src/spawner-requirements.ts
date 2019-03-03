@@ -9,6 +9,7 @@ export interface RoleRequirement {
   maxCount?: number;
   exactBody?: BodyPartConstant[];
   bodyTemplate?: BodyPartConstant[];
+  bodyTemplatePrepend?: BodyPartConstant[];
   additionalMemory?: any;
   countAllRooms?: boolean;
   capMaxEnergy?: number;
@@ -32,12 +33,14 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
 
   const maxEnergyInRoom = spawn.room.energyCapacityAvailable;
 
-  const harvesters = spawn.room.find(FIND_MY_CREEPS).filter(i => i.memory.role === "harvester");
+  const harvesters = spawn.room
+    .find(FIND_MY_CREEPS)
+    .filter(i => i.memory.role === "harvester" && i.memory.homeRoom === spawn.room.name);
   // const towers = spawn.room.find(FIND_MY_STRUCTURES, { filter: i => i.structureType === "tower" });
   const extractors = spawn.room.find(FIND_MY_STRUCTURES, { filter: i => i.structureType === "extractor" });
   const mineralWithReserve = spawn.room.find(FIND_MINERALS, { filter: i => i.mineralAmount > 0 });
-  const labs = spawn.room.find(FIND_MY_STRUCTURES, { filter: i => i.structureType === "lab" });
-  const links = spawn.room.find(FIND_MY_STRUCTURES, { filter: i => i.structureType === "link" });
+  // const labs = spawn.room.find(FIND_MY_STRUCTURES, { filter: i => i.structureType === "lab" });
+  // const links = spawn.room.find(FIND_MY_STRUCTURES, { filter: i => i.structureType === "link" });
   const constructionSites = spawn.room.find(FIND_MY_CONSTRUCTION_SITES);
 
   let maxUpgraderCount: number;
@@ -97,13 +100,44 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     claimerCount = 0;
   }
 
+  const harvesterDefinitions = spawn.room
+    .find(FIND_SOURCES)
+    .map(source => {
+      const energyRate = source.energyCapacity / 300;
+      const currentEnergyRateForThisSource = _.sum(
+        harvesters.filter(i => i.memory.subRole === source.id).map(i => i.getActiveBodyparts(WORK) * HARVEST_POWER)
+      );
+      const requiredAdditionalEnergyRate = energyRate - currentEnergyRateForThisSource;
+      if (requiredAdditionalEnergyRate <= 0) {
+        return null;
+      }
+
+      console.log(source.id, currentEnergyRateForThisSource, requiredAdditionalEnergyRate);
+      const neededWorkParts = Math.ceil(requiredAdditionalEnergyRate / HARVEST_POWER);
+      const neededEnergy = neededWorkParts * BODYPART_COST.work + BODYPART_COST.move + BODYPART_COST.carry;
+
+      return {
+        percentage: 20,
+        role: "harvester",
+        subRole: source.id,
+        maxCount: 3,
+        bodyTemplate: [WORK],
+        bodyTemplatePrepend: [MOVE, CARRY],
+        minEnergy: BODYPART_COST.work + BODYPART_COST.move + BODYPART_COST.carry,
+        capMaxEnergy: neededEnergy
+      } as RoleRequirement;
+    })
+    .filter(i => i)
+    .map(i => i as RoleRequirement);
+
   return [
+    ...harvesterDefinitions,
     {
-      percentage: 20,
-      role: "harvester",
-      maxCount: maxEnergyInRoom > 1400 ? 3 : 3,
-      bodyTemplate: [MOVE, WORK, CARRY],
-      capMaxEnergy: 1800
+      percentage: 2,
+      role: "truck",
+      maxCount: 1,
+      bodyTemplate: [MOVE, CARRY, CARRY],
+      capMaxEnergy: 1100
     },
     {
       percentage: 2,
@@ -117,13 +151,6 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       maxCount: 1, // handled by towers
       bodyTemplate: [MOVE, WORK, CARRY],
       capMaxEnergy: 800
-    },
-    {
-      percentage: 2,
-      role: "truck",
-      maxCount: labs.length || links.length ? 1 : 0,
-      exactBody: [MOVE, CARRY, CARRY],
-      capMaxEnergy: 300
     },
     {
       percentage: 20,
