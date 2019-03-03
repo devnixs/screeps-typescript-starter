@@ -2,6 +2,7 @@
 
 type roles =
   | "harvester"
+  | "static-harvester"
   | "upgrader"
   | "builder"
   | "ranged"

@@ -3,6 +3,8 @@ import { IDismantlerMemory } from "roles/dismantler";
 import { requiredFightersForAnAttack, requiredDismantlersForAnAttack } from "./constants/misc";
 import { requiredHealersForAnAttack } from "./constants/misc";
 import { profiler } from "./utils/profiler";
+import { IHarvesterMemory } from "./roles/harvester";
+import { IStaticHarvesterMemory } from "roles/static-harvester";
 
 export interface RoleRequirement {
   role: roles;
@@ -36,7 +38,8 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
 
   const harvesters = spawn.room
     .find(FIND_MY_CREEPS)
-    .filter(i => i.memory.role === "harvester" && i.memory.homeRoom === spawn.room.name);
+    .filter(i => i.memory.role === "harvester" || i.memory.role === "static-harvester");
+
   // const towers = spawn.room.find(FIND_MY_STRUCTURES, { filter: i => i.structureType === "tower" });
   const extractors = spawn.room.find(FIND_MY_STRUCTURES, { filter: i => i.structureType === "extractor" });
   const mineralWithReserve = spawn.room.find(FIND_MINERALS, { filter: i => i.mineralAmount > 0 });
@@ -70,10 +73,12 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       const totalEnergy = _.sum(containers.map(i => i.store.energy));
 
       const ratio = totalEnergy / totalStorage;
-      if (ratio >= 0.9) {
-        maxUpgraderCount = 7;
+      if (ratio >= 0.7) {
+        maxUpgraderCount = 10;
+      } else if (ratio >= 0.6) {
+        maxUpgraderCount = 8;
       } else if (ratio >= 0.5) {
-        maxUpgraderCount = 5;
+        maxUpgraderCount = 6;
       } else if (ratio >= 0.3) {
         maxUpgraderCount = 2;
       } else {
@@ -84,8 +89,9 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
 
   let claimerCount = Game.flags["claimer_target"] ? 1 : 0;
 
-  if (harvesters.length === 0) {
+  /*   if (harvesters.length === 0) {
     // we need at least one harvester
+    console.log("Spawning necessary harvester");
     return [
       {
         percentage: 10,
@@ -95,7 +101,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       }
     ];
   }
-
+ */
   if ("sim" in Game.rooms) {
     maxUpgraderCount = 0;
     claimerCount = 0;
@@ -108,25 +114,58 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       const currentEnergyRateForThisSource = _.sum(
         harvesters.filter(i => i.memory.subRole === source.id).map(i => i.getActiveBodyparts(WORK) * HARVEST_POWER)
       );
+      console.log("0", source.room.name, currentEnergyRateForThisSource);
       const requiredAdditionalEnergyRate = energyRate - currentEnergyRateForThisSource;
       if (requiredAdditionalEnergyRate <= 0) {
         return null;
       }
 
-      console.log(source.id, currentEnergyRateForThisSource, requiredAdditionalEnergyRate);
-      const neededWorkParts = Math.ceil(requiredAdditionalEnergyRate / HARVEST_POWER);
-      const neededEnergy = neededWorkParts * BODYPART_COST.work + BODYPART_COST.move + BODYPART_COST.carry;
+      const closeContainer: StructureContainer = source.pos.findInRange(FIND_STRUCTURES, 1, {
+        filter: i => i.structureType === "container"
+      })[0] as any;
 
-      return {
-        percentage: 20,
-        role: "harvester",
-        subRole: source.id,
-        maxCount: 3,
-        bodyTemplate: [WORK],
-        bodyTemplatePrepend: [MOVE, CARRY],
-        minEnergy: BODYPART_COST.work + BODYPART_COST.move + BODYPART_COST.carry,
-        capMaxEnergy: neededEnergy
-      } as RoleRequirement;
+      let carryCount = 0;
+      if (closeContainer) {
+        // we don't need to be able to carry
+        carryCount = 0;
+      } else {
+        // we need to be able to carry
+        carryCount = 1;
+      }
+
+      // build creep with max build rate, otherwise we will end up indefinitely with multiple creeps
+
+      console.log("1", source.room.name, source.id, energyRate, requiredAdditionalEnergyRate);
+      const neededWorkParts = Math.ceil(energyRate / HARVEST_POWER);
+      const neededEnergy = neededWorkParts * BODYPART_COST.work + BODYPART_COST.move + carryCount * BODYPART_COST.carry;
+      console.log("2", source.room.name, source.id, neededWorkParts, neededEnergy);
+
+      if (closeContainer) {
+        return {
+          percentage: 20,
+          role: "static-harvester",
+          subRole: source.id,
+          maxCount: 1,
+          bodyTemplate: [WORK],
+          bodyTemplatePrepend: [MOVE],
+          minEnergy: BODYPART_COST.work + BODYPART_COST.move + carryCount * BODYPART_COST.carry,
+          capMaxEnergy: neededEnergy,
+          additionalMemory: {
+            targetContainerId: closeContainer.id
+          } as IStaticHarvesterMemory
+        } as RoleRequirement;
+      } else {
+        return {
+          percentage: 20,
+          role: "harvester",
+          subRole: source.id,
+          maxCount: 3,
+          bodyTemplate: [WORK],
+          bodyTemplatePrepend: [MOVE, CARRY],
+          minEnergy: BODYPART_COST.work + BODYPART_COST.move + carryCount * BODYPART_COST.carry,
+          capMaxEnergy: neededEnergy
+        } as RoleRequirement;
+      }
     })
     .filter(i => i)
     .map(i => i as RoleRequirement);
@@ -158,7 +197,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       role: "dismantler",
       maxCount: Game.flags["dismantler_attack"] ? requiredDismantlersForAnAttack : 0,
       countAllRooms: true,
-      bodyTemplate: [TOUGH, TOUGH, TOUGH, WORK, WORK, RANGED_ATTACK, MOVE, MOVE],
+      bodyTemplate: [TOUGH, TOUGH, TOUGH, WORK, WORK, RANGED_ATTACK, MOVE, MOVE, MOVE],
       sortBody: [TOUGH, WORK, MOVE, RANGED_ATTACK],
       onlyRoom: "E27N47",
       subRole: "room1",
@@ -179,7 +218,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       role: "fighter",
       maxCount: hasSafeMode ? 0 : Game.flags["fighter_attack"] ? requiredFightersForAnAttack : 0,
       onlyRoom: "E27N47",
-      bodyTemplate: [TOUGH, MOVE, ATTACK],
+      bodyTemplate: [TOUGH, MOVE, MOVE, ATTACK],
       sortBody: [TOUGH, MOVE, ATTACK]
     },
     {
@@ -312,9 +351,9 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     {
       percentage: 1,
       role: "upgrader",
-      maxCount: maxUpgraderCount,
-      bodyTemplate: [MOVE, WORK, CARRY],
-      capMaxEnergy: 1800
+      maxCount: 1,
+      bodyTemplate: [MOVE, WORK, WORK, CARRY],
+      capMaxEnergy: 600 * maxUpgraderCount
     },
     {
       percentage: 1,

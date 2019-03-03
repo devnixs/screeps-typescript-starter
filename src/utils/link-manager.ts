@@ -193,3 +193,5 @@ export class LinkManager {
     }
   }
 }
+
+profiler.registerClass(LinkManager, "LinkManager");

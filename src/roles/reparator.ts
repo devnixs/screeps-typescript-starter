@@ -82,4 +82,5 @@ class RoleReparator implements IRole {
   }
 }
 
+profiler.registerClass(RoleReparator, "RoleReparator");
 export const roleReparator = new RoleReparator();

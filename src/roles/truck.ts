@@ -171,7 +171,11 @@ class RoleTruck implements IRole {
     const storage = creep.room.storage as StructureStorage | undefined;
     var droppedResource = creep.room.find(FIND_DROPPED_RESOURCES)[0];
 
-    if (droppedResource && droppedResource.amount > 20 && storage) {
+    if (
+      droppedResource &&
+      droppedResource.amount > creep.pos.getRangeTo(droppedResource.pos.x, droppedResource.pos.y) * 20 &&
+      storage
+    ) {
       return {
         targetSource: droppedResource.id,
         targetDestination: storage.id,
@@ -391,4 +395,5 @@ class RoleTruck implements IRole {
   }
 }
 
+profiler.registerClass(RoleTruck, "RoleTruck");
 export const roleTruck = new RoleTruck();

@@ -38,16 +38,16 @@ class RoleHealer implements IRole {
       } else {
         this.goHome(creep);
       }
-    } else if (attackFlag && attackFlag.room) {
+    } else if (attackFlag) {
       // we are not in the right room, but someone is
-      const closeFigther = attackFlag.room.find(FIND_MY_CREEPS, {
-        filter: i => i.memory.role === "fighter" || i.memory.role === "dismantler"
-      })[0];
-
+      const closeFigther = Object.keys(Game.creeps)
+        .map(i => Game.creeps[i])
+        .filter(i => i.memory.role === "fighter" || i.memory.role === "dismantler")[0];
+      /*
       const damagedCreep = attackFlag.room.find(FIND_MY_CREEPS, {
         filter: i => i.hits < i.hitsMax
-      })[0];
-      const healTarget = damagedCreep || closeFigther;
+      })[0]; */
+      const healTarget = closeFigther;
 
       if (healTarget) {
         creep.goTo(healTarget);

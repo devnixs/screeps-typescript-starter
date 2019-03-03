@@ -83,4 +83,5 @@ class RoleLongDistanceHarvester implements IRole {
   }
 }
 
+profiler.registerClass(RoleLongDistanceHarvester, "RoleLongDistanceHarvester");
 export const roleLongDistanceHarvester = new RoleLongDistanceHarvester();

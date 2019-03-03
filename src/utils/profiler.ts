@@ -377,3 +377,9 @@ export const profiler = {
   registerFN: profileFunction,
   registerClass: profileObjectFunctions
 };
+
+export const profileMethod = function(name: string) {
+  return (fn: any) => {
+    return profiler.registerFN(fn, name);
+  };
+};

@@ -68,7 +68,9 @@ class Spawner {
     requirements = requirements.filter(i => !i.onlyRoom || i.onlyRoom === spawn.room.name);
 
     const allCreeps = _.values(Game.creeps) as Creep[];
-    const creepsInThisRoom = allCreeps.filter(i => i.memory.homeRoom === spawn.room.name);
+    const creepsInThisRoom = allCreeps.filter(
+      i => i.memory.homeRoom === spawn.room.name && (i.ticksToLive === undefined || i.ticksToLive > 50)
+    );
 
     const counts = _.countBy(creepsInThisRoom, i => this.getRoleSlug(i.memory.role, i.memory.subRole));
     const totalPercentage = _.sum(requirements.map(i => i.percentage));
@@ -192,4 +194,5 @@ class Spawner {
   }
 }
 
+profiler.registerClass(Spawner, "Spawner");
 export const spawner = new Spawner();

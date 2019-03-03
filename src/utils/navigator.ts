@@ -1,4 +1,5 @@
 import { defaultReusePath } from "../constants/misc";
+import "./Traveler";
 
 function hashCode(str: string) {
   // java String#hashCode
@@ -33,7 +34,9 @@ Creep.prototype.goTo = function(destination: RoomPosition | { pos: RoomPosition 
     return ERR_INVALID_TARGET;
   }
 
-  let forceNoIgnoreCreeps = false;
+  return creep.travelTo(target, {});
+
+  /*   let forceNoIgnoreCreeps = false;
 
   const currentPos = { x: this.pos.x, y: this.pos.y };
   if (currentPos.x === creep.memory.lastPos.x && currentPos.y === creep.memory.lastPos.y) {
@@ -48,7 +51,7 @@ Creep.prototype.goTo = function(destination: RoomPosition | { pos: RoomPosition 
   }
 
   if (creep.room.name !== target.roomName) {
-    return creep.moveTo(target, {
+    return creep.travelTo(target, {
       ignoreCreeps: true && !forceNoIgnoreCreeps,
       reusePath: forceNoIgnoreCreeps ? 0 : defaultReusePath,
       ...options
@@ -56,17 +59,17 @@ Creep.prototype.goTo = function(destination: RoomPosition | { pos: RoomPosition 
   } else {
     if (!creep.pos.inRangeTo(target.x, target.y, 4)) {
       // if we're far, ignore creeps
-      return creep.moveTo(target, {
+      return creep.travelTo(target, {
         ignoreCreeps: true && !forceNoIgnoreCreeps,
         reusePath: forceNoIgnoreCreeps ? 0 : defaultReusePath,
         ...options
       });
     } else {
-      return creep.moveTo(target, {
+      return creep.travelTo(target, {
         ignoreCreeps: false,
         reusePath: forceNoIgnoreCreeps ? 0 : defaultReusePath,
         ...options
       });
     }
-  }
+  } */
 };

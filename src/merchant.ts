@@ -2,6 +2,7 @@ import { desiredStocks, buyableElements } from "constants/misc";
 import { profiler } from "./utils/profiler";
 
 const minCredits = 1000;
+const minTradeCreditAmount = 200;
 const maxTradeAmount = 500;
 
 export class Merchant {
@@ -109,6 +110,9 @@ export class Merchant {
   }
 
   static runForAllRooms() {
+    if (Game.market.credits < minCredits + minTradeCreditAmount) {
+      return;
+    }
     const roomNames = Object.keys(Game.rooms)
       .map(room => Game.rooms[room])
       .filter(
@@ -130,3 +134,5 @@ export class Merchant {
     }
   }
 }
+
+profiler.registerClass(Merchant, "Merchant");

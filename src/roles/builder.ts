@@ -48,4 +48,6 @@ class RoleBuilder implements IRole {
   }
 }
 
+profiler.registerClass(RoleBuilder, "RoleBuilder");
+
 export const roleBuilder = new RoleBuilder();

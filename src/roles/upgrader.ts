@@ -12,15 +12,16 @@ class RoleUpgrader implements IRole {
       memory.upgrading = false;
       creep.say("🔄 harvest");
     }
-    if (!memory.upgrading && creep.carry.energy == creep.carryCapacity) {
+    if (!memory.upgrading && creep.carry.energy > 0) {
       memory.upgrading = true;
       creep.say("⚡ upgrade");
     }
 
     if (memory.upgrading) {
       if (creep.room.controller) {
-        creep.upgradeController(creep.room.controller);
-        creep.goTo(creep.room.controller);
+        if (creep.upgradeController(creep.room.controller) === ERR_NOT_IN_RANGE) {
+          creep.goTo(creep.room.controller);
+        }
       }
     } else {
       sourceManager.getEnergy(creep);
@@ -28,4 +29,5 @@ class RoleUpgrader implements IRole {
   }
 }
 
+profiler.registerClass(RoleUpgrader, "RoleUpgrader");
 export const roleUpgrader = new RoleUpgrader();

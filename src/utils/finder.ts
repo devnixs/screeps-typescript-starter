@@ -1,6 +1,6 @@
-import { profiler } from "../utils/profiler";
+import { profiler, profileMethod } from "../utils/profiler";
 
-export function findAndCache<K extends FindConstant>(
+let findAndCache = function findAndCache<K extends FindConstant>(
   creep: Creep,
   cacheKey: string,
   findConstant: FindConstant,
@@ -39,11 +39,13 @@ export function findAndCache<K extends FindConstant>(
   }
 
   return cachedElement;
-}
+};
 
-export function findNonEmptyResourceInStore(store: StoreDefinition): ResourceConstant | undefined {
+let findNonEmptyResourceInStore = function findNonEmptyResourceInStore(
+  store: StoreDefinition
+): ResourceConstant | undefined {
   return Object.keys(store).find(i => (store as any)[i] > 0) as any;
-}
+};
 
 interface IRestPosition {
   X: number;
@@ -51,7 +53,7 @@ interface IRestPosition {
   roomName: string;
 }
 
-export function findRestSpot(creep: Creep) {
+let findRestSpot = function findRestSpot(creep: Creep) {
   const memory = (creep.memory as any) as { rest: IRestPosition };
 
   if (!memory.rest) {
@@ -83,14 +85,14 @@ export function findRestSpot(creep: Creep) {
   } else {
     return null;
   }
-}
+};
 
 interface SimplePos {
   x: number;
   y: number;
 }
 
-export function findEmptySpotCloseTo(pos: SimplePos, room: Room) {
+let findEmptySpotCloseTo = function findEmptySpotCloseTo(pos: SimplePos, room: Room) {
   const openList = [pos];
   const closedList = [];
 
@@ -118,4 +120,11 @@ export function findEmptySpotCloseTo(pos: SimplePos, room: Room) {
     }
   }
   return null;
-}
+};
+
+findAndCache = profiler.registerFN(findAndCache, "findAndCache");
+findNonEmptyResourceInStore = profiler.registerFN(findNonEmptyResourceInStore, "findNonEmptyResourceInStore");
+findRestSpot = profiler.registerFN(findRestSpot, "findRestSpot");
+findEmptySpotCloseTo = profiler.registerFN(findEmptySpotCloseTo, "findEmptySpotCloseTo");
+
+export { findAndCache, findNonEmptyResourceInStore, findRestSpot, findEmptySpotCloseTo };

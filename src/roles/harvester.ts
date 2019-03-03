@@ -1,8 +1,10 @@
 import { sourceManager } from "../utils/source-manager";
 import { profiler } from "../utils/profiler";
 
-interface IHarvesterMemory extends CreepMemory {
+export interface IHarvesterMemory extends CreepMemory {
   isDepositing?: boolean;
+  targetContainerId?: string;
+  isSittingOnTargetContainer: string;
 }
 
 class RoleHarvester implements IRole {
@@ -51,5 +53,5 @@ class RoleHarvester implements IRole {
     }
   }
 }
-
+profiler.registerClass(RoleHarvester, "RoleHarvester");
 export const roleHarvester = new RoleHarvester();

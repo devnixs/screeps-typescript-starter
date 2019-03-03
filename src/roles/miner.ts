@@ -1,6 +1,7 @@
 import { sourceManager } from "../utils/source-manager";
 import { roleHarvester } from "./harvester";
 import { profiler } from "../utils/profiler";
+import { O_NOFOLLOW } from "constants";
 
 interface IMinerMemory extends CreepMemory {
   isDepositing?: boolean;
@@ -27,9 +28,12 @@ class RoleMiner implements IRole {
         return roleHarvester.run(creep);
       }
     } else {
-      sourceManager.store(creep);
+      if (sourceManager.storeInCloseContainer(creep) !== OK) {
+        sourceManager.store(creep);
+      }
     }
   }
 }
 
+profiler.registerClass(RoleMiner, "RoleMiner");
 export const roleMiner = new RoleMiner();

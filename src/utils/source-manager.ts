@@ -86,7 +86,7 @@ class SourceManager {
 
   pickupDroppedEnergy(creep: Creep) {
     const droppedEnergy = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES, {
-      filter: i => i.resourceType === RESOURCE_ENERGY
+      filter: i => i.resourceType === RESOURCE_ENERGY && i.pos.getRangeTo(creep.pos.x, creep.pos.y) <= 8
     });
     if (droppedEnergy) {
       if (creep.pickup(droppedEnergy) === ERR_NOT_IN_RANGE) {
@@ -97,7 +97,7 @@ class SourceManager {
     }
 
     const tombstone = creep.pos.findClosestByRange(FIND_TOMBSTONES, {
-      filter: tomb => tomb.store && tomb.store.energy > 0
+      filter: tomb => tomb.store && tomb.store.energy > 0 && tomb.pos.getRangeTo(creep.pos.x, creep.pos.y) <= 8
     });
 
     if (tombstone) {
@@ -152,11 +152,7 @@ class SourceManager {
     }
 
     const linkToWithdrawEnergy = LinkManager.getLinksToWithdrawEnergy(creep.pos)[0];
-    if (
-      linkToWithdrawEnergy &&
-      linkToWithdrawEnergy.link &&
-      linkToWithdrawEnergy.link.energy >= creep.carryCapacity - creep.carry.energy
-    ) {
+    if (linkToWithdrawEnergy && linkToWithdrawEnergy.link && linkToWithdrawEnergy.link.energy > 0) {
       targetStructure = linkToWithdrawEnergy.link;
     }
 
@@ -335,4 +331,5 @@ class SourceManager {
   }
 }
 
+profiler.registerClass(SourceManager, "SourceManager");
 export const sourceManager = new SourceManager();

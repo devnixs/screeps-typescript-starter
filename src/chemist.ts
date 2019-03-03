@@ -4,14 +4,14 @@ import { desiredStocks } from "constants/misc";
 import { profiler } from "./utils/profiler";
 
 export const wantedBoosts: { [roomName: string]: { [body: string]: ResourceConstant[] } } = {
-  E27N47: {
+  /*   E27N47: {
     [HEAL]: [RESOURCE_CATALYZED_LEMERGIUM_ALKALIDE, RESOURCE_LEMERGIUM_ALKALIDE],
     [TOUGH]: [RESOURCE_GHODIUM_ALKALIDE, RESOURCE_GHODIUM_OXIDE]
   },
   sim: {
     [HEAL]: [RESOURCE_LEMERGIUM_OXIDE, RESOURCE_LEMERGIUM_ALKALIDE],
     [TOUGH]: [RESOURCE_GHODIUM_OXIDE]
-  }
+  } */
 };
 
 interface Reaction {
@@ -25,9 +25,11 @@ const labProduceByTick = 5;
 export const boostResourceNeeded = 30;
 
 export class Chemist {
-  assets: { [key: string]: number };
-  assetsWithAllLabs: { [key: string]: number };
-  constructor(private room: Room) {
+  assets: { [key: string]: number } = {};
+  assetsWithAllLabs: { [key: string]: number } = {};
+  constructor(private room: Room) {}
+
+  initializeAssets() {
     this.assets = this.getAssets();
     this.assetsWithAllLabs = this.getAssetsWithAllLabs();
   }
@@ -42,6 +44,8 @@ export class Chemist {
     var rooms = _.values(Game.rooms) as Room[];
     for (let i in rooms) {
       const room = rooms[i];
+
+      // if all labs are on cooldown, skip room
       const chemist = new Chemist(room);
       chemist.run();
     }
@@ -60,12 +64,14 @@ export class Chemist {
     if (this.isBoostMode()) {
       // boost mode
       if (Game.time % 10 === 0) {
+        this.initializeAssets();
         this.assignBoosts();
       }
       this.runAllBoostLabs();
     } else {
       // chemistry mode
       if (Game.time % 5 === 0) {
+        this.initializeAssets();
         this.checkLabs();
         this.assignJobs();
         this.runLabs();
@@ -466,3 +472,5 @@ export class Chemist {
     return REAGENTS[mineral];
   }
 }
+
+profiler.registerClass(Chemist, "Chemist");

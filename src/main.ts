@@ -22,8 +22,9 @@ import { roleTruck } from "roles/truck";
 import { roleDismantler } from "roles/dismantler";
 import { LinkManager } from "utils/link-manager";
 import { Merchant } from "merchant";
+import { roleStaticHarvester } from "roles/static-harvester";
 
-profiler.enable();
+// profiler.enable();
 
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
@@ -56,6 +57,9 @@ export const loop = ErrorMapper.wrapLoop(() => {
       try {
         if (memory.role == "harvester") {
           roleHarvester.run(creep);
+        }
+        if (memory.role == "static-harvester") {
+          roleStaticHarvester.run(creep);
         }
         if (memory.role == "upgrader") {
           roleUpgrader.run(creep);
@@ -125,14 +129,14 @@ export const loop = ErrorMapper.wrapLoop(() => {
       console.log("Used a lot of cpu : ", Game.cpu.getUsed());
     }
 
-    /*     if (Game.time % 37 === 0) {
+    if (Game.time % 7 === 0) {
       Memory.cpuUsages.push(Game.cpu.getUsed());
-      if (Memory.cpuUsages.length > 20) {
+      if (Memory.cpuUsages.length > 100) {
         Memory.cpuUsages.shift();
       }
       console.log("Average CPU : ", _.sum(Memory.cpuUsages) / Memory.cpuUsages.length);
     }
- */
+
     /*
     // shutdown attack
     if (Game.time >= 4536722 && Game.flags["boostmode_1"]) {

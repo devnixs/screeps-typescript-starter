@@ -11,9 +11,11 @@ class RoleTower {
   }
 
   private runSingleTower = (tower: StructureTower) => {
-    const refreshInterval = 1;
-    if (!Memory.lastTowerRefreshTime || Game.time - Memory.lastTowerRefreshTime <= refreshInterval) {
+    if (Game.time % 30 === 0) {
       this.refreshDamagedStructures(tower);
+    }
+
+    if (Game.time % 5 === 0) {
       this.refreshEnemy(tower);
       this.refreshDamagedCreep(tower);
     }
@@ -126,18 +128,18 @@ class RoleTower {
 
   private getDamagedStructureInRoom(tower: StructureTower): AnyStructure | null {
     // only repair really damaged stuff
-    var damagedOther = tower.pos.findClosestByRange(FIND_MY_STRUCTURES, {
+    var damagedOther = tower.room.find(FIND_MY_STRUCTURES, {
       filter: structure => structure.hits < structure.hitsMax / 2
-    });
+    })[0];
     if (damagedOther) {
       return damagedOther;
     }
 
-    var damagedRoads = tower.pos.findClosestByRange(FIND_STRUCTURES, {
+    var damagedRoads = tower.room.find(FIND_STRUCTURES, {
       filter: structure =>
         structure.hits < structure.hitsMax / 2 &&
         (structure.structureType == STRUCTURE_ROAD || structure.structureType == STRUCTURE_CONTAINER)
-    });
+    })[0];
     return damagedRoads;
   }
 
@@ -165,4 +167,5 @@ class RoleTower {
   }
 }
 
+profiler.registerClass(RoleTower, "RoleTower");
 export const roleTower = new RoleTower();
