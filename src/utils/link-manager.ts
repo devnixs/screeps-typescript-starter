@@ -1,3 +1,5 @@
+import { profiler } from "../utils/profiler";
+
 interface LinkAndMemory {
   linkMemory: LinkMemory;
   linkObj: StructureLink;

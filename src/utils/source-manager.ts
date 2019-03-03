@@ -1,5 +1,6 @@
 import { findAndCache, findRestSpot } from "./finder";
 import { LinkManager } from "./link-manager";
+import { profiler } from "../utils/profiler";
 
 class SourceManager {
   harvestEnergyFromSource(creep: Creep) {

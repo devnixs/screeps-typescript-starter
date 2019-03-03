@@ -1,7 +1,7 @@
 import { REAGENTS, RESOURCE_IMPORTANCE, boostResources } from "constants/resources";
 import { minMax } from "./utils/misc-utils";
 import { desiredStocks } from "constants/misc";
-import { cpus } from "os";
+import { profiler } from "./utils/profiler";
 
 export const wantedBoosts: { [roomName: string]: { [body: string]: ResourceConstant[] } } = {
   E27N47: {

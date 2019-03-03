@@ -2,6 +2,7 @@ import { ILongDistanceHarvesterMemory } from "roles/longDistanceHarvester";
 import { IDismantlerMemory } from "roles/dismantler";
 import { requiredFightersForAnAttack, requiredDismantlersForAnAttack } from "./constants/misc";
 import { requiredHealersForAnAttack } from "./constants/misc";
+import { profiler } from "./utils/profiler";
 
 export interface RoleRequirement {
   role: roles;

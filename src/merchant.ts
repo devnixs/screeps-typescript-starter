@@ -1,4 +1,5 @@
 import { desiredStocks, buyableElements } from "constants/misc";
+import { profiler } from "./utils/profiler";
 
 const minCredits = 1000;
 const maxTradeAmount = 500;

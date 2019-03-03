@@ -1,4 +1,5 @@
 import { getSpawnerRequirements, RoleRequirement } from "spawner-requirements";
+import { profiler } from "./utils/profiler";
 
 const costs = {
   [MOVE]: 50,
