@@ -1,5 +1,18 @@
 import { profiler, profileMethod } from "../utils/profiler";
 
+let findClosestRoom = function(targetRoom: string) {
+  var myRooms = _.uniq(Object.keys(Game.spawns).map(spwnName => Game.spawns[spwnName].room.name)).filter(
+    i => i != targetRoom
+  );
+
+  var roomsAndDistances = myRooms.map(sourceRoom => ({
+    roomName: sourceRoom,
+    distance: Game.map.getRoomLinearDistance(sourceRoom, targetRoom)
+  }));
+  var closest = _.sortBy(roomsAndDistances, i => i.distance);
+  return closest[0];
+};
+
 let findAndCache = function findAndCache<K extends FindConstant>(
   creep: Creep,
   cacheKey: string,
@@ -127,4 +140,4 @@ findNonEmptyResourceInStore = profiler.registerFN(findNonEmptyResourceInStore, "
 findRestSpot = profiler.registerFN(findRestSpot, "findRestSpot");
 findEmptySpotCloseTo = profiler.registerFN(findEmptySpotCloseTo, "findEmptySpotCloseTo");
 
-export { findAndCache, findNonEmptyResourceInStore, findRestSpot, findEmptySpotCloseTo };
+export { findAndCache, findNonEmptyResourceInStore, findRestSpot, findEmptySpotCloseTo, findClosestRoom };

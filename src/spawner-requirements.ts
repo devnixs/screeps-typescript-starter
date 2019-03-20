@@ -5,6 +5,7 @@ import { requiredHealersForAnAttack } from "./constants/misc";
 import { profiler } from "./utils/profiler";
 import { IHarvesterMemory } from "./roles/harvester";
 import { IStaticHarvesterMemory } from "roles/static-harvester";
+import { findClosestRoom } from "utils/finder";
 
 export interface RoleRequirement {
   role: roles;
@@ -31,7 +32,54 @@ export interface RoleRequirement {
 // TOUGH	        10	No effect other than the 100 hit points all body parts add. This provides a cheap way to add hit points to a creep.
 // CLAIM	        600
 
+// Stuff that needs to be computed once.
+
+let claimerCount = 0;
+let closestRoomToClaimTarget = "";
+
+let builderHelperCount = 0;
+let builderHelperTarget: string | undefined = undefined;
+let builderHelperSource: string | undefined = undefined;
+
+let lastInitializationTick: number | undefined;
+function initOneTimeValues() {
+  if (lastInitializationTick === Game.time) {
+    return;
+  } else {
+    lastInitializationTick = Game.time;
+  }
+
+  const claimFlag = Game.flags["claimer_target"];
+  if (
+    claimFlag &&
+    Game.map.isRoomAvailable(claimFlag.pos.roomName) &&
+    !(claimFlag.room && claimFlag.room.controller && claimFlag.room.controller.my)
+  ) {
+    claimerCount = 1;
+    closestRoomToClaimTarget = findClosestRoom(claimFlag.pos.roomName).roomName;
+    console.log("Found claim target : ", claimFlag.pos.roomName);
+    console.log("closestRoomToClaimTarget : ", closestRoomToClaimTarget);
+    console.log("claimerCount : ", claimerCount);
+  }
+
+  let colonyThatNeedsHelpBuilding = Object.keys(Game.rooms)
+    .map(i => Game.rooms[i])
+    .filter(i => i.controller && i.controller.my && i.controller.level === 1)[0];
+
+  if (colonyThatNeedsHelpBuilding) {
+    builderHelperSource = findClosestRoom(colonyThatNeedsHelpBuilding.name).roomName;
+    builderHelperTarget = colonyThatNeedsHelpBuilding.name;
+    builderHelperCount = 1;
+    console.log("Found colonyThatNeedsHelpBuilding : ", colonyThatNeedsHelpBuilding.name);
+    console.log("builderHelperTarget : ", colonyThatNeedsHelpBuilding.name);
+    console.log("builderHelperSource : ", builderHelperSource);
+    console.log("builderHelperCount : ", builderHelperCount);
+  }
+}
+
 export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[] {
+  initOneTimeValues();
+
   const hasSafeMode = spawn.room.controller && spawn.room.controller.safeMode;
 
   const maxEnergyInRoom = spawn.room.energyCapacityAvailable;
@@ -40,26 +88,43 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     .find(FIND_MY_CREEPS)
     .filter(i => i.memory.role === "harvester" || i.memory.role === "static-harvester");
 
-  // const towers = spawn.room.find(FIND_MY_STRUCTURES, { filter: i => i.structureType === "tower" });
+  const towers = spawn.room.find(FIND_MY_STRUCTURES, { filter: i => i.structureType === "tower" });
   const extractors = spawn.room.find(FIND_MY_STRUCTURES, { filter: i => i.structureType === "extractor" });
   const mineralWithReserve = spawn.room.find(FIND_MINERALS, { filter: i => i.mineralAmount > 0 });
   // const labs = spawn.room.find(FIND_MY_STRUCTURES, { filter: i => i.structureType === "lab" });
-  // const links = spawn.room.find(FIND_MY_STRUCTURES, { filter: i => i.structureType === "link" });
+  const links = spawn.room.find(FIND_MY_STRUCTURES, { filter: i => i.structureType === "link" });
+  const enemies = spawn.room.find(FIND_HOSTILE_CREEPS);
   const constructionSites = spawn.room.find(FIND_MY_CONSTRUCTION_SITES);
 
-  let maxUpgraderCount: number;
+  let upgraderRatio: number;
+  let maxUpgraderCount: number = 1;
+
+  if (links.length === 0) {
+    if (constructionSites.length) {
+      maxUpgraderCount = 1;
+    } else {
+      maxUpgraderCount = 8;
+    }
+  }
+
   if (spawn.room.storage) {
     const availableEnergy = spawn.room.storage.store.energy;
-    if (availableEnergy > 300000) {
-      maxUpgraderCount = 6;
-    } else if (availableEnergy > 200000) {
-      maxUpgraderCount = 4;
-    } else if (availableEnergy > 150000) {
+    if (availableEnergy > 800000) {
+      upgraderRatio = 10;
       maxUpgraderCount = 3;
-    } else if (availableEnergy > 20000) {
+    } else if (availableEnergy > 600000) {
+      upgraderRatio = 8;
       maxUpgraderCount = 2;
+    } else if (availableEnergy > 300000) {
+      upgraderRatio = 6;
+    } else if (availableEnergy > 200000) {
+      upgraderRatio = 4;
+    } else if (availableEnergy > 150000) {
+      upgraderRatio = 3;
+    } else if (availableEnergy > 20000) {
+      upgraderRatio = 2;
     } else {
-      maxUpgraderCount = 1;
+      upgraderRatio = 1;
     }
   } else {
     const containers: StructureContainer[] = spawn.room.find(FIND_STRUCTURES, {
@@ -67,31 +132,33 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     }) as any;
 
     if (containers.length === 0) {
-      maxUpgraderCount = 3;
+      upgraderRatio = 3;
     } else {
       const totalStorage = _.sum(containers.map(i => i.storeCapacity));
       const totalEnergy = _.sum(containers.map(i => i.store.energy));
 
       const ratio = totalEnergy / totalStorage;
       if (ratio >= 0.7) {
-        maxUpgraderCount = 10;
-      } else if (ratio >= 0.6) {
-        maxUpgraderCount = 8;
-      } else if (ratio >= 0.5) {
+        upgraderRatio = 10;
         maxUpgraderCount = 6;
-      } else if (ratio >= 0.3) {
+      } else if (ratio >= 0.5) {
+        upgraderRatio = 8;
+        maxUpgraderCount = 4;
+      } else if (ratio >= 0.25) {
+        upgraderRatio = 6;
+        maxUpgraderCount = 2;
+      } else if (ratio >= 0.1) {
+        upgraderRatio = 2;
         maxUpgraderCount = 2;
       } else {
-        maxUpgraderCount = 1;
+        upgraderRatio = 1;
+        maxUpgraderCount = 2;
       }
     }
   }
 
-  let claimerCount = Game.flags["claimer_target"] ? 1 : 0;
-
   /*   if (harvesters.length === 0) {
     // we need at least one harvester
-    console.log("Spawning necessary harvester");
     return [
       {
         percentage: 10,
@@ -103,7 +170,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
   }
  */
   if ("sim" in Game.rooms) {
-    maxUpgraderCount = 0;
+    upgraderRatio = 0;
     claimerCount = 0;
   }
 
@@ -114,7 +181,6 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       const currentEnergyRateForThisSource = _.sum(
         harvesters.filter(i => i.memory.subRole === source.id).map(i => i.getActiveBodyparts(WORK) * HARVEST_POWER)
       );
-      console.log("0", source.room.name, currentEnergyRateForThisSource);
       const requiredAdditionalEnergyRate = energyRate - currentEnergyRateForThisSource;
       if (requiredAdditionalEnergyRate <= 0) {
         return null;
@@ -135,10 +201,8 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
 
       // build creep with max build rate, otherwise we will end up indefinitely with multiple creeps
 
-      console.log("1", source.room.name, source.id, energyRate, requiredAdditionalEnergyRate);
       const neededWorkParts = Math.ceil(energyRate / HARVEST_POWER);
       const neededEnergy = neededWorkParts * BODYPART_COST.work + BODYPART_COST.move + carryCount * BODYPART_COST.carry;
-      console.log("2", source.room.name, source.id, neededWorkParts, neededEnergy);
 
       if (closeContainer) {
         return {
@@ -148,7 +212,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
           maxCount: 1,
           bodyTemplate: [WORK],
           bodyTemplatePrepend: [MOVE],
-          minEnergy: BODYPART_COST.work + BODYPART_COST.move + carryCount * BODYPART_COST.carry,
+          minEnergy: BODYPART_COST.work + BODYPART_COST.move,
           capMaxEnergy: neededEnergy,
           additionalMemory: {
             targetContainerId: closeContainer.id
@@ -162,7 +226,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
           maxCount: 3,
           bodyTemplate: [WORK],
           bodyTemplatePrepend: [MOVE, CARRY],
-          minEnergy: BODYPART_COST.work + BODYPART_COST.move + carryCount * BODYPART_COST.carry,
+          minEnergy: BODYPART_COST.work + BODYPART_COST.move + BODYPART_COST.carry,
           capMaxEnergy: neededEnergy
         } as RoleRequirement;
       }
@@ -177,20 +241,30 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       role: "truck",
       maxCount: 1,
       bodyTemplate: [MOVE, CARRY, CARRY],
-      capMaxEnergy: 1100
+      capMaxEnergy: 1900
     },
     {
       percentage: 2,
       role: "builder",
       maxCount: constructionSites.length ? 1 : 0,
-      bodyTemplate: [MOVE, WORK, CARRY]
+      bodyTemplate: [MOVE, WORK, CARRY],
+      capMaxEnergy: 1900
+    },
+    {
+      percentage: 2,
+      role: "builder",
+      maxCount: builderHelperCount,
+      bodyTemplate: [MOVE, WORK, CARRY],
+      capMaxEnergy: 1900,
+      onlyRoom: builderHelperSource,
+      subRole: builderHelperTarget
     },
     {
       percentage: 2,
       role: "reparator",
       maxCount: 1, // handled by towers
       bodyTemplate: [MOVE, WORK, CARRY],
-      capMaxEnergy: 800
+      capMaxEnergy: 1400
     },
     {
       percentage: 20,
@@ -199,7 +273,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       countAllRooms: true,
       bodyTemplate: [TOUGH, TOUGH, TOUGH, WORK, WORK, RANGED_ATTACK, MOVE, MOVE, MOVE],
       sortBody: [TOUGH, WORK, MOVE, RANGED_ATTACK],
-      onlyRoom: "E27N47",
+      onlyRoom: "E25N48",
       subRole: "room1",
       additionalMemory: {} as IDismantlerMemory
     },
@@ -216,8 +290,11 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     {
       percentage: 1,
       role: "fighter",
-      maxCount: hasSafeMode ? 0 : Game.flags["fighter_attack"] ? requiredFightersForAnAttack : 0,
-      onlyRoom: "E27N47",
+      maxCount: Game.flags["fighter_attack"]
+        ? requiredFightersForAnAttack
+        : enemies.length > 0 && towers.length === 0
+        ? 1
+        : 0,
       bodyTemplate: [TOUGH, MOVE, MOVE, ATTACK],
       sortBody: [TOUGH, MOVE, ATTACK]
     },
@@ -229,7 +306,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       capMaxEnergy: 1800,
       sortBody: [MOVE, WORK, CARRY]
     },
-    {
+    /*     {
       percentage: 4,
       role: "long-distance-harvester",
       maxCount: 2,
@@ -313,52 +390,20 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
         targetRoomX: 8,
         targetRoomY: 7
       } as Partial<ILongDistanceHarvesterMemory>
-    },
-    /*     {
-      percentage: 1,
-      role: "long-distance-harvester",
-      maxCount: 2,
-      countAllRooms: true,
-      onlyRoom: "E27N47",
-      bodyTemplate: [MOVE, WORK, CARRY],
-      subRole: "room6",
-      additionalMemory: {
-        homeSpawnPosition: spawn.pos,
-        home: spawn.pos.roomName,
-        role: "long-distance-harvester",
-        targetRoomName: "E28N47",
-        targetRoomX: 13,
-        targetRoomY: 27
-      } as Partial<ILongDistanceHarvesterMemory>
-    },
-    {
-      percentage: 1,
-      role: "long-distance-harvester",
-      maxCount: 2,
-      countAllRooms: true,
-      onlyRoom: "E27N47",
-      bodyTemplate: [MOVE, WORK, CARRY],
-      subRole: "room7",
-      additionalMemory: {
-        homeSpawnPosition: spawn.pos,
-        home: spawn.pos.roomName,
-        role: "long-distance-harvester",
-        targetRoomName: "E28N47",
-        targetRoomX: 35,
-        targetRoomY: 20
-      } as Partial<ILongDistanceHarvesterMemory>
     }, */
     {
       percentage: 1,
       role: "upgrader",
-      maxCount: 1,
-      bodyTemplate: [MOVE, WORK, WORK, CARRY],
-      capMaxEnergy: 600 * maxUpgraderCount
+      maxCount: maxUpgraderCount,
+      bodyTemplate:
+        maxEnergyInRoom < 500 || links.length === 0 ? [MOVE, WORK, CARRY] : [MOVE, WORK, WORK, WORK, WORK, CARRY],
+      capMaxEnergy: 600 * upgraderRatio
     },
     {
       percentage: 1,
       role: "claimer",
       maxCount: claimerCount,
+      onlyRoom: closestRoomToClaimTarget,
       exactBody: [MOVE, CLAIM]
     },
     {

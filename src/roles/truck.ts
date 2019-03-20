@@ -37,7 +37,7 @@ class RoleTruck implements IRole {
     const memory: ITruckMemory = creep.memory as any;
     const totalCargoContent = _.sum(creep.carry);
 
-    if (creep.room.storage && !memory.idle) {
+    if (!memory.idle) {
       this.setJob(creep);
       let target: AnyStructure;
       if (memory.isDepositing) {
@@ -46,10 +46,13 @@ class RoleTruck implements IRole {
           this.restartJob(creep);
         } else {
           creep.goTo(target);
-          if (totalCargoContent === 0 || creep.transfer(target, memory.jobResource) === OK) {
+          const depositResult = creep.transfer(target, memory.jobResource);
+          if (totalCargoContent === 0 || depositResult === OK) {
             memory.isDepositing = false;
 
             // job is complete.
+            this.restartJob(creep);
+          } else if (depositResult === ERR_FULL) {
             this.restartJob(creep);
           }
         }
@@ -66,11 +69,16 @@ class RoleTruck implements IRole {
             currentlyInStock = store[memory.jobResource] || 0;
           }
 
-          let withdrawResult = creep.withdraw(
-            target,
-            memory.jobResource,
-            Math.min(memory.jobNeededAmount, currentlyInStock)
-          );
+          var currentlyCarrying = creep.carry[memory.jobResource] || 0;
+          var needsToWithdraw = memory.jobNeededAmount - currentlyCarrying;
+          let withdrawResult: ScreepsReturnCode = -1;
+          if (needsToWithdraw <= 0) {
+            withdrawResult = OK;
+          }
+
+          if (withdrawResult != OK) {
+            withdrawResult = creep.withdraw(target, memory.jobResource, Math.min(needsToWithdraw, currentlyInStock));
+          }
 
           if (withdrawResult === ERR_INVALID_TARGET) {
             // maybe it's a dropped resource
@@ -189,9 +197,9 @@ class RoleTruck implements IRole {
       filter: i => i.structureType === "container" && _.sum(i.store) >= i.storeCapacity / 2
     })[0] as StructureContainer;
 
-    if (filledContainer && storage) {
-      const resourceType = findNonEmptyResourceInStore(filledContainer.store);
-      if (resourceType) {
+    if (filledContainer) {
+      const resourceType = findNonEmptyResourceInStore(filledContainer.store) as ResourceConstant;
+      if (storage) {
         return {
           jobNeededAmount: filledContainer.store[resourceType] as any,
           jobResource: resourceType,
@@ -199,6 +207,20 @@ class RoleTruck implements IRole {
           targetSource: filledContainer.id,
           targetDestination: storage.id
         };
+      } else if (resourceType === "energy") {
+        const structureThatNeedsEnergy = sourceManager.getStructureThatNeedsEnergy(creep) as StructureExtension;
+        if (resourceType && structureThatNeedsEnergy) {
+          return {
+            jobNeededAmount: Math.min(
+              filledContainer.store.energy,
+              structureThatNeedsEnergy.energyCapacity - structureThatNeedsEnergy.energy
+            ) as any,
+            jobResource: resourceType,
+            jobTag: "empty-container-" + filledContainer.id,
+            targetSource: filledContainer.id,
+            targetDestination: structureThatNeedsEnergy.id
+          };
+        }
       }
     }
 

@@ -1,7 +1,7 @@
 import { desiredStocks, buyableElements } from "constants/misc";
 import { profiler } from "./utils/profiler";
 
-const minCredits = 1000;
+const minCredits = 10000;
 const minTradeCreditAmount = 200;
 const maxTradeAmount = 500;
 
@@ -34,20 +34,22 @@ export class Merchant {
     ) as ResourceConstant | undefined;
 
     if (overSupply) {
+      // console.log("Oversupply", this.room.name, overSupply);
       const overSupplyAmount =
         this.getResource(storage.store, overSupply) +
         this.getResource(terminal.store, overSupply) -
         this.getResource(desiredStocks, overSupply);
       const terminalAmount = this.getResource(terminal.store, overSupply);
-
-      const sellResult = this.sellResource(overSupply, Math.min(terminalAmount, overSupplyAmount));
-      if (sellResult === OK) {
-        return;
+      if (overSupplyAmount > 50) {
+        const sellResult = this.sellResource(overSupply, Math.min(terminalAmount, overSupplyAmount));
+        if (sellResult === OK) {
+          return;
+        }
       }
     }
 
     if (underSupply) {
-      if (Game.market.credits < minCredits) {
+      if (Game.market.credits < minCredits + minTradeCreditAmount) {
         return;
       }
 
@@ -68,6 +70,7 @@ export class Merchant {
     );
 
     if (buyOrders.length >= 5) {
+      console.log("Selling 2", this.room.name, resource, amount);
       // we need at least 5 orders
       // take the most interesting one
       const bestOrder = _.sortBy(buyOrders, i => -1 * i.price)[0];
@@ -110,9 +113,10 @@ export class Merchant {
   }
 
   static runForAllRooms() {
-    if (Game.market.credits < minCredits + minTradeCreditAmount) {
+    if (Game.time % 10 > 0) {
       return;
     }
+
     const roomNames = Object.keys(Game.rooms)
       .map(room => Game.rooms[room])
       .filter(

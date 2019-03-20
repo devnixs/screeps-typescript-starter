@@ -86,7 +86,8 @@ class SourceManager {
 
   pickupDroppedEnergy(creep: Creep) {
     const droppedEnergy = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES, {
-      filter: i => i.resourceType === RESOURCE_ENERGY && i.pos.getRangeTo(creep.pos.x, creep.pos.y) <= 8
+      filter: i =>
+        i.resourceType === RESOURCE_ENERGY && i.pos.getRangeTo(creep.pos.x, creep.pos.y) <= 8 && i.amount >= 15
     });
     if (droppedEnergy) {
       if (creep.pickup(droppedEnergy) === ERR_NOT_IN_RANGE) {
@@ -128,12 +129,9 @@ class SourceManager {
     });
 
     if (tombstone) {
-      console.log(3);
       const element = this.getCurrentCarryingMineral(tombstone.store);
       if (element) {
-        console.log(4);
         if (creep.withdraw(tombstone, element) === ERR_NOT_IN_RANGE) {
-          console.log(5);
           creep.goTo(tombstone);
           creep.withdraw(tombstone, element);
         }
@@ -152,7 +150,7 @@ class SourceManager {
     }
 
     const linkToWithdrawEnergy = LinkManager.getLinksToWithdrawEnergy(creep.pos)[0];
-    if (linkToWithdrawEnergy && linkToWithdrawEnergy.link && linkToWithdrawEnergy.link.energy > 0) {
+    if (linkToWithdrawEnergy && linkToWithdrawEnergy.link) {
       targetStructure = linkToWithdrawEnergy.link;
     }
 
@@ -161,11 +159,11 @@ class SourceManager {
         creep,
         "harvest_container_id",
         FIND_STRUCTURES,
-        (targetStructure: any) => targetStructure.store.energy >= targetStructure.storeCapacity / 2,
+        (targetStructure: any) => targetStructure.store.energy >= targetStructure.storeCapacity / 4,
         {
           filter: (structure: StructureContainer) => {
             return (
-              structure.structureType == STRUCTURE_CONTAINER && structure.store.energy >= structure.storeCapacity / 2
+              structure.structureType == STRUCTURE_CONTAINER && structure.store.energy >= structure.storeCapacity / 4
             );
           }
         }
@@ -182,12 +180,24 @@ class SourceManager {
         creep.withdraw(targetStructure, RESOURCE_ENERGY);
       }
       return OK;
-    } else if (creep.getActiveBodyparts(WORK) > 0) {
-      return -1;
+    } else if (creep.getActiveBodyparts(WORK) > 0 && !creep.room.storage) {
+      // when a room doesn't have a storage yet, creeps need to be able to harvest themselves
+      return this.harvestEnergyFromSource(creep);
     } else {
       return -1;
     }
   }
+
+  filterStructureNeedsEnergy = (structure: StructureSpawn | StructureExtension | StructureTower | StructureLab) => {
+    const isExtOrSpawn = structure.structureType == STRUCTURE_EXTENSION || structure.structureType == STRUCTURE_SPAWN;
+
+    const isTowerOrLab = structure.structureType == STRUCTURE_TOWER || structure.structureType == STRUCTURE_LAB;
+
+    return (
+      (isExtOrSpawn && structure.energy < structure.energyCapacity) ||
+      (isTowerOrLab && structure.energy < structure.energyCapacity * 0.5) // we don't want to keep filling towers. Or the creep would keep doing this as the energy goes down every tick
+    );
+  };
 
   getStructureThatNeedsEnergy(creep: Creep) {
     let targetStructure: AnyStructure | undefined = findAndCache<FIND_STRUCTURES>(
@@ -196,17 +206,7 @@ class SourceManager {
       FIND_STRUCTURES,
       (targetStructure: any) => targetStructure.energy < targetStructure.energyCapacity,
       {
-        filter: (structure: StructureSpawn | StructureExtension | StructureTower | StructureLab) => {
-          const isExtOrSpawn =
-            structure.structureType == STRUCTURE_EXTENSION || structure.structureType == STRUCTURE_SPAWN;
-
-          const isTowerOrLab = structure.structureType == STRUCTURE_TOWER || structure.structureType == STRUCTURE_LAB;
-
-          return (
-            (isExtOrSpawn && structure.energy < structure.energyCapacity) ||
-            (isTowerOrLab && structure.energy < structure.energyCapacity * 0.5) // we don't want to keep filling towers. Or the creep would keep doing this as the energy goes down every tick
-          );
-        }
+        filter: this.filterStructureNeedsEnergy
       }
     ) as any;
 
@@ -275,9 +275,10 @@ class SourceManager {
     }
 
     if (targetStructure) {
-      if (creep.transfer(targetStructure, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+      let transferResult: number = creep.transfer(targetStructure, RESOURCE_ENERGY);
+      if (transferResult == ERR_NOT_IN_RANGE) {
         creep.goTo(targetStructure);
-        creep.transfer(targetStructure, RESOURCE_ENERGY);
+        transferResult = creep.transfer(targetStructure, RESOURCE_ENERGY);
       }
     } else {
       const restSpot = findRestSpot(creep);
@@ -287,6 +288,7 @@ class SourceManager {
     }
     return OK;
   }
+
   getCurrentCarryingMineral(store: StoreDefinition) {
     var carrying = Object.keys(store as any).filter(i => i !== "energy" && store && (store as any)[i] > 0)[0] as
       | ResourceConstant

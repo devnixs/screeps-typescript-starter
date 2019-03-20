@@ -107,7 +107,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
 
     roleTower.runAllTowers();
 
-    // architect.run();
+    architect.run();
 
     // Automatically delete memory of missing creeps
     for (const name in Memory.creeps) {
@@ -126,15 +126,25 @@ export const loop = ErrorMapper.wrapLoop(() => {
     Memory.rooms = Memory.rooms || {};
 
     if (Game.cpu.getUsed() > 50) {
-      console.log("Used a lot of cpu : ", Game.cpu.getUsed());
+      console.log("Used a lot of cpu : ", Game.cpu.getUsed(), Game.time);
     }
 
     if (Game.time % 7 === 0) {
+      Memory.cpuUsages = Memory.cpuUsages || [];
       Memory.cpuUsages.push(Game.cpu.getUsed());
       if (Memory.cpuUsages.length > 100) {
         Memory.cpuUsages.shift();
       }
       console.log("Average CPU : ", _.sum(Memory.cpuUsages) / Memory.cpuUsages.length);
+    }
+
+    // shutdown attack
+    if (
+      Game.flags["dismantler_attack"] &&
+      !Game.getObjectById("5c1cbb97e38b1f6a4735759e") &&
+      Game.getObjectById("5c1cbb95c219895c92dfdb3d")
+    ) {
+      Game.flags["dismantler_attack"].remove();
     }
 
     /*

@@ -25,14 +25,14 @@ class RoleClaimer implements IRole {
         const attackResult = creep.attackController(ctrl);
         console.log("Attack ctrl result", attackResult);
         if (attackResult === ERR_NOT_IN_RANGE) {
-          creep.goTo(flag);
+          creep.goTo(ctrl);
         }
       } else {
         const claimResult = creep.claimController(ctrl);
         if (claimResult === ERR_GCL_NOT_ENOUGH) {
           creep.reserveController(ctrl);
         } else if (creep.claimController(ctrl) === ERR_NOT_IN_RANGE) {
-          creep.goTo(flag);
+          creep.goTo(ctrl);
         }
       }
     } else {

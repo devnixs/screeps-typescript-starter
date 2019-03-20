@@ -12,10 +12,12 @@ const costs = {
   [CLAIM]: 600
 };
 
+var delay = "sim" in Game.rooms ? 1 : 5;
+
 class Spawner {
   run() {
     // Do the spawning logic once every 20 ticks
-    if (Game.time % 5 > 0) {
+    if (Game.time % delay > 0) {
       return;
     }
 
@@ -30,6 +32,10 @@ class Spawner {
     }
   }
 
+  getBodyPrice(parts: BodyPartConstant[]) {
+    return _.sum(parts.map(i => costs[i]));
+  }
+
   getBodyPartCombinationFromTemplate(
     parts: BodyPartConstant[],
     prependBodyTemplate: BodyPartConstant[] | undefined,
@@ -39,12 +45,12 @@ class Spawner {
     const current: BodyPartConstant[] = prependBodyTemplate ? prependBodyTemplate.concat() : [];
     let cost = 0;
 
-    cost = _.sum(current.map(i => costs[i]));
+    cost = this.getBodyPrice(current);
     let counter = 0;
     while (cost <= maxEnergy && current.length <= 50) {
       current.push(parts[counter % parts.length]);
       counter++;
-      cost = _.sum(current.map(i => costs[i]));
+      cost = this.getBodyPrice(current);
     }
     current.pop();
 
@@ -69,7 +75,7 @@ class Spawner {
 
     const allCreeps = _.values(Game.creeps) as Creep[];
     const creepsInThisRoom = allCreeps.filter(
-      i => i.memory.homeRoom === spawn.room.name && (i.ticksToLive === undefined || i.ticksToLive > 50)
+      i => i.memory.homeRoom === spawn.room.name && (i.ticksToLive === undefined || i.ticksToLive > 100)
     );
 
     const counts = _.countBy(creepsInThisRoom, i => this.getRoleSlug(i.memory.role, i.memory.subRole));
@@ -122,25 +128,40 @@ class Spawner {
     }
 
     if (roleNeededToBeCreated) {
-      this.spawnRole(spawn, roleNeededToBeCreated.requirement, debugMode);
+      this.spawnRole(spawn, roleNeededToBeCreated.requirement, debugMode, counts);
     } else if (roleThatCanBeCreated) {
-      this.spawnRole(spawn, roleThatCanBeCreated.requirement, debugMode);
+      this.spawnRole(spawn, roleThatCanBeCreated.requirement, debugMode, counts);
     }
   }
 
-  private spawnRole(spawn: StructureSpawn, role: RoleRequirement, debug: boolean = false) {
+  doesRoleExist(role: roles, existingRoles: _.Dictionary<number>) {
+    return Object.keys(existingRoles).find(i => i.indexOf(role) === 0);
+  }
+
+  private spawnRole(
+    spawn: StructureSpawn,
+    role: RoleRequirement,
+    debug: boolean = false,
+    existingRoles: _.Dictionary<number>
+  ) {
     let creepsCounter = Object.keys(Game.creeps).length + 1;
+
+    const willTheSpawnRefill =
+      this.doesRoleExist("harvester", existingRoles) ||
+      (this.doesRoleExist("truck", existingRoles) && this.doesRoleExist("static-harvester", existingRoles));
 
     while (Game.creeps[role.role + (creepsCounter + 1)]) {
       creepsCounter++;
     }
     const creepName = role.role + (creepsCounter + 1);
 
-    // const maxEnergyPossible = spawn.room.energyCapacityAvailable;
-    const maxEnergyPossible = spawn.room.energyAvailable;
+    // we want the biggest creep possible if the spawn will refill itself
+    const maxEnergyPossible = willTheSpawnRefill ? spawn.room.energyCapacityAvailable : spawn.room.energyAvailable;
 
     if (role.minEnergy && maxEnergyPossible < role.minEnergy) {
+      console.log("Max energy possible = ", maxEnergyPossible);
       console.log("Not enough energy to create the body. Required=", role.minEnergy);
+      return;
     }
 
     if (debug) {
@@ -164,6 +185,7 @@ class Spawner {
         Math.min(maxEnergyPossible, maxEnergy),
         role.sortBody
       );
+
       if (debug) {
         console.log("-- Result : ", body);
       }

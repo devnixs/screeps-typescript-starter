@@ -2,6 +2,7 @@ import { sourceManager } from "../utils/source-manager";
 import { roleHarvester } from "./harvester";
 import { profiler } from "../utils/profiler";
 import { O_NOFOLLOW } from "constants";
+import { findRestSpot } from "utils/finder";
 
 interface IMinerMemory extends CreepMemory {
   isDepositing?: boolean;
@@ -25,12 +26,18 @@ class RoleMiner implements IRole {
 
     if (!memory.isDepositing) {
       if (sourceManager.mineMineral(creep) !== OK) {
-        return roleHarvester.run(creep);
+        return this.goToRest(creep);
       }
     } else {
       if (sourceManager.storeInCloseContainer(creep) !== OK) {
         sourceManager.store(creep);
       }
+    }
+  }
+  goToRest(creep: Creep) {
+    const restSpot = findRestSpot(creep);
+    if (restSpot) {
+      creep.goTo(restSpot);
     }
   }
 }

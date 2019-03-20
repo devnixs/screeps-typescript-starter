@@ -177,6 +177,9 @@ export class Traveler {
    */
 
   public static checkAvoid(roomName: string) {
+    if (!Traveler.isHighway(roomName) && !Game.map.isRoomAvailable(roomName)) {
+      return true;
+    }
     return Memory.rooms && Memory.rooms[roomName] && Memory.rooms[roomName].avoid;
   }
 
@@ -382,6 +385,12 @@ export class Traveler {
    * @param options
    * @returns {{}}
    */
+
+  public static isHighway(roomName: string) {
+    const parsed = /^[WE]([0-9]+)[NS]([0-9]+)$/.exec(roomName) as any;
+    let isHighway = parsed[1] % 10 === 0 || parsed[2] % 10 === 0;
+    return isHighway;
+  }
 
   public static findRoute(
     origin: string,

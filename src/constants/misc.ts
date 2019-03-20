@@ -1,8 +1,8 @@
 export const defaultReusePath = 15;
 
-export const requiredHealersForAnAttack = 2;
+export const requiredHealersForAnAttack = 0;
 export const requiredFightersForAnAttack = 1;
-export const requiredDismantlersForAnAttack = 1;
+export const requiredDismantlersForAnAttack = 2;
 
 // How much we should store in the terminal
 export const wantsToSell: { [roomName: string]: StoreDefinition } = {
@@ -14,6 +14,11 @@ export const wantsToSell: { [roomName: string]: StoreDefinition } = {
     energy: 10000,
     [RESOURCE_OXYGEN]: 10000
   }
+};
+
+// limit boosts to N parts
+export const boostsLimitations: { [key: string]: number } = {
+  [TOUGH]: 3
 };
 
 export const desiredEnergyInTerminal = 10000;
@@ -38,7 +43,7 @@ export const desiredStocks: StoreDefinitionWithoutEnergy = {
   [RESOURCE_KEANIUM]: 10000,
   [RESOURCE_ZYNTHIUM]: 10000,
   [RESOURCE_CATALYST]: 10000,
-  [RESOURCE_GHODIUM]: 10000,
+  [RESOURCE_GHODIUM]: 30000,
 
   [RESOURCE_HYDROXIDE]: 10000,
   [RESOURCE_ZYNTHIUM_KEANITE]: 10000,

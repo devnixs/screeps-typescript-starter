@@ -36,7 +36,11 @@ class RoleBuilder implements IRole {
         creep.goTo(constructionSites[0]);
       }
     } else if (sourceManager.getEnergy(creep) !== OK) {
-      return this.goToRest(creep);
+      if (memory.subRole) {
+        sourceManager.harvestEnergyFromSource(creep);
+      } else {
+        return this.goToRest(creep);
+      }
     }
   }
 

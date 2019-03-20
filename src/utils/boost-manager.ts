@@ -1,15 +1,15 @@
 import { wantedBoosts, boostResourceNeeded } from "../chemist";
 import { profiler } from "../utils/profiler";
-
-// limit boosts to N parts
-const boostsLimitations: { [key: string]: number } = {
-  [TOUGH]: 2
-};
+import { boostsLimitations } from "../constants/misc";
+import { SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER } from "constants";
 
 export function boostCreep(creep: Creep) {
-  debugger;
+  if (creep.room.name) {
+    return -1;
+  }
+
   if (creep.room.name !== creep.memory.homeRoom) {
-    return;
+    return -1;
   }
   const bodyPartsThatNeedBoosts = Object.keys(wantedBoosts[creep.room.name] || {});
   const nonBoostedBodyPartsThatNeedBoosts = creep.body

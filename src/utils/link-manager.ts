@@ -112,7 +112,6 @@ export class LinkManager {
       .filter(i => i.type === "output")
       .map(i => ({ link: Game.getObjectById(i.id) as StructureLink, amount: i.needsAmount, type: i.type }))
       .filter(i => i.link)
-      .filter(i => i.link.energy > 0)
       .filter(i => i.link.pos.inRangeTo(pos.x, pos.y, 5));
 
     return inputLinks;

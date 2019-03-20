@@ -39,6 +39,16 @@ interface RoomMemory {
   isBoostMode: boolean;
 
   links: LinkMemory[];
+
+  areColonyRoadsSetup: boolean | undefined;
+  areSourcesRoadsSetup: boolean | undefined;
+  areControllerRoadsSetup: boolean | undefined;
+  areMineralRoadsSetup: boolean | undefined;
+}
+
+interface Vector {
+  x: number;
+  y: number;
 }
 
 interface LinkMemory {

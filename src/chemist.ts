@@ -1,17 +1,17 @@
 import { REAGENTS, RESOURCE_IMPORTANCE, boostResources } from "constants/resources";
 import { minMax } from "./utils/misc-utils";
-import { desiredStocks } from "constants/misc";
+import { desiredStocks, boostsLimitations } from "constants/misc";
 import { profiler } from "./utils/profiler";
 
 export const wantedBoosts: { [roomName: string]: { [body: string]: ResourceConstant[] } } = {
-  /*   E27N47: {
+  E27N47: {
     [HEAL]: [RESOURCE_CATALYZED_LEMERGIUM_ALKALIDE, RESOURCE_LEMERGIUM_ALKALIDE],
     [TOUGH]: [RESOURCE_GHODIUM_ALKALIDE, RESOURCE_GHODIUM_OXIDE]
   },
   sim: {
     [HEAL]: [RESOURCE_LEMERGIUM_OXIDE, RESOURCE_LEMERGIUM_ALKALIDE],
     [TOUGH]: [RESOURCE_GHODIUM_OXIDE]
-  } */
+  }
 };
 
 interface Reaction {
@@ -125,11 +125,26 @@ export class Chemist {
 
     if (lab.mineralAmount >= boostResourceNeeded && lab.mineralType === labMemory.boostResource) {
       const adjascentCreeps = lab.pos.findInRange(FIND_MY_CREEPS, 1);
-      const adjascentCreepsWithRightBody = adjascentCreeps.find(
-        i => !!i.body.find(bodyPart => bodyPart.type === labMemory.boostBodyType && !bodyPart.boost)
-      );
+      const maxBoostedBodyParts = labMemory.boostBodyType && boostsLimitations[labMemory.boostBodyType];
+      const adjascentCreepsWithRightBody = adjascentCreeps.find(i => {
+        const hasBodyThatCanReceiveBoost = !!i.body.find(
+          bodyPart => bodyPart.type === labMemory.boostBodyType && !bodyPart.boost
+        );
+        const boostedBodyParts = i.body.filter(bodyPart => bodyPart.type === labMemory.boostBodyType && bodyPart.boost)
+          .length;
+        return (
+          hasBodyThatCanReceiveBoost && (maxBoostedBodyParts === undefined || boostedBodyParts < maxBoostedBodyParts)
+        );
+      });
       if (adjascentCreepsWithRightBody) {
-        lab.boostCreep(adjascentCreepsWithRightBody);
+        if (maxBoostedBodyParts) {
+          const boostedBodyParts = adjascentCreepsWithRightBody.body.filter(
+            bodyPart => bodyPart.type === labMemory.boostBodyType && bodyPart.boost
+          ).length;
+          lab.boostCreep(adjascentCreepsWithRightBody, maxBoostedBodyParts - boostedBodyParts);
+        } else {
+          lab.boostCreep(adjascentCreepsWithRightBody);
+        }
       }
     }
   }
@@ -357,6 +372,9 @@ export class Chemist {
     group.labSource2.needsResource = reaction.source2;
     group.labSource1.needsAmount = reaction.amount;
     group.labSource2.needsAmount = reaction.amount;
+    group.labResult.boostBodyType = undefined;
+    group.labSource1.boostBodyType = undefined;
+    group.labSource2.boostBodyType = undefined;
     group.remainingAmountToProduce = reaction.amount;
     group.currentTarget = reaction.target;
     group.lastActivity = Game.time;

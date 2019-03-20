@@ -46,11 +46,21 @@ class RoleDismantler implements IRole {
 
         targetStructure =
           targetStructure ||
-          creep.pos.findClosestByRange(FIND_HOSTILE_STRUCTURES, { filter: i => i.structureType !== "rampart" });
+          creep.pos.findClosestByRange(FIND_HOSTILE_STRUCTURES, {
+            filter: i => i.structureType !== "rampart" && i.structureType !== "controller"
+          });
+
+        targetStructure = targetStructure || creep.pos.findClosestByRange(FIND_CONSTRUCTION_SITES);
+
+        targetStructure =
+          targetStructure ||
+          creep.pos.findClosestByRange(FIND_STRUCTURES, {
+            filter: i => i.structureType !== "road"
+          });
 
         if (targetStructure) {
           if (creep.dismantle(targetStructure) === ERR_NOT_IN_RANGE) {
-            if (healersClose.length >= 2 || this.isCloseToExit(creep)) {
+            if (healersClose.length >= requiredHealersForAnAttack || this.isCloseToExit(creep)) {
               creep.goTo(targetStructure);
             }
             creep.dismantle(targetStructure);
