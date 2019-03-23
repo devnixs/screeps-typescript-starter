@@ -1,6 +1,5 @@
-import { defaultReusePath, requiredHealersForAnAttack } from "../constants/misc";
-import { notify } from "../utils/notify";
-import { findEmptySpotCloseTo, findRestSpot } from "utils/finder";
+import { requiredHealersForAnAttack } from "../constants/misc";
+import { findRestSpot } from "utils/finder";
 
 interface IFighterMemory extends CreepMemory {
   assignedExplorerName: string | null;

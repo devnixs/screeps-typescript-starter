@@ -70,7 +70,6 @@ export class Merchant {
     );
 
     if (buyOrders.length >= 5) {
-      console.log("Selling 2", this.room.name, resource, amount);
       // we need at least 5 orders
       // take the most interesting one
       const bestOrder = _.sortBy(buyOrders, i => -1 * i.price)[0];
@@ -78,7 +77,6 @@ export class Merchant {
 
       const result = Game.market.deal(bestOrder.id, tradeAmount, this.room.name);
       if (result === OK) {
-        console.log("SOLD ", tradeAmount, resource, this.room.name, bestOrder.id);
       }
       return result;
     } else {
@@ -103,7 +101,6 @@ export class Merchant {
 
       const result = Game.market.deal(bestOrder.id, tradeAmount, this.room.name);
       if (result === OK) {
-        console.log("BOUGHT ", tradeAmount, resource, this.room.name, bestOrder.id);
       }
       //const result = OK;
       return result;
@@ -113,7 +110,7 @@ export class Merchant {
   }
 
   static runForAllRooms() {
-    if (Game.time % 10 > 0) {
+    if (Game.time % 50 > 0) {
       return;
     }
 

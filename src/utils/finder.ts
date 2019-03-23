@@ -1,16 +1,35 @@
 import { profiler, profileMethod } from "../utils/profiler";
 
 let findClosestRoom = function(targetRoom: string) {
+  Memory.closestRooms = Memory.closestRooms || {};
+  if (Memory.closestRooms[targetRoom]) {
+    return Memory.closestRooms[targetRoom];
+  }
+
   var myRooms = _.uniq(Object.keys(Game.spawns).map(spwnName => Game.spawns[spwnName].room.name)).filter(
     i => i != targetRoom
   );
 
-  var roomsAndDistances = myRooms.map(sourceRoom => ({
-    roomName: sourceRoom,
-    distance: Game.map.getRoomLinearDistance(sourceRoom, targetRoom)
-  }));
+  var roomsAndDistances = myRooms.map(sourceRoom => {
+    var distance = Game.map.findRoute(sourceRoom, targetRoom);
+    if (distance === -2) {
+      return {
+        roomName: sourceRoom,
+        distance: 100000
+      };
+    } else {
+      return {
+        roomName: sourceRoom,
+        distance: distance.length
+      };
+    }
+  });
+
   var closest = _.sortBy(roomsAndDistances, i => i.distance);
-  return closest[0];
+
+  Memory.closestRooms[targetRoom] = closest[0].roomName;
+
+  return closest[0].roomName;
 };
 
 let findAndCache = function findAndCache<K extends FindConstant>(

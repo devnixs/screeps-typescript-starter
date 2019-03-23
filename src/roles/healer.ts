@@ -1,4 +1,4 @@
-import { findEmptySpotCloseTo, findRestSpot } from "../utils/finder";
+import { findRestSpot } from "../utils/finder";
 import { boostCreep } from "../utils/boost-manager";
 
 interface IHealerMemory extends CreepMemory {

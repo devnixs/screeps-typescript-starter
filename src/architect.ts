@@ -1,11 +1,14 @@
 import { findEmptySpotCloseTo } from "utils/finder";
-import { O_NOFOLLOW } from "constants";
+import { profiler } from "./utils/profiler";
 
 const isSimulation = "sim" in Game.rooms;
 const delay = isSimulation ? 1 : 100;
 
-class Architect {
-  run() {
+export class Architect {
+  emptySpot: Vector | undefined;
+  constructor(private room: Room) {}
+
+  static runForAllRooms() {
     // Do the architect logic once every 100 ticks
     if (Game.time % delay > 0) {
       return;
@@ -18,54 +21,71 @@ class Architect {
 
     roomNames.forEach(roomName => {
       const room = Game.rooms[roomName];
-      this.architectRoom(room);
+      var architect = new Architect(room);
+      architect.run();
     });
   }
 
-  architectRoom(room: Room) {
-    var constructionSites = room.find(FIND_CONSTRUCTION_SITES);
+  run() {
+    if (this.room.controller && this.room.memory.constructionsAreSetupAtLevel === this.room.controller.level) {
+      console.log("Room is already setup", this.room.name);
+      return;
+    }
+
+    var constructionSites = this.room.find(FIND_CONSTRUCTION_SITES);
 
     var creations = [
       this.createInitialSpawn,
       this.createSourcesRoads,
       this.createControllerRoads,
       this.createColonyRoads,
-      this.createExtension,
+      this.createCloseToSpawn(STRUCTURE_EXTENSION),
       this.createContainers,
       this.createMineralRoads,
       this.createExtractor,
-      this.createTowers,
-      this.createStorage,
-      this.createTerminal
+      this.createCloseToSpawn(STRUCTURE_TOWER),
+      this.createCloseToSpawn(STRUCTURE_STORAGE),
+      this.createCloseToSpawn(STRUCTURE_TERMINAL),
+      this.createCloseToSpawn(STRUCTURE_NUKER),
+      this.createCloseToSpawn(STRUCTURE_SPAWN),
+      this.createCloseToSpawn(STRUCTURE_OBSERVER),
+      this.createCloseToSpawn(STRUCTURE_POWER_SPAWN),
+      this.createLinks
     ];
 
     if (constructionSites.length === 0) {
+      let somethingIsBeingBuilt = false;
       for (let i = 0; i < creations.length; i++) {
-        let result = creations[i].bind(this)(room);
+        let result = creations[i].bind(this)();
         if (result === OK) {
+          somethingIsBeingBuilt = true;
           break;
         }
+      }
+
+      if (!somethingIsBeingBuilt) {
+        this.room.memory.constructionsAreSetupAtLevel = this.room.controller && this.room.controller.level;
       }
     }
   }
 
-  createExtractor(room: Room) {
-    var hasExtractor = room.find(FIND_MY_STRUCTURES, { filter: s => s.structureType === "extractor" }).length > 0;
-    var hasLevel = room.controller && room.controller.level >= 6;
+  createExtractor() {
+    var hasExtractor = this.room.find(FIND_MY_STRUCTURES, { filter: s => s.structureType === "extractor" }).length > 0;
+    var hasLevel = this.room.controller && this.room.controller.level >= 6;
 
     if (hasLevel && !hasExtractor) {
-      var mineral = room.find(FIND_MINERALS)[0];
+      var mineral = this.room.find(FIND_MINERALS)[0];
       if (mineral) {
-        return room.createConstructionSite(mineral.pos.x, mineral.pos.y, STRUCTURE_EXTRACTOR);
+        return this.room.createConstructionSite(mineral.pos.x, mineral.pos.y, STRUCTURE_EXTRACTOR);
       }
     }
 
     return -1;
   }
 
-  createColonyRoads(room: Room) {
-    if (!room.memory.areColonyRoadsSetup && room.controller && room.controller.level >= 2) {
-      var firstSpawn = room.find(FIND_MY_STRUCTURES, {
+  createColonyRoads() {
+    if (!this.room.memory.areColonyRoadsSetup && this.room.controller && this.room.controller.level >= 2) {
+      var firstSpawn = this.room.find(FIND_MY_STRUCTURES, {
         filter: i => i.structureType === "spawn"
       })[0] as StructureSpawn | null;
 
@@ -77,20 +97,20 @@ class Architect {
         for (let y = -1; y <= 1; y++) {
           if (x !== 0 || y !== 0) {
             this.iterateInDirection(firstSpawn.pos, { x, y }, 5, pos => {
-              this.createRoadAtPositionIfPossible(room, pos);
+              this.createRoadAtPositionIfPossible(pos);
             });
           }
         }
 
-      room.memory.areColonyRoadsSetup = true;
+      this.room.memory.areColonyRoadsSetup = true;
       return OK;
     }
     return -1;
   }
 
-  createSourcesRoads(room: Room) {
-    if (!room.memory.areSourcesRoadsSetup) {
-      var firstSpawn = room.find(FIND_MY_STRUCTURES, {
+  createSourcesRoads() {
+    if (!this.room.memory.areSourcesRoadsSetup) {
+      var firstSpawn = this.room.find(FIND_MY_STRUCTURES, {
         filter: i => i.structureType === "spawn"
       })[0] as StructureSpawn | null;
 
@@ -98,42 +118,42 @@ class Architect {
         return;
       }
 
-      var sources = room.find(FIND_SOURCES);
+      var sources = this.room.find(FIND_SOURCES);
       for (var sourceIndex in sources) {
         var source = sources[sourceIndex];
 
-        this.createRoadFromAtoB(room, firstSpawn.pos, source.pos);
+        this.createRoadFromAtoB(firstSpawn.pos, source.pos);
       }
 
-      room.memory.areSourcesRoadsSetup = true;
+      this.room.memory.areSourcesRoadsSetup = true;
       return OK;
     }
     return -1;
   }
 
-  createControllerRoads(room: Room) {
-    if (!room.memory.areControllerRoadsSetup && room.controller && room.controller.level >= 2) {
-      var firstSpawn = room.find(FIND_MY_STRUCTURES, {
+  createControllerRoads() {
+    if (!this.room.memory.areControllerRoadsSetup && this.room.controller && this.room.controller.level >= 2) {
+      var firstSpawn = this.room.find(FIND_MY_STRUCTURES, {
         filter: i => i.structureType === "spawn"
       })[0] as StructureSpawn | null;
 
       if (!firstSpawn) {
         return;
       }
-      var controller = room.controller;
+      var controller = this.room.controller;
       if (controller) {
-        this.createRoadFromAtoB(room, firstSpawn.pos, controller.pos);
+        this.createRoadFromAtoB(firstSpawn.pos, controller.pos);
       }
 
-      room.memory.areControllerRoadsSetup = true;
+      this.room.memory.areControllerRoadsSetup = true;
       return OK;
     }
     return -1;
   }
 
-  createMineralRoads(room: Room) {
-    if (!room.memory.areMineralRoadsSetup && room.controller && room.controller.level >= 6) {
-      var firstSpawn = room.find(FIND_MY_STRUCTURES, {
+  createMineralRoads() {
+    if (!this.room.memory.areMineralRoadsSetup && this.room.controller && this.room.controller.level >= 6) {
+      var firstSpawn = this.room.find(FIND_MY_STRUCTURES, {
         filter: i => i.structureType === "spawn"
       })[0] as StructureSpawn | null;
 
@@ -141,47 +161,42 @@ class Architect {
         return;
       }
 
-      var mineral = room.find(FIND_MINERALS)[0];
+      var mineral = this.room.find(FIND_MINERALS)[0];
       if (mineral) {
-        this.createRoadFromAtoB(room, firstSpawn.pos, mineral.pos);
+        this.createRoadFromAtoB(firstSpawn.pos, mineral.pos);
       }
 
-      room.memory.areMineralRoadsSetup = true;
+      this.room.memory.areMineralRoadsSetup = true;
       return OK;
     }
     return -1;
   }
 
-  createRoadFromAtoB(room: Room, pos1: Vector, pos2: Vector) {
-    this.iterateFromAtoB(room, pos1, pos2, (pos, index, isLast) => {
+  createRoadFromAtoB(pos1: Vector, pos2: Vector) {
+    this.iterateFromAtoB(pos1, pos2, (pos, index, isLast) => {
       if (!isLast) {
         // TODO: check that there is no terrain or other objet at this pos
-        this.createRoadAtPositionIfPossible(room, pos);
+        this.createRoadAtPositionIfPossible(pos);
       }
     });
   }
 
-  createRoadAtPositionIfPossible(room: Room, pos: Vector) {
-    const structureHere = room
+  createRoadAtPositionIfPossible(pos: Vector) {
+    const structureHere = this.room
       .lookAt(pos.x, pos.y)
       .find(i => i.type === LOOK_STRUCTURES || (i.type === LOOK_TERRAIN && i.terrain === "wall"));
 
     if (!structureHere) {
-      return room.createConstructionSite(pos.x, pos.y, STRUCTURE_ROAD);
+      return this.room.createConstructionSite(pos.x, pos.y, STRUCTURE_ROAD);
     } else {
       return -1;
     }
   }
 
-  iterateFromAtoB(
-    room: Room,
-    pos1: Vector,
-    pos2: Vector,
-    callback: (pos: Vector, index: number, isLast: boolean) => void
-  ) {
-    var positions = room.findPath(
-      new RoomPosition(pos1.x, pos1.y, room.name),
-      new RoomPosition(pos2.x, pos2.y, room.name)
+  iterateFromAtoB(pos1: Vector, pos2: Vector, callback: (pos: Vector, index: number, isLast: boolean) => void) {
+    var positions = this.room.findPath(
+      new RoomPosition(pos1.x, pos1.y, this.room.name),
+      new RoomPosition(pos2.x, pos2.y, this.room.name)
     );
     if (positions.length) {
       for (let stepIndex in positions) {
@@ -200,70 +215,74 @@ class Architect {
     }
   }
 
-  createExtension(room: Room) {
-    const spawn = room.find(FIND_MY_SPAWNS)[0];
-    if (!spawn) {
-      return -1;
-    }
-    const spot = findEmptySpotCloseTo(spawn.pos, room);
-    if (spot) {
-      return room.createConstructionSite(spot.x, spot.y, STRUCTURE_EXTENSION);
-    } else {
-      return -1;
-    }
-  }
-
-  createTowers(room: Room) {
-    const spawn = room.find(FIND_MY_SPAWNS)[0];
-    if (!spawn) {
-      return -1;
-    }
-    const spot = findEmptySpotCloseTo(spawn.pos, room);
-    if (spot) {
-      return room.createConstructionSite(spot.x, spot.y, STRUCTURE_TOWER);
-    } else {
-      return -1;
-    }
-  }
-
-  createStorage(room: Room) {
-    const spawn = room.find(FIND_MY_SPAWNS)[0];
-    if (!spawn) {
-      return -1;
-    }
-    const spot = findEmptySpotCloseTo(spawn.pos, room);
-    if (spot) {
-      return room.createConstructionSite(spot.x, spot.y, STRUCTURE_STORAGE);
-    } else {
-      return -1;
-    }
-  }
-
-  createInitialSpawn(room: Room) {
-    const spawn = room.find(FIND_MY_SPAWNS)[0];
+  createInitialSpawn() {
+    const spawn = this.room.find(FIND_MY_SPAWNS)[0];
     const target = Game.flags["claimer_target"];
-    if (!spawn && target && target.pos.roomName === room.name) {
-      return room.createConstructionSite(target.pos.x, target.pos.y, STRUCTURE_SPAWN);
+    if (!spawn && target && target.pos.roomName === this.room.name) {
+      const result = this.room.createConstructionSite(target.pos.x, target.pos.y, STRUCTURE_SPAWN);
+      if (result === OK) {
+        target.remove();
+      }
+      return result;
     } else {
       return -1;
     }
   }
 
-  createTerminal(room: Room) {
-    const spawn = room.find(FIND_MY_SPAWNS)[0];
-    if (!spawn) {
-      return -1;
-    }
-    const spot = findEmptySpotCloseTo(spawn.pos, room);
-    if (spot) {
-      return room.createConstructionSite(spot.x, spot.y, STRUCTURE_TERMINAL);
+  getEmptySpotCloseToSpawn() {
+    if (this.emptySpot) {
+      return this.emptySpot;
     } else {
-      return -1;
+      const spawn = this.room.find(FIND_MY_SPAWNS)[0];
+      if (!spawn) {
+        return null;
+      }
+
+      var emptySpot = findEmptySpotCloseTo(spawn.pos, this.room);
+      if (emptySpot) {
+        this.emptySpot = emptySpot;
+        return emptySpot;
+      } else {
+        return null;
+      }
     }
   }
 
-  createContainers(room: Room) {
-    let sources = room.find(FIND_SOURCES);
+  createCloseToSpawn(structure: BuildableStructureConstant) {
+    return () => {
+      const spot = this.getEmptySpotCloseToSpawn();
+      if (spot) {
+        return this.room.createConstructionSite(spot.x, spot.y, structure);
+      } else {
+        return -1;
+      }
+    };
+  }
+
+  createLinks() {
+    if (!this.room.memory.areControllerLinksSetup && this.room.controller && this.room.controller.level >= 5) {
+      const storage = this.room.storage;
+      if (!storage) {
+        return -1;
+      }
+      const spot1 = findEmptySpotCloseTo(storage.pos, this.room);
+      const spot2 = findEmptySpotCloseTo(this.room.controller.pos, this.room);
+
+      if (spot1 && spot2) {
+        this.room.createConstructionSite(spot1.x, spot1.y, STRUCTURE_LINK);
+        this.room.createConstructionSite(spot2.x, spot2.y, STRUCTURE_LINK);
+        this.room.memory.areControllerLinksSetup = true;
+        return OK;
+      } else {
+        return -1;
+      }
+    }
+
+    return -1;
+  }
+
+  createContainers() {
+    let sources = this.room.find(FIND_SOURCES);
     for (let sourceIndex in sources) {
       let source = sources[sourceIndex];
 
@@ -273,12 +292,12 @@ class Architect {
       if (!closeContainer) {
         let closeRoad = source.pos.findInRange(FIND_STRUCTURES, 1, { filter: i => i.structureType === "road" })[0];
         if (closeRoad) {
-          return room.createConstructionSite(closeRoad.pos.x, closeRoad.pos.y, STRUCTURE_CONTAINER);
+          return this.room.createConstructionSite(closeRoad.pos.x, closeRoad.pos.y, STRUCTURE_CONTAINER);
         }
       }
     }
-    if (room.controller && room.controller.level >= 6) {
-      let mineral = room.find(FIND_MINERALS)[0];
+    if (this.room.controller && this.room.controller.level >= 6) {
+      let mineral = this.room.find(FIND_MINERALS)[0];
 
       let closeContainer = mineral.pos.findInRange(FIND_STRUCTURES, 1, {
         filter: i => i.structureType === "container"
@@ -286,7 +305,7 @@ class Architect {
       if (!closeContainer) {
         let closeRoad = mineral.pos.findInRange(FIND_STRUCTURES, 1, { filter: i => i.structureType === "road" })[0];
         if (closeRoad) {
-          return room.createConstructionSite(closeRoad.pos.x, closeRoad.pos.y, STRUCTURE_CONTAINER);
+          return this.room.createConstructionSite(closeRoad.pos.x, closeRoad.pos.y, STRUCTURE_CONTAINER);
         }
       }
     }
@@ -295,4 +314,4 @@ class Architect {
   }
 }
 
-export const architect = new Architect();
+profiler.registerClass(Architect, "Architect");

@@ -56,7 +56,7 @@ function initOneTimeValues() {
     !(claimFlag.room && claimFlag.room.controller && claimFlag.room.controller.my)
   ) {
     claimerCount = 1;
-    closestRoomToClaimTarget = findClosestRoom(claimFlag.pos.roomName).roomName;
+    closestRoomToClaimTarget = findClosestRoom(claimFlag.pos.roomName);
     console.log("Found claim target : ", claimFlag.pos.roomName);
     console.log("closestRoomToClaimTarget : ", closestRoomToClaimTarget);
     console.log("claimerCount : ", claimerCount);
@@ -67,7 +67,10 @@ function initOneTimeValues() {
     .filter(i => i.controller && i.controller.my && i.controller.level === 1)[0];
 
   if (colonyThatNeedsHelpBuilding) {
-    builderHelperSource = findClosestRoom(colonyThatNeedsHelpBuilding.name).roomName;
+    var initialCpu = Game.cpu.getUsed();
+    builderHelperSource = findClosestRoom(colonyThatNeedsHelpBuilding.name);
+    var afterCpu = Game.cpu.getUsed();
+    console.log("Used CPU: ", afterCpu - initialCpu);
     builderHelperTarget = colonyThatNeedsHelpBuilding.name;
     builderHelperCount = 1;
     console.log("Found colonyThatNeedsHelpBuilding : ", colonyThatNeedsHelpBuilding.name);
@@ -107,52 +110,67 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     }
   }
 
-  if (spawn.room.storage) {
-    const availableEnergy = spawn.room.storage.store.energy;
-    if (availableEnergy > 800000) {
-      upgraderRatio = 10;
-      maxUpgraderCount = 3;
-    } else if (availableEnergy > 600000) {
-      upgraderRatio = 8;
-      maxUpgraderCount = 2;
-    } else if (availableEnergy > 300000) {
-      upgraderRatio = 6;
-    } else if (availableEnergy > 200000) {
-      upgraderRatio = 4;
-    } else if (availableEnergy > 150000) {
-      upgraderRatio = 3;
-    } else if (availableEnergy > 20000) {
-      upgraderRatio = 2;
-    } else {
+  if (spawn.room.controller && spawn.room.controller.level === 8) {
+    if (spawn.room.controller.ticksToDowngrade <= 3000) {
+      maxUpgraderCount = 1;
       upgraderRatio = 1;
+    } else {
+      maxUpgraderCount = 0;
+      upgraderRatio = 0;
     }
   } else {
-    const containers: StructureContainer[] = spawn.room.find(FIND_STRUCTURES, {
-      filter: i => i.structureType === "container"
-    }) as any;
-
-    if (containers.length === 0) {
-      upgraderRatio = 3;
-    } else {
-      const totalStorage = _.sum(containers.map(i => i.storeCapacity));
-      const totalEnergy = _.sum(containers.map(i => i.store.energy));
-
-      const ratio = totalEnergy / totalStorage;
-      if (ratio >= 0.7) {
+    if (spawn.room.storage) {
+      const availableEnergy = spawn.room.storage.store.energy;
+      if (availableEnergy > 800000) {
         upgraderRatio = 10;
-        maxUpgraderCount = 6;
-      } else if (ratio >= 0.5) {
+        maxUpgraderCount = 3;
+      } else if (availableEnergy > 600000) {
         upgraderRatio = 8;
-        maxUpgraderCount = 4;
-      } else if (ratio >= 0.25) {
+        maxUpgraderCount = 2;
+      } else if (availableEnergy > 300000) {
         upgraderRatio = 6;
-        maxUpgraderCount = 2;
-      } else if (ratio >= 0.1) {
+        maxUpgraderCount = 1;
+      } else if (availableEnergy > 200000) {
+        upgraderRatio = 4;
+        maxUpgraderCount = 1;
+      } else if (availableEnergy > 150000) {
+        upgraderRatio = 3;
+        maxUpgraderCount = 1;
+      } else if (availableEnergy > 20000) {
         upgraderRatio = 2;
-        maxUpgraderCount = 2;
+        maxUpgraderCount = 1;
       } else {
         upgraderRatio = 1;
-        maxUpgraderCount = 2;
+        maxUpgraderCount = 1;
+      }
+    } else {
+      const containers: StructureContainer[] = spawn.room.find(FIND_STRUCTURES, {
+        filter: i => i.structureType === "container"
+      }) as any;
+
+      if (containers.length === 0) {
+        upgraderRatio = 3;
+      } else {
+        const totalStorage = _.sum(containers.map(i => i.storeCapacity));
+        const totalEnergy = _.sum(containers.map(i => i.store.energy));
+
+        const ratio = totalEnergy / totalStorage;
+        if (ratio >= 0.7) {
+          upgraderRatio = 10;
+          maxUpgraderCount = 6;
+        } else if (ratio >= 0.5) {
+          upgraderRatio = 8;
+          maxUpgraderCount = 4;
+        } else if (ratio >= 0.25) {
+          upgraderRatio = 6;
+          maxUpgraderCount = 2;
+        } else if (ratio >= 0.1) {
+          upgraderRatio = 2;
+          maxUpgraderCount = 2;
+        } else {
+          upgraderRatio = 1;
+          maxUpgraderCount = 2;
+        }
       }
     }
   }

@@ -44,33 +44,34 @@ export class Chemist {
     var rooms = _.values(Game.rooms) as Room[];
     for (let i in rooms) {
       const room = rooms[i];
-
-      // if all labs are on cooldown, skip room
-      const chemist = new Chemist(room);
-      chemist.run();
+      if (room.controller && room.controller.my) {
+        // if all labs are on cooldown, skip room
+        const chemist = new Chemist(room);
+        chemist.run();
+      }
     }
   }
 
   run() {
-    const checkTime = "sim" in Game.rooms ? 1 : 200;
+    const checkTime = "sim" in Game.rooms ? 1 : 500;
     if (Game.time % checkTime === 0) {
       this.setupLabGroups();
     }
 
-    if (Game.time % 10 === 0) {
+    if (Game.time % 20 === 0) {
       this.checkBoostMode();
     }
 
     if (this.isBoostMode()) {
       // boost mode
-      if (Game.time % 10 === 0) {
+      if (Game.time % 20 === 0) {
         this.initializeAssets();
         this.assignBoosts();
       }
       this.runAllBoostLabs();
     } else {
       // chemistry mode
-      if (Game.time % 5 === 0) {
+      if (Game.time % 30 === 0) {
         this.initializeAssets();
         this.checkLabs();
         this.assignJobs();

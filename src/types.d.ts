@@ -44,6 +44,9 @@ interface RoomMemory {
   areSourcesRoadsSetup: boolean | undefined;
   areControllerRoadsSetup: boolean | undefined;
   areMineralRoadsSetup: boolean | undefined;
+  areControllerLinksSetup: boolean | undefined;
+
+  constructionsAreSetupAtLevel: number | undefined;
 }
 
 interface Vector {
@@ -89,6 +92,8 @@ interface Memory {
   lastBucketRefillTime: number | undefined;
 
   cpuUsages: number[];
+
+  closestRooms: { [roomName: string]: string };
 }
 
 // `global` extension samples

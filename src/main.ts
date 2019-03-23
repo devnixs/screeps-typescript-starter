@@ -7,7 +7,7 @@ import { roleFighter } from "roles/fighter";
 import { spawner } from "./spawner";
 import { roleReparator } from "roles/reparator";
 import { roleExplorer } from "roles/explorer";
-import { architect } from "architect";
+import { Architect } from "architect";
 import { roleLongDistanceHarvester } from "roles/longDistanceHarvester";
 import { profiler } from "./utils/profiler";
 import { roleTower } from "roles/tower";
@@ -35,7 +35,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
     console.log("Limit :" + Game.cpu.limit);
     console.log("TickLimit :" + Game.cpu.tickLimit); */
 
-    if (Game.cpu.tickLimit < 80) {
+    if (Game.cpu.tickLimit < 200) {
       console.log("Bucket :" + Game.cpu.bucket);
       console.log("Bucket almost empty. Skipping tick.");
       return;
@@ -107,7 +107,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
 
     roleTower.runAllTowers();
 
-    architect.run();
+    Architect.runForAllRooms();
 
     // Automatically delete memory of missing creeps
     for (const name in Memory.creeps) {
@@ -116,7 +116,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
       }
     }
 
-    if (Game.time % 100 === 0) {
+    if (Game.time % 13 === 0) {
       console.log("Bucket :" + Game.cpu.bucket);
       console.log("Used :" + Game.cpu.getUsed());
       //console.log("Limit :" + Game.cpu.limit);
@@ -139,13 +139,13 @@ export const loop = ErrorMapper.wrapLoop(() => {
     }
 
     // shutdown attack
-    if (
+    /*     if (
       Game.flags["dismantler_attack"] &&
       !Game.getObjectById("5c1cbb97e38b1f6a4735759e") &&
       Game.getObjectById("5c1cbb95c219895c92dfdb3d")
     ) {
       Game.flags["dismantler_attack"].remove();
-    }
+    } */
 
     /*
     // shutdown attack

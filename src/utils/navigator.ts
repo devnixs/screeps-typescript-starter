@@ -34,7 +34,7 @@ Creep.prototype.goTo = function(destination: RoomPosition | { pos: RoomPosition 
     return ERR_INVALID_TARGET;
   }
 
-  return creep.travelTo(target, {});
+  return creep.travelTo(target, { preferHighway: true });
 
   /*   let forceNoIgnoreCreeps = false;
 
