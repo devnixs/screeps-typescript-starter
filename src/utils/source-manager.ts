@@ -150,7 +150,7 @@ class SourceManager {
     }
 
     const linkToWithdrawEnergy = LinkManager.getLinksToWithdrawEnergy(creep.pos)[0];
-    if (linkToWithdrawEnergy && linkToWithdrawEnergy.link) {
+    if (linkToWithdrawEnergy && linkToWithdrawEnergy.link && creep.memory.role != 'truck') {
       targetStructure = linkToWithdrawEnergy.link;
     }
 

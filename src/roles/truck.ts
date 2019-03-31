@@ -37,7 +37,7 @@ class RoleTruck implements IRole {
     const memory: ITruckMemory = creep.memory as any;
     const totalCargoContent = _.sum(creep.carry);
 
-    if (!memory.idle) {
+    if (!memory.idle && creep.room.energyAvailable === creep.room.energyCapacityAvailable) {
       this.setJob(creep);
       let target: AnyStructure;
       if (memory.isDepositing) {
@@ -97,15 +97,13 @@ class RoleTruck implements IRole {
         }
       }
     } else {
-      if (memory.idle) {
-        if (this.runEnergyTruck(creep) !== OK) {
-          this.goToRestSpot(creep);
+      if (this.runEnergyTruck(creep) !== OK) {
+        this.goToRestSpot(creep);
 
-          const checkTime = "sim" in Game.rooms ? 1 : 10;
-          if (Game.time % checkTime === 0) {
-            // periodically check for jobs
-            this.setJob(creep);
-          }
+        const checkTime = "sim" in Game.rooms ? 1 : 10;
+        if (Game.time % checkTime === 0) {
+          // periodically check for jobs
+          this.setJob(creep);
         }
       }
     }
@@ -364,6 +362,33 @@ class RoleTruck implements IRole {
           jobNeededAmount: overSupply,
           jobTag: "refill-link-" + linkThatNeedsRefill.id
         };
+      }
+
+      if (creep.room.controller && creep.room.controller.level === 8) {
+        var nucker: StructureNuker | undefined = creep.room.find(FIND_STRUCTURES, {
+          filter: i => i.structureType === "nuker"
+        })[0] as any;
+        if (nucker) {
+          if (nucker.energy < nucker.energyCapacity && storage.store.energy > 100000) {
+            return {
+              targetSource: storage.id,
+              targetDestination: nucker.id,
+              jobResource: "energy",
+              jobNeededAmount: nucker.energyCapacity - nucker.energy,
+              jobTag: "refill-e-nuker-" + nucker.id
+            };
+          }
+          const availableGhodium = storage.store[RESOURCE_GHODIUM] || 0;
+          if (nucker.ghodium < nucker.ghodiumCapacity && availableGhodium > 0) {
+            return {
+              targetSource: storage.id,
+              targetDestination: nucker.id,
+              jobResource: RESOURCE_GHODIUM,
+              jobNeededAmount: nucker.ghodiumCapacity - nucker.ghodium,
+              jobTag: "refill-g-nuker-" + nucker.id
+            };
+          }
+        }
       }
     }
 

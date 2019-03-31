@@ -45,7 +45,7 @@ export class Architect {
       this.createExtractor,
       this.createCloseToSpawn(STRUCTURE_TOWER),
       this.createCloseToSpawn(STRUCTURE_STORAGE),
-      this.createCloseToSpawn(STRUCTURE_TERMINAL),
+      this.createCloseTo(this.room.storage, STRUCTURE_TERMINAL),
       this.createCloseToSpawn(STRUCTURE_NUKER),
       this.createCloseToSpawn(STRUCTURE_SPAWN),
       this.createCloseToSpawn(STRUCTURE_OBSERVER),
@@ -251,6 +251,20 @@ export class Architect {
   createCloseToSpawn(structure: BuildableStructureConstant) {
     return () => {
       const spot = this.getEmptySpotCloseToSpawn();
+      if (spot) {
+        return this.room.createConstructionSite(spot.x, spot.y, structure);
+      } else {
+        return -1;
+      }
+    };
+  }
+
+  createCloseTo(existingStructure: AnyStructure | undefined, structure: BuildableStructureConstant) {
+    return () => {
+      if(!existingStructure){
+        return undefined;
+      }
+      const spot = findEmptySpotCloseTo(existingStructure.pos, existingStructure.room);
       if (spot) {
         return this.room.createConstructionSite(spot.x, spot.y, structure);
       } else {

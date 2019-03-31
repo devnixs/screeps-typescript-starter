@@ -99,6 +99,8 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
   const enemies = spawn.room.find(FIND_HOSTILE_CREEPS);
   const constructionSites = spawn.room.find(FIND_MY_CONSTRUCTION_SITES);
 
+  const storageQuantity = spawn.room.storage && _.sum(spawn.room.storage.store);
+
   let upgraderRatio: number;
   let maxUpgraderCount: number = 1;
 
@@ -111,7 +113,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
   }
 
   if (spawn.room.controller && spawn.room.controller.level === 8) {
-    if (spawn.room.controller.ticksToDowngrade <= 3000) {
+    if (spawn.room.controller.ticksToDowngrade <= 6000) {
       maxUpgraderCount = 1;
       upgraderRatio = 1;
     } else {
@@ -123,10 +125,10 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       const availableEnergy = spawn.room.storage.store.energy;
       if (availableEnergy > 800000) {
         upgraderRatio = 10;
-        maxUpgraderCount = 3;
+        maxUpgraderCount = 1;
       } else if (availableEnergy > 600000) {
         upgraderRatio = 8;
-        maxUpgraderCount = 2;
+        maxUpgraderCount = 1;
       } else if (availableEnergy > 300000) {
         upgraderRatio = 6;
         maxUpgraderCount = 1;
@@ -227,7 +229,8 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
           percentage: 20,
           role: "static-harvester",
           subRole: source.id,
-          maxCount: 1,
+          maxCount:
+            storageQuantity && spawn.room.storage && storageQuantity >= spawn.room.storage.storeCapacity * 0.95 ? 0 : 1,
           bodyTemplate: [WORK],
           bodyTemplatePrepend: [MOVE],
           minEnergy: BODYPART_COST.work + BODYPART_COST.move,

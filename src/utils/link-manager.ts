@@ -13,7 +13,7 @@ export class LinkManager {
   run() {
     const debugMode = false;
 
-    if (Game.time % 100 === 0 || debugMode || !this.room.memory.links) {
+    if (Game.time % 500 === 0 || debugMode || !this.room.memory.links) {
       this.assignLinks();
     }
 
@@ -34,7 +34,7 @@ export class LinkManager {
   }
 
   static inputOutputLinkTargetEnergy() {
-    return 400;
+    return 800;
   }
 
   setStates() {

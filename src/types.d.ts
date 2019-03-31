@@ -163,3 +163,6 @@ interface Creep {
   travelTo(destination: HasPos | RoomPosition, ops?: TravelToOptions): number;
   goTo(destination: HasPos | RoomPosition, ops?: MoveToOpts): number;
 }
+
+
+type StoreDefinitionWithoutEnergy = Partial<Record<_ResourceConstantSansEnergy, number>>;

@@ -1,5 +1,6 @@
-import { desiredStocks, buyableElements } from "constants/misc";
+import { desiredStocks, buyableElements, desiredEnergyInTerminal } from "constants/misc";
 import { profiler } from "./utils/profiler";
+import { allRooms } from "utils/misc-utils";
 
 const minCredits = 10000;
 const minTradeCreditAmount = 200;
@@ -109,10 +110,49 @@ export class Merchant {
     }
   }
 
+  static transferExcessiveResources() {
+    var oversuppliedRoom = allRooms.filter(
+      i =>
+        i.storage &&
+        i.storage.store.energy >= i.storage.storeCapacity * 0.75 &&
+        i.controller &&
+        i.controller.my &&
+        i.controller.level === 8
+    )[0];
+    var undersuppliedRoom = allRooms.filter(
+      i =>
+        i.storage &&
+        i.storage.store.energy < i.storage.storeCapacity * 0.35 &&
+        i.controller &&
+        i.controller.my &&
+        i.controller.level < 8 &&
+        i.controller.level >= 6
+    )[0];
+
+    if (oversuppliedRoom && undersuppliedRoom) {
+      var terminal1: StructureTerminal | undefined = oversuppliedRoom.find(FIND_MY_STRUCTURES, {
+        filter: i => i.structureType === "terminal"
+      })[0] as any;
+      var terminal2: StructureTerminal | undefined = undersuppliedRoom.find(FIND_MY_STRUCTURES, {
+        filter: i => i.structureType === "terminal"
+      })[0] as any;
+
+      if (terminal1 && terminal1.cooldown === 0 && terminal2) {
+        console.log("Balancing energy ", oversuppliedRoom.name, "=>", undersuppliedRoom.name);
+        const result = terminal1.send(RESOURCE_ENERGY, desiredEnergyInTerminal / 3, undersuppliedRoom.name);
+        if (result !== OK) {
+          console.log("Cannot balance : ", result);
+        }
+      }
+    }
+  }
+
   static runForAllRooms() {
-    if (Game.time % 50 > 0) {
+    if (Game.time % 20 > 0) {
       return;
     }
+
+    Merchant.transferExcessiveResources();
 
     const roomNames = Object.keys(Game.rooms)
       .map(room => Game.rooms[room])
