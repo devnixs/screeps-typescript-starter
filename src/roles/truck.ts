@@ -288,6 +288,21 @@ class RoleTruck implements IRole {
         };
       }
 
+      if (
+        terminal &&
+        terminal.store.energy > desiredEnergyInTerminal &&
+        storage &&
+        _.sum(storage.store) < storage.storeCapacity - (terminal.store.energy - desiredEnergyInTerminal)
+      ) {
+        return {
+          targetSource: terminal.id,
+          targetDestination: storage.id,
+          jobResource: "energy",
+          jobNeededAmount: terminal.store.energy - desiredEnergyInTerminal,
+          jobTag: "empty-terminal-energy"
+        };
+      }
+
       if (terminal) {
         const resources = _.uniq(Object.keys(wantsToKeepForThisRoom).concat(Object.keys(terminal.store)));
 

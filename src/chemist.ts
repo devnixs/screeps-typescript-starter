@@ -36,7 +36,7 @@ export class Chemist {
 
   static settings = {
     minBatchSize: 100, // anything less than this wastes time
-    maxBatchSize: 400, // manager/queen carry capacity
+    maxBatchSize: 500, // manager/queen carry capacity
     sleepTime: 100 // sleep for this many ticks once you can't make anything
   };
 
