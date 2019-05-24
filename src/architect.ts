@@ -27,8 +27,15 @@ export class Architect {
   }
 
   run() {
+    this.room.memory.rnd = this.room.memory.rnd || Math.floor(Math.random() * 10) + 5;
+
+    if (Game.time % (delay * this.room.memory.rnd) === 0) {
+      console.log("Redoing constructions for room", this.room.name);
+      // sometimes, redo constructions. They might have broken.
+      this.room.memory.constructionsAreSetupAtLevel = 0;
+    }
+
     if (this.room.controller && this.room.memory.constructionsAreSetupAtLevel === this.room.controller.level) {
-      console.log("Room is already setup", this.room.name);
       return;
     }
 
@@ -261,7 +268,7 @@ export class Architect {
 
   createCloseTo(existingStructure: AnyStructure | undefined, structure: BuildableStructureConstant) {
     return () => {
-      if(!existingStructure){
+      if (!existingStructure) {
         return undefined;
       }
       const spot = findEmptySpotCloseTo(existingStructure.pos, existingStructure.room);

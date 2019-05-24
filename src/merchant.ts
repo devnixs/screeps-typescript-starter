@@ -152,7 +152,8 @@ export class Merchant {
       return;
     }
 
-    Merchant.transferExcessiveResources();
+    // temporarily disabled
+    // Merchant.transferExcessiveResources();
 
     const roomNames = Object.keys(Game.rooms)
       .map(room => Game.rooms[room])

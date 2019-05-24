@@ -388,8 +388,12 @@ export class Traveler {
 
   public static isHighway(roomName: string) {
     const parsed = /^[WE]([0-9]+)[NS]([0-9]+)$/.exec(roomName) as any;
-    let isHighway = parsed[1] % 10 === 0 || parsed[2] % 10 === 0;
-    return isHighway;
+    try {
+      let isHighway = parsed[1] % 10 === 0 || parsed[2] % 10 === 0;
+      return isHighway;
+    } catch {
+      return false;
+    }
   }
 
   public static findRoute(

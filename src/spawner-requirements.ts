@@ -6,6 +6,7 @@ import { profiler } from "./utils/profiler";
 import { IHarvesterMemory } from "./roles/harvester";
 import { IStaticHarvesterMemory } from "roles/static-harvester";
 import { findClosestRoom } from "utils/finder";
+import { RoleBuilder } from "roles/builder";
 
 export interface RoleRequirement {
   role: roles;
@@ -103,6 +104,17 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
 
   let upgraderRatio: number;
   let maxUpgraderCount: number = 1;
+
+  var needsBuilder = false;
+  if (!spawn.room.memory.nextCheckNeedsBuilder || spawn.room.memory.nextCheckNeedsBuilder < Game.time) {
+    var targetStructure = RoleBuilder.findTargetStructure(spawn.room, false);
+    if (!targetStructure) {
+      spawn.room.memory.nextCheckNeedsBuilder = Game.time + 1000;
+    } else {
+      spawn.room.memory.nextCheckNeedsBuilder = Game.time + 300;
+      needsBuilder = true;
+    }
+  }
 
   if (links.length === 0) {
     if (constructionSites.length) {
@@ -260,16 +272,14 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     {
       percentage: 2,
       role: "truck",
-      maxCount: 1,
-      bodyTemplate: [MOVE, CARRY, CARRY],
-      capMaxEnergy: 1900
+      maxCount: spawn.room.memory.trucksCount || 1,
+      bodyTemplate: [MOVE, CARRY, CARRY]
     },
     {
       percentage: 2,
       role: "builder",
-      maxCount: constructionSites.length ? 1 : 0,
-      bodyTemplate: [MOVE, WORK, CARRY],
-      capMaxEnergy: 1900
+      maxCount: needsBuilder ? 1 : 0,
+      bodyTemplate: [MOVE, WORK, CARRY]
     },
     {
       percentage: 2,
@@ -296,6 +306,16 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       sortBody: [TOUGH, WORK, MOVE, RANGED_ATTACK],
       onlyRoom: "E25N48",
       subRole: "room1",
+      additionalMemory: {} as IDismantlerMemory
+    },
+    {
+      percentage: 20,
+      role: "versatile",
+      maxCount: Game.flags["versatile_attack"] ? 1 : 0,
+      countAllRooms: true,
+      bodyTemplate: [TOUGH, TOUGH, RANGED_ATTACK, WORK, MOVE, HEAL, HEAL, HEAL, HEAL],
+      sortBody: [TOUGH, RANGED_ATTACK, WORK, MOVE, HEAL],
+      onlyRoom: "E19N47",
       additionalMemory: {} as IDismantlerMemory
     },
     {
@@ -327,23 +347,40 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       capMaxEnergy: 1800,
       sortBody: [MOVE, WORK, CARRY]
     },
-    /*     {
+    {
       percentage: 4,
       role: "long-distance-harvester",
-      maxCount: 2,
+      maxCount: 1,
       countAllRooms: true,
       bodyTemplate: [MOVE, WORK, CARRY],
-      subRole: "room1",
-      onlyRoom: "E27N47",
+      subRole: "room10",
+      onlyRoom: "E22N36",
       capMaxEnergy: 1800,
       additionalMemory: {
         homeSpawnPosition: spawn.pos,
         home: spawn.pos.roomName,
-        targetRoomName: "E27N48",
-        targetRoomX: 29,
-        targetRoomY: 7
+        targetRoomName: "E21N36",
+        targetRoomX: 39,
+        targetRoomY: 16
       } as Partial<ILongDistanceHarvesterMemory>
     },
+    {
+      percentage: 4,
+      role: "long-distance-harvester",
+      maxCount: 1,
+      countAllRooms: true,
+      bodyTemplate: [MOVE, WORK, CARRY],
+      subRole: "room11",
+      onlyRoom: "E22N35",
+      capMaxEnergy: 1800,
+      additionalMemory: {
+        homeSpawnPosition: spawn.pos,
+        home: spawn.pos.roomName,
+        targetRoomName: "E21N35",
+        targetRoomX: 41,
+        targetRoomY: 39
+      } as Partial<ILongDistanceHarvesterMemory>
+    } /*
     {
       percentage: 1,
       role: "long-distance-harvester",
@@ -411,7 +448,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
         targetRoomX: 8,
         targetRoomY: 7
       } as Partial<ILongDistanceHarvesterMemory>
-    }, */
+    }, */,
     {
       percentage: 1,
       role: "upgrader",

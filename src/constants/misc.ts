@@ -4,6 +4,20 @@ export const requiredHealersForAnAttack = 0;
 export const requiredFightersForAnAttack = 1;
 export const requiredDismantlersForAnAttack = 2;
 
+export const wallsMinHp = (roomLevel: number) => {
+  if (roomLevel === 8) {
+    return 11000000;
+  }
+  return 500000;
+};
+
+export const rampartMinHp = (roomLevel: number) => {
+  if (roomLevel === 8) {
+    return 11000000;
+  }
+  return 500000;
+};
+
 // How much we should store in the terminal
 export const wantsToSell: { [roomName: string]: StoreDefinition } = {
   E27N47: {
@@ -18,7 +32,7 @@ export const wantsToSell: { [roomName: string]: StoreDefinition } = {
 
 // limit boosts to N parts
 export const boostsLimitations: { [key: string]: number } = {
-  [TOUGH]: 3
+  // [TOUGH]: 5
 };
 
 export const desiredEnergyInTerminal = 20000;
@@ -56,7 +70,7 @@ export const desiredStocks: StoreDefinitionWithoutEnergy = {
   [RESOURCE_LEMERGIUM_HYDRIDE]: 0,
   [RESOURCE_LEMERGIUM_OXIDE]: 1000,
   [RESOURCE_ZYNTHIUM_HYDRIDE]: 0,
-  [RESOURCE_ZYNTHIUM_OXIDE]: 0,
+  [RESOURCE_ZYNTHIUM_OXIDE]: 1000,
   [RESOURCE_GHODIUM_HYDRIDE]: 0,
   [RESOURCE_GHODIUM_OXIDE]: 1000,
 
@@ -67,7 +81,7 @@ export const desiredStocks: StoreDefinitionWithoutEnergy = {
   [RESOURCE_LEMERGIUM_ACID]: 0,
   [RESOURCE_LEMERGIUM_ALKALIDE]: 1000,
   [RESOURCE_ZYNTHIUM_ACID]: 0,
-  [RESOURCE_ZYNTHIUM_ALKALIDE]: 0,
+  [RESOURCE_ZYNTHIUM_ALKALIDE]: 15000,
   [RESOURCE_GHODIUM_ACID]: 0,
   [RESOURCE_GHODIUM_ALKALIDE]: 1000,
 
@@ -76,10 +90,10 @@ export const desiredStocks: StoreDefinitionWithoutEnergy = {
   [RESOURCE_CATALYZED_KEANIUM_ACID]: 0,
   [RESOURCE_CATALYZED_KEANIUM_ALKALIDE]: 0,
   [RESOURCE_CATALYZED_LEMERGIUM_ACID]: 0,
-  [RESOURCE_CATALYZED_LEMERGIUM_ALKALIDE]: 20000,
+  [RESOURCE_CATALYZED_LEMERGIUM_ALKALIDE]: 60000,
   [RESOURCE_CATALYZED_ZYNTHIUM_ACID]: 0,
   [RESOURCE_CATALYZED_ZYNTHIUM_ALKALIDE]: 0,
   [RESOURCE_CATALYZED_GHODIUM_ACID]: 0,
-  [RESOURCE_CATALYZED_GHODIUM_ALKALIDE]: 20000
+  [RESOURCE_CATALYZED_GHODIUM_ALKALIDE]: 30000
   // }
 };

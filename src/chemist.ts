@@ -8,6 +8,10 @@ export const wantedBoosts: { [roomName: string]: { [body: string]: ResourceConst
     [HEAL]: [RESOURCE_CATALYZED_LEMERGIUM_ALKALIDE, RESOURCE_LEMERGIUM_ALKALIDE],
     [TOUGH]: [RESOURCE_GHODIUM_ALKALIDE, RESOURCE_GHODIUM_OXIDE]
   },
+  E19N47: {
+    [HEAL]: [RESOURCE_CATALYZED_LEMERGIUM_ALKALIDE],
+    [TOUGH]: [RESOURCE_CATALYZED_GHODIUM_ALKALIDE]
+  },
   sim: {
     [HEAL]: [RESOURCE_LEMERGIUM_OXIDE, RESOURCE_LEMERGIUM_ALKALIDE],
     [TOUGH]: [RESOURCE_GHODIUM_OXIDE]
@@ -71,7 +75,7 @@ export class Chemist {
       this.runAllBoostLabs();
     } else {
       // chemistry mode
-      if (Game.time % 30 === 0) {
+      if (Game.time % 10 === 0) {
         this.initializeAssets();
         this.checkLabs();
         this.assignJobs();

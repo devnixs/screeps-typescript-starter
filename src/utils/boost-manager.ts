@@ -4,7 +4,7 @@ import { boostsLimitations } from "../constants/misc";
 import { SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER } from "constants";
 
 export function boostCreep(creep: Creep) {
-  if (creep.room.name) {
+  if (!creep.room.name) {
     return -1;
   }
 

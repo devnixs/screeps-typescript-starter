@@ -15,6 +15,7 @@ type roles =
   | "claimer"
   | "miner"
   | "truck"
+  | "versatile"
   | "dismantler";
 
 // memory extension samples
@@ -47,6 +48,11 @@ interface RoomMemory {
   areControllerLinksSetup: boolean | undefined;
 
   constructionsAreSetupAtLevel: number | undefined;
+  rnd: number | undefined;
+
+  nextCheckNeedsBuilder: number;
+
+  trucksCount: number | null;
 }
 
 interface Vector {
@@ -164,5 +170,4 @@ interface Creep {
   goTo(destination: HasPos | RoomPosition, ops?: MoveToOpts): number;
 }
 
-
-type StoreDefinitionWithoutEnergy = Partial<Record<_ResourceConstantSansEnergy, number>>;
+// type StoreDefinitionWithoutEnergy = Partial<Record<_ResourceConstantSansEnergy, number>>;

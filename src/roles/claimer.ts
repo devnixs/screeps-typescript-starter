@@ -18,6 +18,7 @@ class RoleClaimer implements IRole {
 
       if (ctrl.my) {
         // no need to do anything more
+        creep.suicide();
         return;
       }
 

@@ -51,7 +51,7 @@ class RoleTruck implements IRole {
             memory.isDepositing = false;
 
             // job is complete.
-            this.restartJob(creep);
+            this.endJob(creep);
           } else if (depositResult === ERR_FULL) {
             this.restartJob(creep);
           }
@@ -161,6 +161,12 @@ class RoleTruck implements IRole {
     this.setJob(creep, { assumeEmpty: !forceEmptying });
   }
 
+  endJob(creep: Creep) {
+    const memory: ITruckMemory = creep.memory as any;
+    memory.isDepositing = false;
+    memory.jobTag = undefined;
+  }
+
   getResource(store: StoreDefinition | StoreDefinitionWithoutEnergy, res: string) {
     return (store as any)[res] || 0;
   }
@@ -173,7 +179,7 @@ class RoleTruck implements IRole {
     return desiredStocks;
   }
 
-  getJobs(creep: Creep): IJob | null {
+  *getJobs(creep: Creep): IterableIterator<IJob> {
     const storage = creep.room.storage as StructureStorage | undefined;
     var droppedResource = creep.room.find(FIND_DROPPED_RESOURCES)[0];
 
@@ -182,7 +188,7 @@ class RoleTruck implements IRole {
       droppedResource.amount > creep.pos.getRangeTo(droppedResource.pos.x, droppedResource.pos.y) * 20 &&
       storage
     ) {
-      return {
+      yield {
         targetSource: droppedResource.id,
         targetDestination: storage.id,
         jobResource: droppedResource.resourceType,
@@ -246,7 +252,7 @@ class RoleTruck implements IRole {
 
       if (labThatNeedsRefills) {
         const lab = labThatNeedsRefills;
-        return {
+        yield {
           targetSource: storage.id,
           targetDestination: lab.obj.id,
           jobResource: lab.memory.needsResource,
@@ -257,7 +263,7 @@ class RoleTruck implements IRole {
 
       if (labThatNeedsEmptying) {
         const lab = labThatNeedsEmptying;
-        return {
+        yield {
           targetSource: lab.obj.id,
           targetDestination: storage.id,
           jobResource: lab.obj.mineralType as ResourceConstant,
@@ -279,7 +285,7 @@ class RoleTruck implements IRole {
         storage &&
         storage.store.energy >= desiredEnergyInTerminal
       ) {
-        return {
+        yield {
           targetSource: storage.id,
           targetDestination: terminal.id,
           jobResource: "energy",
@@ -294,7 +300,7 @@ class RoleTruck implements IRole {
         storage &&
         _.sum(storage.store) < storage.storeCapacity - (terminal.store.energy - desiredEnergyInTerminal)
       ) {
-        return {
+        yield {
           targetSource: terminal.id,
           targetDestination: storage.id,
           jobResource: "energy",
@@ -327,7 +333,7 @@ class RoleTruck implements IRole {
 
         const overSupply = Math.min(needsAmount, terminalHasAmount);
 
-        return {
+        yield {
           targetSource: terminal.id,
           targetDestination: storage.id,
           jobResource: terminalOversupply as ResourceConstant,
@@ -341,7 +347,7 @@ class RoleTruck implements IRole {
           this.getResource(storage.store, terminalUndersupply) -
           this.getResource(wantsToKeepForThisRoom, terminalUndersupply);
 
-        return {
+        yield {
           targetSource: storage.id,
           targetDestination: terminal.id,
           jobResource: terminalUndersupply as ResourceConstant,
@@ -359,7 +365,7 @@ class RoleTruck implements IRole {
 
       if (linkThatNeedsEmptying && linkThatNeedsEmptying.needsAmount !== undefined) {
         const overSupply = linkThatNeedsEmptying.needsAmount;
-        return {
+        yield {
           targetSource: linkThatNeedsEmptying.id,
           targetDestination: storage.id,
           jobResource: "energy",
@@ -370,7 +376,7 @@ class RoleTruck implements IRole {
 
       if (linkThatNeedsRefill && linkThatNeedsRefill.needsAmount !== undefined) {
         const overSupply = linkThatNeedsRefill.needsAmount;
-        return {
+        yield {
           targetSource: storage.id,
           targetDestination: linkThatNeedsRefill.id,
           jobResource: "energy",
@@ -385,7 +391,7 @@ class RoleTruck implements IRole {
         })[0] as any;
         if (nucker) {
           if (nucker.energy < nucker.energyCapacity && storage.store.energy > 100000) {
-            return {
+            yield {
               targetSource: storage.id,
               targetDestination: nucker.id,
               jobResource: "energy",
@@ -395,7 +401,7 @@ class RoleTruck implements IRole {
           }
           const availableGhodium = storage.store[RESOURCE_GHODIUM] || 0;
           if (nucker.ghodium < nucker.ghodiumCapacity && availableGhodium > 0) {
-            return {
+            yield {
               targetSource: storage.id,
               targetDestination: nucker.id,
               jobResource: RESOURCE_GHODIUM,
@@ -407,20 +413,84 @@ class RoleTruck implements IRole {
       }
     }
 
-    return null;
+    const emptyTowers: StructureTower[] = creep.room.find(FIND_MY_STRUCTURES, {
+      filter: i => i.structureType === "tower" && i.energy <= 100
+    }) as any;
+
+    if (storage && emptyTowers.length) {
+      const tower = emptyTowers[0];
+      if (storage) {
+        yield {
+          jobNeededAmount: tower.energyCapacity - tower.energy,
+          jobResource: "energy",
+          jobTag: "refill-tower-" + tower.id,
+          targetSource: storage.id,
+          targetDestination: tower.id
+        };
+      }
+    }
+
+    const nonEmptyContainers: StructureContainer[] = creep.room.find(FIND_STRUCTURES, {
+      filter: i => i.structureType === "container" && _.sum(i.store) >= 0
+    }) as StructureContainer[];
+
+    for (var nonEmptyContainersIndex in nonEmptyContainers) {
+      const nonEmptyContainer = nonEmptyContainers[nonEmptyContainersIndex];
+
+      const resourceType = findNonEmptyResourceInStore(nonEmptyContainer.store) as ResourceConstant;
+      if (storage) {
+        yield {
+          jobNeededAmount: nonEmptyContainer.store[resourceType] as any,
+          jobResource: resourceType,
+          jobTag: "empty-container-" + nonEmptyContainer.id,
+          targetSource: nonEmptyContainer.id,
+          targetDestination: storage.id
+        };
+      } else if (resourceType === "energy") {
+        const structureThatNeedsEnergy = sourceManager.getStructureThatNeedsEnergy(creep) as StructureExtension;
+        if (resourceType && structureThatNeedsEnergy) {
+          yield {
+            jobNeededAmount: Math.min(
+              nonEmptyContainer.store.energy,
+              structureThatNeedsEnergy.energyCapacity - structureThatNeedsEnergy.energy
+            ) as any,
+            jobResource: resourceType,
+            jobTag: "empty-container-" + nonEmptyContainer.id,
+            targetSource: nonEmptyContainer.id,
+            targetDestination: structureThatNeedsEnergy.id
+          };
+        }
+      }
+    }
   }
 
   setJob(creep: Creep, { assumeEmpty }: { assumeEmpty?: boolean } = { assumeEmpty: false }) {
     const memory: ITruckMemory = creep.memory as any;
 
-    if (!memory.idle && memory.lastJobRefreshTime && memory.lastJobRefreshTime + 100 > Game.time) {
+    if (!memory.idle && memory.jobTag && memory.lastJobRefreshTime && memory.lastJobRefreshTime + 100 > Game.time) {
       // don't do anything if we already have a job or if we are not stuck
       return;
     } else {
       memory.lastJobRefreshTime = Game.time;
     }
 
-    let job = this.getJobs(creep);
+    var jobIterator = this.getJobs(creep);
+    const otherTrucksJobs = creep.room
+      .find(FIND_MY_CREEPS, { filter: c => c.memory.role === "truck" && c.name !== creep.name })
+      .map(i => i.memory as ITruckMemory)
+      .map(i => i.jobTag);
+
+    // find a job that is not assigned to another truck
+    var result = jobIterator.next();
+    let job: IJob | null = null;
+    while (result.value) {
+      if (otherTrucksJobs.indexOf(result.value.jobTag) >= 0) {
+        result = jobIterator.next();
+      } else {
+        job = result.value;
+        break;
+      }
+    }
 
     const totalCargoContent = _.sum(creep.carry);
     const carrying = Object.keys(creep.carry).find(i => (creep.carry as any)[i] > 0) as ResourceConstant | undefined;

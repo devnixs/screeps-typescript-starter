@@ -38,7 +38,6 @@ class SourceManager {
   }
   mineMineral(creep: Creep) {
     if (this.pickupDroppedMineral(creep) === OK) {
-      console.log("miner is picking up dropped minerals");
       return OK;
     }
 
@@ -150,7 +149,7 @@ class SourceManager {
     }
 
     const linkToWithdrawEnergy = LinkManager.getLinksToWithdrawEnergy(creep.pos)[0];
-    if (linkToWithdrawEnergy && linkToWithdrawEnergy.link && creep.memory.role != 'truck') {
+    if (linkToWithdrawEnergy && linkToWithdrawEnergy.link && creep.memory.role != "truck") {
       targetStructure = linkToWithdrawEnergy.link;
     }
 
@@ -204,7 +203,9 @@ class SourceManager {
       creep,
       "deposit_structure_id",
       FIND_STRUCTURES,
-      (targetStructure: any) => targetStructure.energy < targetStructure.energyCapacity,
+      (targetStructure: any) =>
+        (targetStructure.structureType != "tower" && targetStructure.energy < targetStructure.energyCapacity) ||
+        (targetStructure.structureType === "tower" && targetStructure.energy < targetStructure.energyCapacity - 100),
       {
         filter: this.filterStructureNeedsEnergy
       }

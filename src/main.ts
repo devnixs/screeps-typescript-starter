@@ -23,6 +23,7 @@ import { roleDismantler } from "roles/dismantler";
 import { LinkManager } from "utils/link-manager";
 import { Merchant } from "merchant";
 import { roleStaticHarvester } from "roles/static-harvester";
+import { roleVersatile } from "roles/versatile";
 
 // profiler.enable();
 
@@ -99,6 +100,9 @@ export const loop = ErrorMapper.wrapLoop(() => {
         }
         if (memory.role == "miner") {
           roleMiner.run(creep);
+        }
+        if (memory.role == "versatile") {
+          roleVersatile.run(creep);
         }
       } catch (e) {
         error = e;

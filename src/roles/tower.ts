@@ -1,4 +1,5 @@
 import { profiler } from "../utils/profiler";
+import { rampartMinHp, wallsMinHp } from "constants/misc";
 
 interface ITowerMemory extends CreepMemory {
   upgrading: boolean;
@@ -11,6 +12,9 @@ class RoleTower {
   }
 
   private runSingleTower = (tower: StructureTower) => {
+    if (tower.energy === 0) {
+      return;
+    }
     if (Game.time % 30 === 0) {
       this.refreshDamagedStructures(tower);
     }
@@ -127,20 +131,33 @@ class RoleTower {
   }
 
   private getDamagedStructureInRoom(tower: StructureTower): AnyStructure | null {
+    const maxEnergyInExtensions = tower.room.energyAvailable === tower.room.energyCapacityAvailable;
+    const allowWallsAndRemparts =
+      maxEnergyInExtensions && (tower.room.storage ? tower.room.storage.store.energy > 700000 : false);
+    const minHpRampart = rampartMinHp(tower.room.controller ? tower.room.controller.level : 0);
+    const minHpWalls = wallsMinHp(tower.room.controller ? tower.room.controller.level : 0);
+
     // only repair really damaged stuff
     var damagedOther = tower.room.find(FIND_MY_STRUCTURES, {
-      filter: structure => structure.hits < structure.hitsMax / 2
-    })[0];
-    if (damagedOther) {
-      return damagedOther;
+      filter: structure => structure.structureType != STRUCTURE_RAMPART && structure.hits < structure.hitsMax / 10
+    });
+    if (damagedOther.length) {
+      damagedOther.sort((a, b) => a.hits - b.hits);
+      return damagedOther[0];
     }
 
     var damagedRoads = tower.room.find(FIND_STRUCTURES, {
       filter: structure =>
-        structure.hits < structure.hitsMax / 2 &&
-        (structure.structureType == STRUCTURE_ROAD || structure.structureType == STRUCTURE_CONTAINER)
-    })[0];
-    return damagedRoads;
+        (allowWallsAndRemparts && structure.structureType === STRUCTURE_RAMPART && structure.hits < minHpRampart) ||
+        (allowWallsAndRemparts &&
+          structure.structureType === "constructedWall" &&
+          structure.hits > 0 &&
+          structure.hits < minHpWalls) ||
+        ((structure.structureType == STRUCTURE_ROAD || structure.structureType == STRUCTURE_CONTAINER) &&
+          structure.hits < structure.hitsMax / 2)
+    });
+    damagedRoads.sort((a, b) => a.hits - b.hits);
+    return damagedRoads[0];
   }
 
   private getDamagedCreepInRoom(tower: StructureTower): Creep | null {
@@ -151,12 +168,16 @@ class RoleTower {
   }
 
   private getEnemyInRoom(tower: StructureTower): Creep | null {
-    var enemy = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
-    return enemy;
+    var enemies = tower.room.find(FIND_HOSTILE_CREEPS);
+
+    var healersFirst = _.sortBy(enemies, enemy => -1 * enemy.getActiveBodyparts(HEAL));
+
+    return healersFirst[0];
   }
 
   private getTowerList(): StructureTower[] {
-    if (!Memory.existingTowerIds || Game.time % 100 === 0) {
+    const isSimulation = "sim" in Game.rooms;
+    if (!Memory.existingTowerIds || Game.time % 100 === 0 || isSimulation) {
       const towerIds = Object.keys(Game.structures)
         .map(i => Game.structures[i])
         .filter(i => i.structureType === STRUCTURE_TOWER)

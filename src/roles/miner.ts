@@ -26,7 +26,8 @@ class RoleMiner implements IRole {
 
     if (!memory.isDepositing) {
       if (sourceManager.mineMineral(creep) !== OK) {
-        return this.goToRest(creep);
+        creep.suicide();
+        return;
       }
     } else {
       if (sourceManager.storeInCloseContainer(creep) !== OK) {
