@@ -141,6 +141,20 @@ class SourceManager {
     return -1;
   }
 
+  getEnergyFromStorageIfPossible(creep: Creep) {
+    const storage = creep.room.storage;
+    if (storage) {
+      const withdrawResult = creep.withdraw(storage, RESOURCE_ENERGY);
+      if (withdrawResult === ERR_NOT_IN_RANGE) {
+        creep.goTo(storage);
+        creep.withdraw(storage, RESOURCE_ENERGY);
+      }
+      return OK;
+    } else {
+      return this.getEnergy(creep);
+    }
+  }
+
   getEnergy(creep: Creep) {
     let targetStructure: AnyStructure | undefined = undefined;
 
@@ -151,6 +165,10 @@ class SourceManager {
     const linkToWithdrawEnergy = LinkManager.getLinksToWithdrawEnergy(creep.pos)[0];
     if (linkToWithdrawEnergy && linkToWithdrawEnergy.link && creep.memory.role != "truck") {
       targetStructure = linkToWithdrawEnergy.link;
+    }
+
+    if (!targetStructure) {
+      targetStructure = creep.room.storage && creep.room.storage.store.energy > 0 ? creep.room.storage : undefined;
     }
 
     if (!targetStructure) {
@@ -169,12 +187,9 @@ class SourceManager {
       ) as any;
     }
 
-    if (!targetStructure) {
-      targetStructure = creep.room.storage && creep.room.storage.store.energy > 0 ? creep.room.storage : undefined;
-    }
-
     if (targetStructure) {
-      if (creep.withdraw(targetStructure, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+      const withdrawResult = creep.withdraw(targetStructure, RESOURCE_ENERGY);
+      if (withdrawResult === ERR_NOT_IN_RANGE) {
         creep.goTo(targetStructure);
         creep.withdraw(targetStructure, RESOURCE_ENERGY);
       }
@@ -240,8 +255,8 @@ class SourceManager {
     let targetStructure: AnyStructure | undefined = undefined;
     const inputLink = LinkManager.getInputLinkThatCanReceiveEnergy(creep.pos);
 
-    if (inputLink) {
-      // if the link is very close, use it first
+    if (inputLink && creep.memory.role !== "truck") {
+      // if the link is very close, use it first, but not for trucks as they might end up stuck in a loop
       targetStructure = inputLink && inputLink.link;
     }
 

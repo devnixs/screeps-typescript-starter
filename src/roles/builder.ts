@@ -63,9 +63,9 @@ export class RoleBuilder implements IRole {
       this.resetTarget(memory, creep.room);
       if (!memory.targetStructure) {
         // suicide
-        console.log("Suiciding idle builder", creep.room.name);
-        creep.suicide();
-        return;
+        // console.log("Suiciding idle builder", creep.room.name);
+        // creep.suicide();
+        return this.goToRest(creep);
       }
     }
 

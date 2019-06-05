@@ -1,5 +1,6 @@
 import { getSpawnerRequirements, RoleRequirement } from "spawner-requirements";
 import { profiler } from "./utils/profiler";
+import { getCpuAverage } from "utils/cpu";
 
 const costs = {
   [MOVE]: 50,
@@ -71,11 +72,12 @@ class Spawner {
   handleSingleSpawn(spawn: StructureSpawn) {
     let requirements = getSpawnerRequirements(spawn);
 
-    requirements = requirements.filter(i => !i.onlyRoom || i.onlyRoom === spawn.room.name);
+    requirements = requirements.filter(i => !i.onlyRooms || i.onlyRooms.indexOf(spawn.room.name) >= 0);
 
     const allCreeps = _.values(Game.creeps) as Creep[];
     const creepsInThisRoom = allCreeps.filter(
-      i => i.memory.homeRoom === spawn.room.name && (i.ticksToLive === undefined || i.ticksToLive > 100)
+      i =>
+        i.memory.homeRoom === spawn.room.name && (i.ticksToLive === undefined || i.ticksToLive > i.body.length * 3 + 10)
     );
 
     const counts = _.countBy(creepsInThisRoom, i => this.getRoleSlug(i.memory.role, i.memory.subRole));
@@ -102,14 +104,21 @@ class Spawner {
       };
     });
 
+    const currentCpu = Game.cpu.bucket;
+    const cpuAverage = getCpuAverage();
+    const isLowOnCpu = currentCpu < 7000 || cpuAverage > 19;
+
     const roleNeededToBeCreated = roleInfos.filter(
       i =>
         i.currentPercentage < i.desiredPercentage &&
+        (!i.requirement.disableIfLowOnCpu || !isLowOnCpu) &&
         (i.requirement.maxCount === undefined || i.currentCount < i.requirement.maxCount)
     )[0];
 
     const roleThatCanBeCreated = roleInfos.filter(
-      i => i.requirement.maxCount === undefined || i.currentCount < i.requirement.maxCount
+      i =>
+        (!i.requirement.disableIfLowOnCpu || !isLowOnCpu) &&
+        (i.requirement.maxCount === undefined || i.currentCount < i.requirement.maxCount)
     )[0];
 
     if (debugMode) {

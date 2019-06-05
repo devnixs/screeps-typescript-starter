@@ -8,13 +8,28 @@ export const wantedBoosts: { [roomName: string]: { [body: string]: ResourceConst
     [HEAL]: [RESOURCE_CATALYZED_LEMERGIUM_ALKALIDE, RESOURCE_LEMERGIUM_ALKALIDE],
     [TOUGH]: [RESOURCE_GHODIUM_ALKALIDE, RESOURCE_GHODIUM_OXIDE]
   },
-  E19N47: {
+  E19N37: {
     [HEAL]: [RESOURCE_CATALYZED_LEMERGIUM_ALKALIDE],
-    [TOUGH]: [RESOURCE_CATALYZED_GHODIUM_ALKALIDE]
+    [TOUGH]: [RESOURCE_CATALYZED_GHODIUM_ALKALIDE],
+    [MOVE]: ["XZHO2", RESOURCE_ZYNTHIUM_ALKALIDE, "ZO"],
+    [WORK]: ["XZH2O", "ZH2O", "ZH"]
+  },
+  E22N36: {
+    [HEAL]: [RESOURCE_CATALYZED_LEMERGIUM_ALKALIDE],
+    [TOUGH]: [RESOURCE_CATALYZED_GHODIUM_ALKALIDE],
+    [MOVE]: ["XZHO2", RESOURCE_ZYNTHIUM_ALKALIDE, "ZO"],
+    [WORK]: ["XZH2O", "ZH2O", "ZH"]
+  },
+  E22N35: {
+    [HEAL]: [RESOURCE_CATALYZED_LEMERGIUM_ALKALIDE],
+    [TOUGH]: [RESOURCE_CATALYZED_GHODIUM_ALKALIDE],
+    [MOVE]: ["XZHO2", RESOURCE_ZYNTHIUM_ALKALIDE, "ZO"],
+    [WORK]: ["XZH2O", "ZH2O", "ZH"]
   },
   sim: {
     [HEAL]: [RESOURCE_LEMERGIUM_OXIDE, RESOURCE_LEMERGIUM_ALKALIDE],
-    [TOUGH]: [RESOURCE_GHODIUM_OXIDE]
+    [TOUGH]: [RESOURCE_GHODIUM_OXIDE],
+    [MOVE]: [RESOURCE_ZYNTHIUM_ALKALIDE]
   }
 };
 
@@ -68,14 +83,14 @@ export class Chemist {
 
     if (this.isBoostMode()) {
       // boost mode
-      if (Game.time % 20 === 0) {
+      if (Game.time % 10 === 0) {
         this.initializeAssets();
         this.assignBoosts();
       }
       this.runAllBoostLabs();
     } else {
       // chemistry mode
-      if (Game.time % 10 === 0) {
+      if (Game.time % 5 === 0) {
         this.initializeAssets();
         this.checkLabs();
         this.assignJobs();
@@ -132,6 +147,9 @@ export class Chemist {
       const adjascentCreeps = lab.pos.findInRange(FIND_MY_CREEPS, 1);
       const maxBoostedBodyParts = labMemory.boostBodyType && boostsLimitations[labMemory.boostBodyType];
       const adjascentCreepsWithRightBody = adjascentCreeps.find(i => {
+        if (!i.memory.boostable) {
+          return false;
+        }
         const hasBodyThatCanReceiveBoost = !!i.body.find(
           bodyPart => bodyPart.type === labMemory.boostBodyType && !bodyPart.boost
         );
@@ -161,7 +179,7 @@ export class Chemist {
       const boosts = Object.keys(boostsForThisRoom)
         .map(bodyPart => {
           const resources = boostsForThisRoom[bodyPart];
-          const resource = resources.filter(i => this.assetsWithAllLabs[i] > boostResourceNeeded)[0];
+          const resource = resources.filter(i => this.assetsWithAllLabs[i] > boostResourceNeeded * 30)[0];
           return {
             bodyPart: bodyPart as BodyPartConstant,
             resource: resource
@@ -180,7 +198,7 @@ export class Chemist {
         if (boost) {
           lab.boostResource = boost.resource;
           lab.needsResource = boost.resource;
-          lab.needsAmount = boostResourceNeeded * 10;
+          lab.needsAmount = boostResourceNeeded * 60;
           lab.boostBodyType = boost.bodyPart;
         } else {
           // this lab is not useful
@@ -406,7 +424,7 @@ export class Chemist {
   }
 
   getAssets() {
-    if (!this.room.storage) {
+    if (!this.room.terminal) {
       return {};
     } else {
       // resultLabs should be counted as assets
@@ -417,7 +435,7 @@ export class Chemist {
 
       const allAssets = _.merge(
         {},
-        this.room.storage.store,
+        this.room.terminal.store,
         ...resultLabAssets,
         (i: any, j: any) => (i || 0) + (j || 0)
       ) as { [key: string]: number };
@@ -427,14 +445,19 @@ export class Chemist {
   }
 
   getAssetsWithAllLabs() {
-    if (!this.room.storage) {
+    if (!this.room.terminal) {
       return {};
     } else {
       // resultLabs should be counted as assets
       const labs = this.labs.map(i => Game.getObjectById(i.id)).filter(i => i) as StructureLab[];
       const labAssets = labs.filter(i => i.mineralAmount > 0).map(i => ({ [i.mineralType as any]: i.mineralAmount }));
 
-      const allAssets = _.merge({}, this.room.storage.store, ...labAssets, (i: any, j: any) => (i || 0) + (j || 0)) as {
+      const allAssets = _.merge(
+        {},
+        this.room.terminal.store,
+        ...labAssets,
+        (i: any, j: any) => (i || 0) + (j || 0)
+      ) as {
         [key: string]: number;
       };
       // console.log("All assets are ", JSON.stringify(allAssets));

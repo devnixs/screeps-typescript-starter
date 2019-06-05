@@ -24,6 +24,9 @@ import { LinkManager } from "utils/link-manager";
 import { Merchant } from "merchant";
 import { roleStaticHarvester } from "roles/static-harvester";
 import { roleVersatile } from "roles/versatile";
+import { roleAttacker } from "roles/attacker";
+import { getCpuAverage } from "utils/cpu";
+import { Observer } from "utils/observer";
 
 // profiler.enable();
 
@@ -104,6 +107,9 @@ export const loop = ErrorMapper.wrapLoop(() => {
         if (memory.role == "versatile") {
           roleVersatile.run(creep);
         }
+        if (memory.role == "attacker") {
+          roleAttacker.run(creep);
+        }
       } catch (e) {
         error = e;
       }
@@ -112,6 +118,8 @@ export const loop = ErrorMapper.wrapLoop(() => {
     roleTower.runAllTowers();
 
     Architect.runForAllRooms();
+
+    Observer.runAllObservers();
 
     // Automatically delete memory of missing creeps
     for (const name in Memory.creeps) {
@@ -139,10 +147,15 @@ export const loop = ErrorMapper.wrapLoop(() => {
       if (Memory.cpuUsages.length > 100) {
         Memory.cpuUsages.shift();
       }
-      console.log("Average CPU : ", _.sum(Memory.cpuUsages) / Memory.cpuUsages.length);
+      console.log("Average CPU : ", getCpuAverage());
     }
 
     // shutdown attack
+    /*
+    if (Game.flags["versatile_attack"] && Game.time > 7084587 + 3000) {
+      Game.flags["versatile_attack"].remove();
+      Game.flags["boostmode_5"].remove();
+    } */
     /*     if (
       Game.flags["dismantler_attack"] &&
       !Game.getObjectById("5c1cbb97e38b1f6a4735759e") &&

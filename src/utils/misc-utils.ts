@@ -1,7 +1,5 @@
 // Random utilities that don't belong anywhere else
 
-export const allRooms = Object.keys(Game.rooms).map(i => Game.rooms[i]);
-
 export function printRoomName(roomName: string): string {
   return '<a href="#!/room/' + Game.shard.name + "/" + roomName + '">' + roomName + "</a>";
 }

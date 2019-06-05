@@ -21,7 +21,8 @@ export interface RoleRequirement {
   minEnergy?: number;
   sortBody?: BodyPartConstant[];
   subRole?: string;
-  onlyRoom?: string;
+  onlyRooms?: string[];
+  disableIfLowOnCpu?: boolean;
 }
 
 // MOVE	            50	Moves the creep. Reduces creep fatigue by 2/tick. See movement.
@@ -135,9 +136,9 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
   } else {
     if (spawn.room.storage) {
       const availableEnergy = spawn.room.storage.store.energy;
-      if (availableEnergy > 800000) {
+      if (availableEnergy > 700000) {
         upgraderRatio = 10;
-        maxUpgraderCount = 1;
+        maxUpgraderCount = 2;
       } else if (availableEnergy > 600000) {
         upgraderRatio = 8;
         maxUpgraderCount = 1;
@@ -287,7 +288,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       maxCount: builderHelperCount,
       bodyTemplate: [MOVE, WORK, CARRY],
       capMaxEnergy: 1900,
-      onlyRoom: builderHelperSource,
+      onlyRooms: builderHelperSource ? [builderHelperSource] : undefined,
       subRole: builderHelperTarget
     },
     {
@@ -295,7 +296,8 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       role: "reparator",
       maxCount: 1, // handled by towers
       bodyTemplate: [MOVE, WORK, CARRY],
-      capMaxEnergy: 1400
+      capMaxEnergy: 1400,
+      disableIfLowOnCpu: true
     },
     {
       percentage: 20,
@@ -304,7 +306,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       countAllRooms: true,
       bodyTemplate: [TOUGH, TOUGH, TOUGH, WORK, WORK, RANGED_ATTACK, MOVE, MOVE, MOVE],
       sortBody: [TOUGH, WORK, MOVE, RANGED_ATTACK],
-      onlyRoom: "E25N48",
+      onlyRooms: ["E25N48"],
       subRole: "room1",
       additionalMemory: {} as IDismantlerMemory
     },
@@ -313,10 +315,45 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       role: "versatile",
       maxCount: Game.flags["versatile_attack"] ? 1 : 0,
       countAllRooms: true,
-      bodyTemplate: [TOUGH, TOUGH, RANGED_ATTACK, WORK, MOVE, HEAL, HEAL, HEAL, HEAL],
+      // bodyTemplate: [TOUGH, TOUGH, RANGED_ATTACK, WORK, MOVE, HEAL, HEAL, HEAL, HEAL],
+      bodyTemplate: [TOUGH, RANGED_ATTACK, WORK, WORK, WORK, MOVE, HEAL, HEAL, HEAL],
       sortBody: [TOUGH, RANGED_ATTACK, WORK, MOVE, HEAL],
-      onlyRoom: "E19N47",
-      additionalMemory: {} as IDismantlerMemory
+      onlyRooms: ["E19N37", "E22N36", "E22N35"],
+      additionalMemory: {
+        boostable: true
+      } as IDismantlerMemory
+    },
+    {
+      percentage: 20,
+      role: "attacker",
+      maxCount: Game.flags["attacker_attack_" + spawn.room.name] ? 2 : 0,
+      countAllRooms: false,
+      exactBody: [
+        TOUGH,
+        TOUGH,
+        TOUGH,
+        TOUGH,
+        RANGED_ATTACK,
+        RANGED_ATTACK,
+        RANGED_ATTACK,
+        RANGED_ATTACK,
+        ATTACK,
+        ATTACK,
+        ATTACK,
+        MOVE,
+        MOVE,
+        MOVE,
+        MOVE,
+        MOVE,
+        HEAL,
+        HEAL,
+        HEAL,
+        HEAL,
+        HEAL
+      ],
+      additionalMemory: {
+        boostable: false
+      } as IDismantlerMemory
     },
     {
       percentage: 20,
@@ -324,7 +361,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       maxCount: Game.flags["fighter_attack"] || Game.flags["dismantler_attack"] ? requiredHealersForAnAttack : 0,
       bodyTemplate: [HEAL, MOVE, HEAL, MOVE, HEAL, MOVE, HEAL, MOVE],
       sortBody: [TOUGH, HEAL, MOVE],
-      onlyRoom: "E27N47",
+      onlyRooms: ["E27N47"],
       capMaxEnergy: 1600,
       minEnergy: 1300
     },
@@ -345,7 +382,8 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       maxCount: extractors.length >= 1 && mineralWithReserve.length > 0 ? 1 : 0,
       bodyTemplate: [MOVE, WORK, CARRY, WORK, CARRY, WORK, CARRY],
       capMaxEnergy: 1800,
-      sortBody: [MOVE, WORK, CARRY]
+      sortBody: [MOVE, WORK, CARRY],
+      disableIfLowOnCpu: true
     },
     {
       percentage: 4,
@@ -354,8 +392,9 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       countAllRooms: true,
       bodyTemplate: [MOVE, WORK, CARRY],
       subRole: "room10",
-      onlyRoom: "E22N36",
-      capMaxEnergy: 1800,
+      onlyRooms: ["E22N36"],
+      capMaxEnergy: 1400,
+      disableIfLowOnCpu: true,
       additionalMemory: {
         homeSpawnPosition: spawn.pos,
         home: spawn.pos.roomName,
@@ -371,8 +410,9 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       countAllRooms: true,
       bodyTemplate: [MOVE, WORK, CARRY],
       subRole: "room11",
-      onlyRoom: "E22N35",
-      capMaxEnergy: 1800,
+      onlyRooms: ["E22N35"],
+      capMaxEnergy: 1400,
+      disableIfLowOnCpu: true,
       additionalMemory: {
         homeSpawnPosition: spawn.pos,
         home: spawn.pos.roomName,
@@ -380,33 +420,53 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
         targetRoomX: 41,
         targetRoomY: 39
       } as Partial<ILongDistanceHarvesterMemory>
-    } /*
+    },
     {
-      percentage: 1,
+      percentage: 4,
       role: "long-distance-harvester",
-      maxCount: 2,
+      maxCount: 1,
       countAllRooms: true,
-      onlyRoom: "E27N47",
       bodyTemplate: [MOVE, WORK, CARRY],
-      subRole: "room2",
-      capMaxEnergy: 1800,
+      subRole: "room12",
+      onlyRooms: ["E19N47"],
+      capMaxEnergy: 1500,
+      disableIfLowOnCpu: true,
       additionalMemory: {
         homeSpawnPosition: spawn.pos,
         home: spawn.pos.roomName,
-        targetRoomName: "E26N47",
-        targetRoomX: 26,
-        targetRoomY: 31
+        targetRoomName: "E19N46",
+        targetRoomX: 7,
+        targetRoomY: 15
       } as Partial<ILongDistanceHarvesterMemory>
     },
     {
-      percentage: 1,
+      percentage: 4,
       role: "long-distance-harvester",
-      maxCount: 2,
+      maxCount: 1,
       countAllRooms: true,
       bodyTemplate: [MOVE, WORK, CARRY],
-      subRole: "room3",
-      onlyRoom: "E27N47",
-      capMaxEnergy: 1800,
+      subRole: "room13",
+      onlyRooms: ["E19N47"],
+      capMaxEnergy: 1600,
+      disableIfLowOnCpu: true,
+      additionalMemory: {
+        homeSpawnPosition: spawn.pos,
+        home: spawn.pos.roomName,
+        targetRoomName: "E18N46",
+        targetRoomX: 36,
+        targetRoomY: 26
+      } as Partial<ILongDistanceHarvesterMemory>
+    },
+    {
+      percentage: 4,
+      role: "long-distance-harvester",
+      maxCount: 1,
+      countAllRooms: true,
+      bodyTemplate: [MOVE, WORK, CARRY],
+      subRole: "room14",
+      onlyRooms: ["E25N48"],
+      capMaxEnergy: 1500,
+      disableIfLowOnCpu: true,
       additionalMemory: {
         homeSpawnPosition: spawn.pos,
         home: spawn.pos.roomName,
@@ -416,39 +476,95 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       } as Partial<ILongDistanceHarvesterMemory>
     },
     {
-      percentage: 1,
+      percentage: 4,
       role: "long-distance-harvester",
-      maxCount: maxEnergyInRoom > 1500 ? 2 : 3,
+      maxCount: 1,
       countAllRooms: true,
       bodyTemplate: [MOVE, WORK, CARRY],
-      subRole: "room4",
-      onlyRoom: "E25N48",
-      capMaxEnergy: 1200,
+      subRole: "room15",
+      onlyRooms: ["E27N47"],
+      capMaxEnergy: 1500,
+      disableIfLowOnCpu: true,
       additionalMemory: {
         homeSpawnPosition: spawn.pos,
         home: spawn.pos.roomName,
-        targetRoomName: "E24N48",
-        targetRoomX: 24,
-        targetRoomY: 17
+        targetRoomName: "E27N48",
+        targetRoomX: 29,
+        targetRoomY: 7
       } as Partial<ILongDistanceHarvesterMemory>
     },
     {
-      percentage: 1,
+      percentage: 4,
       role: "long-distance-harvester",
-      maxCount: maxEnergyInRoom > 1500 ? 2 : 3,
+      maxCount: 1,
       countAllRooms: true,
       bodyTemplate: [MOVE, WORK, CARRY],
-      subRole: "room5",
-      onlyRoom: "E25N48",
-      capMaxEnergy: 1200,
+      subRole: "room16",
+      onlyRooms: ["E31N49"],
+      capMaxEnergy: 1500,
+      disableIfLowOnCpu: true,
       additionalMemory: {
         homeSpawnPosition: spawn.pos,
         home: spawn.pos.roomName,
-        targetRoomName: "E24N48",
-        targetRoomX: 8,
-        targetRoomY: 7
+        targetRoomName: "E32N49",
+        targetRoomX: 13,
+        targetRoomY: 45
       } as Partial<ILongDistanceHarvesterMemory>
-    }, */,
+    },
+    {
+      percentage: 4,
+      role: "long-distance-harvester",
+      maxCount: 1,
+      countAllRooms: true,
+      bodyTemplate: [MOVE, WORK, CARRY],
+      subRole: "room17",
+      onlyRooms: ["E31N49"],
+      capMaxEnergy: 1500,
+      disableIfLowOnCpu: true,
+      additionalMemory: {
+        homeSpawnPosition: spawn.pos,
+        home: spawn.pos.roomName,
+        targetRoomName: "E32N49",
+        targetRoomX: 12,
+        targetRoomY: 41
+      } as Partial<ILongDistanceHarvesterMemory>
+    },
+    {
+      percentage: 4,
+      role: "long-distance-harvester",
+      maxCount: 1,
+      countAllRooms: true,
+      bodyTemplate: [MOVE, WORK, CARRY],
+      subRole: "room18",
+      onlyRooms: ["E27N47"],
+      capMaxEnergy: 1500,
+      disableIfLowOnCpu: true,
+      additionalMemory: {
+        homeSpawnPosition: spawn.pos,
+        home: spawn.pos.roomName,
+        targetRoomName: "E28N47",
+        targetRoomX: 13,
+        targetRoomY: 27
+      } as Partial<ILongDistanceHarvesterMemory>
+    },
+    {
+      percentage: 4,
+      role: "long-distance-harvester",
+      maxCount: 1,
+      countAllRooms: true,
+      bodyTemplate: [MOVE, WORK, CARRY],
+      subRole: "room19",
+      onlyRooms: ["E27N47"],
+      capMaxEnergy: 1500,
+      disableIfLowOnCpu: true,
+      additionalMemory: {
+        homeSpawnPosition: spawn.pos,
+        home: spawn.pos.roomName,
+        targetRoomName: "E28N47",
+        targetRoomX: 35,
+        targetRoomY: 20
+      } as Partial<ILongDistanceHarvesterMemory>
+    },
     {
       percentage: 1,
       role: "upgrader",
@@ -461,7 +577,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       percentage: 1,
       role: "claimer",
       maxCount: claimerCount,
-      onlyRoom: closestRoomToClaimTarget,
+      onlyRooms: closestRoomToClaimTarget ? [closestRoomToClaimTarget] : undefined,
       exactBody: [MOVE, CLAIM]
     },
     {
@@ -473,7 +589,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       sortBody: [TOUGH, WORK, MOVE],
       subRole: "room1",
       capMaxEnergy: 60,
-      onlyRoom: "E27N47",
+      onlyRooms: ["E27N47"],
       additionalMemory: {} as IDismantlerMemory
     }
   ];

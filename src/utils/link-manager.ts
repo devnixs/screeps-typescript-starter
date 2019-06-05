@@ -17,11 +17,11 @@ export class LinkManager {
       this.assignLinks();
     }
 
-    if (Game.time % 5 || debugMode) {
+    if (Game.time % 3 || debugMode) {
       this.doTransfers();
     }
 
-    if (Game.time % 5 || debugMode) {
+    if (Game.time % 3 || debugMode) {
       this.setStates();
     }
 
@@ -127,7 +127,7 @@ export class LinkManager {
 
     if (outputLinkNotFull) {
       link.linkObj.transferEnergy(outputLinkNotFull.linkObj);
-    } else {
+    } else if (link.linkMemory.type === "input") {
       let inputOutputLinkNotFull = links.find(
         i =>
           i.linkMemory.type === "input-output" &&

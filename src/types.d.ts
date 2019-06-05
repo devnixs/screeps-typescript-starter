@@ -16,6 +16,7 @@ type roles =
   | "miner"
   | "truck"
   | "versatile"
+  | "attacker"
   | "dismantler";
 
 // memory extension samples
@@ -27,6 +28,7 @@ interface CreepMemory {
   _trav?: any;
   lastPos: { x: number; y: number };
   noMovementTicksCount: number;
+  boostable: boolean;
 }
 
 interface RoomMemory {
@@ -100,6 +102,8 @@ interface Memory {
   cpuUsages: number[];
 
   closestRooms: { [roomName: string]: string };
+
+  observersIds?: string[];
 }
 
 // `global` extension samples

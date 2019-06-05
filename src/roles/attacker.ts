@@ -4,10 +4,9 @@ import { boostCreep } from "utils/boost-manager";
 
 interface IVersatileMemory extends CreepMemory {
   status: "healing" | "attacking";
-  arrivedInTargetRoomAt?: number;
 }
 
-class RoleVersatile implements IRole {
+class RoleAttacker implements IRole {
   run(creep: Creep) {
     if (creep.ticksToLive === 1480) {
       creep.notifyWhenAttacked(false);
@@ -23,21 +22,16 @@ class RoleVersatile implements IRole {
       return;
     }
 
-    // const rooms = Object.keys(Game.rooms).map(i => Game.rooms[i]);
     const memory: IVersatileMemory = creep.memory as any;
 
     let hostile: Creep | null = null;
     hostile = creep.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
 
     if (hostile) {
-      if (hostile.pos.inRangeTo(creep.pos, 1)) {
-        creep.rangedMassAttack();
-      } else {
-        creep.rangedAttack(hostile);
-      }
+      creep.rangedAttack(hostile);
     }
 
-    const attackFlag = Game.flags["versatile_attack"];
+    const attackFlag = Game.flags["attacker_attack_" + creep.memory.homeRoom];
 
     if (!memory.status) {
       memory.status = "attacking";
@@ -61,43 +55,17 @@ class RoleVersatile implements IRole {
       creep.heal(creep);
     } else {
       if (!attackFlag) {
-        this.goHome(creep);
         return;
       } else {
         if (attackFlag.pos && attackFlag.pos.roomName != creep.room.name) {
           creep.goTo(attackFlag);
           return;
         } else {
-          if (!memory.arrivedInTargetRoomAt) {
-            memory.arrivedInTargetRoomAt = Game.time;
-          }
-
-          let targetStructure: AnyStructure | undefined | null;
-          const previousCreep = this.getPreviousCreepInRoom(creep);
-          if (!previousCreep) {
-            targetStructure = this.findTargetStructure(creep, attackFlag, false);
-          } else {
-            if (previousCreep.pos.inRangeTo(creep.pos, 1)) {
-              targetStructure = this.findTargetStructure(creep, attackFlag, true);
-            } else {
-              creep.goTo(previousCreep);
-              return;
-            }
-          }
-
+          const targetStructure = this.findTargetStructure(creep, attackFlag);
           if (targetStructure) {
-            const dismantleResult = creep.dismantle(targetStructure);
-            if (creep.dismantle(targetStructure) === ERR_NOT_IN_RANGE) {
-              var gotoResult = creep.goTo(targetStructure);
-              creep.dismantle(targetStructure);
-            } else if (dismantleResult != OK) {
-              if (attackFlag.room && attackFlag.room.controller && attackFlag.room.controller.safeMode) {
-                // pull off the attack.
-                Game.notify("Removing flag because room " + attackFlag.room.name + " is in safe mode");
-                attackFlag.remove();
-              }
-              console.log(creep.name, "dismantle result", dismantleResult);
-              console.log(creep.name, "dismantle type", targetStructure.structureType);
+            if (creep.attack(targetStructure) === ERR_NOT_IN_RANGE) {
+              creep.goTo(targetStructure);
+              creep.attack(targetStructure);
             }
           } else {
             creep.goTo(attackFlag);
@@ -105,15 +73,6 @@ class RoleVersatile implements IRole {
         }
       }
     }
-  }
-
-  getPreviousCreepInRoom(creep: Creep) {
-    var creeps = Object.keys(Game.creeps)
-      .filter(creepName => Game.creeps[creepName].room.name === creep.room.name)
-      .map(creepName => Game.creeps[creepName]);
-    var orderedCreeps = _.sortBy(creeps, creep => (creep.memory as IVersatileMemory).arrivedInTargetRoomAt);
-    var myIndex = orderedCreeps.indexOf(creep);
-    return orderedCreeps[myIndex - 1];
   }
 
   removeFlag() {
@@ -151,25 +110,10 @@ class RoleVersatile implements IRole {
     return totalToughHits > 0 && actualToughHits >= totalToughHits * 0.8;
   }
 
-  findTargetStructure(creep: Creep, attackFlag: Flag, ignoreFlags: boolean): AnyStructure | undefined | null {
-    let targetStructure: AnyStructure | undefined | null;
-
-    if (!ignoreFlags) {
-      const targetStructures = creep.room.lookForAt(LOOK_STRUCTURES, attackFlag) as AnyStructure[];
-      targetStructure = targetStructures[0];
-      let counter = -1;
-      while (!targetStructure && counter <= 10) {
-        counter++;
-        const flag = Game.flags["versatile_attack_" + counter];
-        if (!flag) {
-          continue;
-        }
-
-        const targetStructures = creep.room.lookForAt(LOOK_STRUCTURES, flag) as AnyStructure[];
-        targetStructure = targetStructures[0];
-      }
-    }
-
+  findTargetStructure(creep: Creep, attackFlag: Flag): AnyStructure | undefined | null {
+    const targetStructures = creep.room.lookForAt(LOOK_STRUCTURES, attackFlag) as AnyStructure[];
+    let targetStructure: AnyStructure | undefined | null = targetStructures[0];
+    /*
     targetStructure =
       targetStructure ||
       creep.pos.findClosestByRange(FIND_HOSTILE_STRUCTURES, { filter: i => i.structureType === "tower" });
@@ -177,23 +121,35 @@ class RoleVersatile implements IRole {
     targetStructure =
       targetStructure ||
       creep.pos.findClosestByRange(FIND_HOSTILE_STRUCTURES, { filter: i => i.structureType === "spawn" });
-    /*
+
     targetStructure =
       targetStructure ||
       creep.pos.findClosestByRange(FIND_HOSTILE_CONSTRUCTION_SITES, { filter: i => i.structureType === "tower" });
- */
+
     targetStructure =
       targetStructure ||
       creep.pos.findClosestByRange(FIND_HOSTILE_STRUCTURES, {
         filter: i => i.structureType !== "rampart" && i.structureType !== "controller"
       });
-    /*
+
     targetStructure = targetStructure || creep.pos.findClosestByRange(FIND_CONSTRUCTION_SITES);
- */
+
+    targetStructure = targetStructure || creep.pos.findClosestByRange(FIND_HOSTILE_STRUCTURES); */
+
+    targetStructure = targetStructure || creep.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
+    if (targetStructure) {
+      var isUnderRampart = creep.room
+        .lookForAt(LOOK_STRUCTURES, targetStructure.pos)
+        .find(i => i.structureType === "rampart");
+      if (isUnderRampart) {
+        targetStructure = undefined;
+      }
+    }
+
     targetStructure = targetStructure || creep.pos.findClosestByRange(FIND_HOSTILE_STRUCTURES);
 
     return targetStructure;
   }
 }
 
-export const roleVersatile = new RoleVersatile();
+export const roleAttacker = new RoleAttacker();

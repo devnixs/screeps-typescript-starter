@@ -1,10 +1,18 @@
 import { wantedBoosts, boostResourceNeeded } from "../chemist";
 import { profiler } from "../utils/profiler";
 import { boostsLimitations } from "../constants/misc";
-import { SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER } from "constants";
 
 export function boostCreep(creep: Creep) {
   if (!creep.room.name) {
+    return -1;
+  }
+
+  if (!creep.ticksToLive || creep.ticksToLive <= 1350) {
+    // let's not waste time.
+    return -1;
+  }
+
+  if (!creep.memory.boostable) {
     return -1;
   }
 
@@ -27,7 +35,9 @@ export function boostCreep(creep: Creep) {
   if (nonBoostedBodyPartsThatNeedBoosts.length === 0) {
     return -1;
   } else {
-    const bodyPart = nonBoostedBodyPartsThatNeedBoosts[0];
+    // Boost MOVE first.
+    const bodyPart = _.sortBy(nonBoostedBodyPartsThatNeedBoosts, i => i !== MOVE)[0];
+    const sameOfThisType = nonBoostedBodyPartsThatNeedBoosts.filter(i => i === bodyPart);
 
     // find lab that can boost this creep.
     const labGroups = creep.room.memory.labGroups || [];
@@ -36,7 +46,7 @@ export function boostCreep(creep: Creep) {
     const labDoingThisBoost = labs.find(lab => lab.boostBodyType === bodyPart);
     if (labDoingThisBoost) {
       const labObject = Game.getObjectById(labDoingThisBoost.id) as StructureLab;
-      if (labObject && labObject.mineralAmount >= boostResourceNeeded) {
+      if (labObject && labObject.mineralAmount >= boostResourceNeeded * sameOfThisType.length) {
         creep.goTo(labObject);
         return OK;
       } else {

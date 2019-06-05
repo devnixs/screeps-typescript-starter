@@ -1,6 +1,5 @@
-import { desiredStocks, buyableElements, desiredEnergyInTerminal } from "constants/misc";
+import { desiredStocks, buyableElements, desiredEnergyInTerminal, sellableElements } from "constants/misc";
 import { profiler } from "./utils/profiler";
-import { allRooms } from "utils/misc-utils";
 
 const minCredits = 10000;
 const minTradeCreditAmount = 200;
@@ -17,21 +16,18 @@ export class Merchant {
     const storage = this.room.storage as StructureStorage;
     const terminal = this.room.terminal as StructureTerminal;
 
-    const resources = _.uniq(
-      Object.keys(desiredStocks)
-        .concat(Object.keys(terminal.store))
-        .concat(Object.keys(storage.store))
-    );
+    const resources = _.uniq(Object.keys(desiredStocks).concat(Object.keys(terminal.store)));
 
     const overSupply = resources.find(
       i =>
         i !== "energy" &&
-        this.getResource(storage.store, i) + this.getResource(terminal.store, i) > this.getResource(desiredStocks, i) &&
+        sellableElements.indexOf(i) >= 0 &&
+        this.getResource(terminal.store, i) > this.getResource(desiredStocks, i) &&
         this.getResource(terminal.store, i) > 300
     ) as ResourceConstant | undefined;
 
     const underSupply = buyableElements.find(
-      i => this.getResource(storage.store, i) + this.getResource(terminal.store, i) < this.getResource(desiredStocks, i)
+      i => this.getResource(terminal.store, i) < this.getResource(desiredStocks, i)
     ) as ResourceConstant | undefined;
 
     if (overSupply) {
@@ -78,6 +74,7 @@ export class Merchant {
 
       const result = Game.market.deal(bestOrder.id, tradeAmount, this.room.name);
       if (result === OK) {
+        console.log(this.room.name, " SOLD " + tradeAmount + resource);
       }
       return result;
     } else {
@@ -102,6 +99,7 @@ export class Merchant {
 
       const result = Game.market.deal(bestOrder.id, tradeAmount, this.room.name);
       if (result === OK) {
+        console.log(this.room.name, " BOUGHT " + tradeAmount + resource);
       }
       //const result = OK;
       return result;
@@ -111,40 +109,65 @@ export class Merchant {
   }
 
   static transferExcessiveResources() {
-    var oversuppliedRoom = allRooms.filter(
+    const allRooms = Object.keys(Game.rooms).map(i => Game.rooms[i]);
+    var oversuppliedRooms = allRooms.filter(
       i =>
         i.storage &&
         i.storage.store.energy >= i.storage.storeCapacity * 0.75 &&
         i.controller &&
         i.controller.my &&
-        i.controller.level === 8
-    )[0];
-    var undersuppliedRoom = allRooms.filter(
+        i.controller.level === 8 &&
+        i.terminal &&
+        i.terminal.cooldown === 0 &&
+        i.terminal.store.energy >= (2 / 3) * desiredEnergyInTerminal
+    );
+    let undersuppliedRooms = allRooms.filter(
       i =>
         i.storage &&
-        i.storage.store.energy < i.storage.storeCapacity * 0.35 &&
+        _.sum(i.storage.store) < i.storage.storeCapacity * 0.85 &&
         i.controller &&
         i.controller.my &&
         i.controller.level < 8 &&
-        i.controller.level >= 6
-    )[0];
+        i.controller.level >= 6 &&
+        i.terminal &&
+        _.sum(i.terminal.store) < i.terminal.storeCapacity * 0.8
+    );
 
-    if (oversuppliedRoom && undersuppliedRoom) {
-      var terminal1: StructureTerminal | undefined = oversuppliedRoom.find(FIND_MY_STRUCTURES, {
-        filter: i => i.structureType === "terminal"
-      })[0] as any;
-      var terminal2: StructureTerminal | undefined = undersuppliedRoom.find(FIND_MY_STRUCTURES, {
-        filter: i => i.structureType === "terminal"
-      })[0] as any;
+    let undersuppliedRoom = _.sortBy(undersuppliedRooms, room => room.storage && room.storage.store.energy)[0];
 
-      if (terminal1 && terminal1.cooldown === 0 && terminal2) {
-        console.log("Balancing energy ", oversuppliedRoom.name, "=>", undersuppliedRoom.name);
-        const result = terminal1.send(RESOURCE_ENERGY, desiredEnergyInTerminal / 3, undersuppliedRoom.name);
-        if (result !== OK) {
-          console.log("Cannot balance : ", result);
+    if (!undersuppliedRoom) {
+      let undersuppliedRooms = allRooms.filter(
+        i =>
+          i.storage &&
+          i.controller &&
+          i.controller.my &&
+          i.controller.level === 8 &&
+          i.terminal &&
+          i.storage.store.energy < i.storage.storeCapacity * 0.7 &&
+          _.sum(i.storage.store) < i.storage.storeCapacity * 0.9 &&
+          _.sum(i.terminal.store) < i.terminal.storeCapacity * 0.8
+      );
+
+      undersuppliedRoom = _.sortBy(undersuppliedRooms, room => room.storage && room.storage.store.energy)[0];
+    }
+
+    console.log("A:", oversuppliedRooms[0] && oversuppliedRooms[0].name);
+    console.log("B:", undersuppliedRoom && undersuppliedRoom.name);
+
+    _.forEach(oversuppliedRooms, oversuppliedRoom => {
+      if (undersuppliedRoom) {
+        var terminal1 = oversuppliedRoom.terminal;
+        var terminal2 = undersuppliedRoom.terminal;
+
+        if (terminal1 && terminal1.cooldown === 0 && terminal2) {
+          console.log("Balancing energy ", oversuppliedRoom.name, "=>", undersuppliedRoom.name);
+          const result = terminal1.send(RESOURCE_ENERGY, desiredEnergyInTerminal / 3, undersuppliedRoom.name);
+          if (result !== OK) {
+            console.log("Cannot balance : ", result);
+          }
         }
       }
-    }
+    });
   }
 
   static runForAllRooms() {
@@ -152,8 +175,7 @@ export class Merchant {
       return;
     }
 
-    // temporarily disabled
-    // Merchant.transferExcessiveResources();
+    Merchant.transferExcessiveResources();
 
     const roomNames = Object.keys(Game.rooms)
       .map(room => Game.rooms[room])

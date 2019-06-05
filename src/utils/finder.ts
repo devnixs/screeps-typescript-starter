@@ -79,6 +79,10 @@ let findNonEmptyResourceInStore = function findNonEmptyResourceInStore(
   return Object.keys(store).find(i => (store as any)[i] > 0) as any;
 };
 
+let findNonEmptyResourcesInStore = function findNonEmptyResourcesInStore(store: StoreDefinition): ResourceConstant[] {
+  return Object.keys(store).filter(i => (store as any)[i] > 0) as any;
+};
+
 interface IRestPosition {
   X: number;
   Y: number;
@@ -156,7 +160,15 @@ let findEmptySpotCloseTo = function findEmptySpotCloseTo(pos: SimplePos, room: R
 
 findAndCache = profiler.registerFN(findAndCache, "findAndCache");
 findNonEmptyResourceInStore = profiler.registerFN(findNonEmptyResourceInStore, "findNonEmptyResourceInStore");
+findNonEmptyResourcesInStore = profiler.registerFN(findNonEmptyResourcesInStore, "findNonEmptyResourcesInStore");
 findRestSpot = profiler.registerFN(findRestSpot, "findRestSpot");
 findEmptySpotCloseTo = profiler.registerFN(findEmptySpotCloseTo, "findEmptySpotCloseTo");
 
-export { findAndCache, findNonEmptyResourceInStore, findRestSpot, findEmptySpotCloseTo, findClosestRoom };
+export {
+  findAndCache,
+  findNonEmptyResourceInStore,
+  findNonEmptyResourcesInStore,
+  findRestSpot,
+  findEmptySpotCloseTo,
+  findClosestRoom
+};

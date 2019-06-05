@@ -1,7 +1,7 @@
 import { sourceManager } from "../utils/source-manager";
 import { roleHarvester } from "./harvester";
 import { wantsToSell, desiredStocks, desiredEnergyInTerminal } from "../constants/misc";
-import { findRestSpot, findNonEmptyResourceInStore } from "utils/finder";
+import { findRestSpot, findNonEmptyResourceInStore, findNonEmptyResourcesInStore } from "utils/finder";
 import { profiler } from "../utils/profiler";
 
 interface ITruckDestination {}
@@ -100,7 +100,7 @@ class RoleTruck implements IRole {
       if (this.runEnergyTruck(creep) !== OK) {
         this.goToRestSpot(creep);
 
-        const checkTime = "sim" in Game.rooms ? 1 : 10;
+        const checkTime = "sim" in Game.rooms ? 1 : 3;
         if (Game.time % checkTime === 0) {
           // periodically check for jobs
           this.setJob(creep);
@@ -150,7 +150,7 @@ class RoleTruck implements IRole {
     if (memory.isDepositingEnergy) {
       return sourceManager.storeEnergy(creep);
     } else {
-      return sourceManager.getEnergy(creep);
+      return sourceManager.getEnergyFromStorageIfPossible(creep);
     }
   }
 
@@ -179,22 +179,109 @@ class RoleTruck implements IRole {
     return desiredStocks;
   }
 
-  *getJobs(creep: Creep): IterableIterator<IJob> {
+  createRetrievalJob(params: {
+    creep: Creep;
+    tag: string;
+    sourceId: string;
+    amount: number;
+    resource: ResourceConstant;
+  }) {
+    let target: StructureTerminal | StructureStorage | undefined = undefined;
+    if (params.resource === "energy") {
+      target = params.creep.room.storage;
+    } else {
+      target = params.creep.room.terminal;
+    }
+
+    if (target) {
+      return {
+        targetSource: params.sourceId,
+        targetDestination: target.id,
+        jobResource: params.resource,
+        jobNeededAmount: params.amount,
+        jobTag: params.tag
+      };
+    }
+
+    if (params.resource === "energy") {
+      const structureThatNeedsEnergy = sourceManager.getStructureThatNeedsEnergy(params.creep) as StructureExtension;
+
+      if (structureThatNeedsEnergy) {
+        return {
+          targetSource: params.sourceId,
+          targetDestination: structureThatNeedsEnergy.id,
+          jobResource: params.resource,
+          jobNeededAmount: Math.min(
+            params.amount,
+            structureThatNeedsEnergy.energyCapacity - structureThatNeedsEnergy.energy
+          ) as any,
+          jobTag: params.tag
+        };
+      }
+    }
+    return null;
+  }
+
+  createRefillJob(params: { creep: Creep; tag: string; targetId: string; amount: number; resource: ResourceConstant }) {
+    let source: StructureTerminal | StructureStorage | undefined = undefined;
+    if (params.resource === "energy") {
+      source = params.creep.room.storage;
+    } else {
+      source = params.creep.room.terminal;
+    }
+
+    if (source) {
+      return {
+        targetSource: source.id,
+        targetDestination: params.targetId,
+        jobResource: params.resource,
+        jobNeededAmount: params.amount,
+        jobTag: params.tag
+      };
+    }
+
+    if (params.resource === "energy") {
+      const containerWithEnergy: StructureContainer | undefined = params.creep.room.find(FIND_STRUCTURES, {
+        filter: structure =>
+          structure.structureType == STRUCTURE_CONTAINER && structure.store.energy >= structure.storeCapacity / 4
+      })[0] as any;
+
+      if (containerWithEnergy) {
+        return {
+          targetSource: containerWithEnergy.id,
+          targetDestination: params.targetId,
+          jobResource: params.resource,
+          jobNeededAmount: Math.min(
+            params.amount,
+            containerWithEnergy.storeCapacity - containerWithEnergy.store.energy
+          ) as any,
+          jobTag: params.tag
+        };
+      }
+    }
+    return null;
+  }
+
+  *getJobs(creep: Creep): IterableIterator<IJob | null> {
     const storage = creep.room.storage as StructureStorage | undefined;
+    const terminal = creep.room.terminal as StructureTerminal | undefined;
     var droppedResource = creep.room.find(FIND_DROPPED_RESOURCES)[0];
 
     if (
       droppedResource &&
-      droppedResource.amount > creep.pos.getRangeTo(droppedResource.pos.x, droppedResource.pos.y) * 20 &&
-      storage
+      droppedResource.amount > 100 &&
+      droppedResource.amount > creep.pos.getRangeTo(droppedResource.pos.x, droppedResource.pos.y) * 20
     ) {
-      yield {
-        targetSource: droppedResource.id,
-        targetDestination: storage.id,
-        jobResource: droppedResource.resourceType,
-        jobNeededAmount: droppedResource.amount,
-        jobTag: "dropped-resource-" + droppedResource.id
-      };
+      const job = this.createRetrievalJob({
+        amount: droppedResource.amount,
+        creep: creep,
+        tag: "dropped-resource-" + droppedResource.id,
+        resource: droppedResource.resourceType,
+        sourceId: droppedResource.id
+      });
+      if (job) {
+        yield job;
+      }
     }
 
     const filledContainer: StructureContainer | undefined = creep.room.find(FIND_STRUCTURES, {
@@ -203,28 +290,36 @@ class RoleTruck implements IRole {
 
     if (filledContainer) {
       const resourceType = findNonEmptyResourceInStore(filledContainer.store) as ResourceConstant;
-      if (storage) {
-        return {
-          jobNeededAmount: filledContainer.store[resourceType] as any,
-          jobResource: resourceType,
-          jobTag: "empty-container-" + filledContainer.id,
-          targetSource: filledContainer.id,
-          targetDestination: storage.id
-        };
-      } else if (resourceType === "energy") {
-        const structureThatNeedsEnergy = sourceManager.getStructureThatNeedsEnergy(creep) as StructureExtension;
-        if (resourceType && structureThatNeedsEnergy) {
-          return {
-            jobNeededAmount: Math.min(
-              filledContainer.store.energy,
-              structureThatNeedsEnergy.energyCapacity - structureThatNeedsEnergy.energy
-            ) as any,
-            jobResource: resourceType,
-            jobTag: "empty-container-" + filledContainer.id,
-            targetSource: filledContainer.id,
-            targetDestination: structureThatNeedsEnergy.id
-          };
-        }
+      const job = this.createRetrievalJob({
+        amount: filledContainer.store[resourceType] as any,
+        creep: creep,
+        tag: "empty-container",
+        resource: resourceType,
+        sourceId: filledContainer.id
+      });
+      if (job) {
+        yield job;
+      }
+    }
+
+    const containerWithMultipleResources: StructureContainer | undefined = creep.room.find(FIND_STRUCTURES, {
+      filter: i => i.structureType === "container" && findNonEmptyResourcesInStore(i.store).length >= 2
+    })[0] as StructureContainer;
+
+    if (containerWithMultipleResources) {
+      const resourcesInThatContainer = findNonEmptyResourcesInStore(containerWithMultipleResources.store);
+      const resourceId = _.random(0, resourcesInThatContainer.length - 1);
+
+      const resourceType = resourcesInThatContainer[resourceId] as ResourceConstant;
+      const job = this.createRetrievalJob({
+        amount: filledContainer.store[resourceType] as any,
+        creep: creep,
+        tag: "empty-container",
+        resource: resourceType,
+        sourceId: filledContainer.id
+      });
+      if (job) {
+        yield job;
       }
     }
 
@@ -236,41 +331,8 @@ class RoleTruck implements IRole {
         (i.obj.cooldown === 0 || i.obj.mineralAmount > 300)
     )[0];
 
-    if (storage) {
+    if (storage && terminal) {
       var assets = storage.store;
-      var labThatNeedsRefills = labs.filter(i => {
-        if (!i.memory.needsResource) {
-          return;
-        }
-        const availableResource = assets[i.memory.needsResource] || 0;
-        return (
-          i.memory.state === "waiting-for-resource" &&
-          availableResource > 0 &&
-          i.memory.needsAmount > i.obj.mineralAmount
-        );
-      })[0];
-
-      if (labThatNeedsRefills) {
-        const lab = labThatNeedsRefills;
-        yield {
-          targetSource: storage.id,
-          targetDestination: lab.obj.id,
-          jobResource: lab.memory.needsResource,
-          jobNeededAmount: lab.memory.needsAmount - lab.obj.mineralAmount,
-          jobTag: "refill-lab-" + lab.obj.id
-        };
-      }
-
-      if (labThatNeedsEmptying) {
-        const lab = labThatNeedsEmptying;
-        yield {
-          targetSource: lab.obj.id,
-          targetDestination: storage.id,
-          jobResource: lab.obj.mineralType as ResourceConstant,
-          jobNeededAmount: lab.obj.mineralAmount,
-          jobTag: "empty-lab-" + lab.obj.id
-        };
-      }
 
       let terminalOversupply: string | undefined;
       let terminalUndersupply: string | undefined;
@@ -278,6 +340,41 @@ class RoleTruck implements IRole {
       const wantsToKeepForThisRoom = this.getWantsToKeepForThisRoom(creep.room.name);
 
       const terminal = creep.room.terminal;
+
+      var linkThatNeedsEmptying =
+        creep.room.memory.links && creep.room.memory.links.find(i => i.state == "needs-emptying");
+
+      var linkThatNeedsRefill =
+        creep.room.memory.links &&
+        creep.room.memory.links.find(i => i.state == "needs-refill" && i.type === "input-output");
+
+      if (linkThatNeedsEmptying && linkThatNeedsEmptying.needsAmount !== undefined) {
+        const overSupply = linkThatNeedsEmptying.needsAmount;
+        const job = this.createRetrievalJob({
+          amount: Math.min(overSupply, creep.carryCapacity),
+          creep: creep,
+          tag: "empty-link-" + linkThatNeedsEmptying.id,
+          resource: "energy",
+          sourceId: linkThatNeedsEmptying.id
+        });
+        if (job) {
+          yield job;
+        }
+      }
+
+      if (linkThatNeedsRefill && linkThatNeedsRefill.needsAmount !== undefined) {
+        const overSupply = linkThatNeedsRefill.needsAmount;
+        const job = this.createRefillJob({
+          amount: overSupply,
+          creep: creep,
+          tag: "refill-link-" + linkThatNeedsRefill.id,
+          resource: "energy",
+          targetId: linkThatNeedsRefill.id
+        });
+        if (job) {
+          return job;
+        }
+      }
 
       if (
         terminal &&
@@ -309,6 +406,21 @@ class RoleTruck implements IRole {
         };
       }
 
+      if (terminal && storage) {
+        var nonEnergyInStorage = Object.keys(storage.store).filter(i => i !== "energy")[0] as
+          | ResourceConstant
+          | undefined;
+        if (nonEnergyInStorage) {
+          yield {
+            targetSource: storage.id,
+            targetDestination: terminal.id,
+            jobResource: nonEnergyInStorage,
+            jobNeededAmount: storage.store[nonEnergyInStorage] as any,
+            jobTag: "empty-storage"
+          };
+        }
+      }
+
       if (terminal) {
         const resources = _.uniq(Object.keys(wantsToKeepForThisRoom).concat(Object.keys(terminal.store)));
 
@@ -324,68 +436,41 @@ class RoleTruck implements IRole {
         )[0];
       }
 
-      if (terminalOversupply && terminal) {
-        const needsAmount =
-          this.getResource(wantsToKeepForThisRoom, terminalOversupply) -
-          this.getResource(storage.store, terminalOversupply);
+      var labThatNeedsRefills = labs.filter(i => {
+        if (!i.memory.needsResource) {
+          return;
+        }
+        const availableResource = (terminal && terminal.store[i.memory.needsResource]) || 0;
+        return (
+          i.memory.state === "waiting-for-resource" &&
+          availableResource > 0 &&
+          i.memory.needsAmount > i.obj.mineralAmount
+        );
+      })[0];
 
-        const terminalHasAmount = this.getResource(terminal.store, terminalOversupply);
-
-        const overSupply = Math.min(needsAmount, terminalHasAmount);
-
+      if (labThatNeedsRefills && terminal) {
+        const lab = labThatNeedsRefills;
         yield {
           targetSource: terminal.id,
-          targetDestination: storage.id,
-          jobResource: terminalOversupply as ResourceConstant,
-          jobNeededAmount: overSupply,
-          jobTag: "empty-terminal-" + terminalOversupply
+          targetDestination: lab.obj.id,
+          jobResource: lab.memory.needsResource,
+          jobNeededAmount: lab.memory.needsAmount - lab.obj.mineralAmount,
+          jobTag: "refill-lab-" + lab.obj.id
         };
       }
 
-      if (terminalUndersupply && terminal) {
-        const underSupply =
-          this.getResource(storage.store, terminalUndersupply) -
-          this.getResource(wantsToKeepForThisRoom, terminalUndersupply);
-
+      if (labThatNeedsEmptying && terminal) {
+        const lab = labThatNeedsEmptying;
         yield {
-          targetSource: storage.id,
+          targetSource: lab.obj.id,
           targetDestination: terminal.id,
-          jobResource: terminalUndersupply as ResourceConstant,
-          jobNeededAmount: underSupply,
-          jobTag: "refill-terminal-" + terminalOversupply
+          jobResource: lab.obj.mineralType as ResourceConstant,
+          jobNeededAmount: lab.obj.mineralAmount,
+          jobTag: "empty-lab-" + lab.obj.id
         };
       }
 
-      var linkThatNeedsEmptying =
-        creep.room.memory.links && creep.room.memory.links.find(i => i.state == "needs-emptying");
-
-      var linkThatNeedsRefill =
-        creep.room.memory.links &&
-        creep.room.memory.links.find(i => i.state == "needs-refill" && i.type === "input-output");
-
-      if (linkThatNeedsEmptying && linkThatNeedsEmptying.needsAmount !== undefined) {
-        const overSupply = linkThatNeedsEmptying.needsAmount;
-        yield {
-          targetSource: linkThatNeedsEmptying.id,
-          targetDestination: storage.id,
-          jobResource: "energy",
-          jobNeededAmount: Math.min(overSupply, creep.carryCapacity),
-          jobTag: "empty-link-" + linkThatNeedsEmptying.id
-        };
-      }
-
-      if (linkThatNeedsRefill && linkThatNeedsRefill.needsAmount !== undefined) {
-        const overSupply = linkThatNeedsRefill.needsAmount;
-        yield {
-          targetSource: storage.id,
-          targetDestination: linkThatNeedsRefill.id,
-          jobResource: "energy",
-          jobNeededAmount: overSupply,
-          jobTag: "refill-link-" + linkThatNeedsRefill.id
-        };
-      }
-
-      if (creep.room.controller && creep.room.controller.level === 8) {
+      if (creep.room.controller && creep.room.controller.level === 8 && terminal) {
         var nucker: StructureNuker | undefined = creep.room.find(FIND_STRUCTURES, {
           filter: i => i.structureType === "nuker"
         })[0] as any;
@@ -399,10 +484,10 @@ class RoleTruck implements IRole {
               jobTag: "refill-e-nuker-" + nucker.id
             };
           }
-          const availableGhodium = storage.store[RESOURCE_GHODIUM] || 0;
+          const availableGhodium = terminal.store[RESOURCE_GHODIUM] || 0;
           if (nucker.ghodium < nucker.ghodiumCapacity && availableGhodium > 0) {
             yield {
-              targetSource: storage.id,
+              targetSource: terminal.id,
               targetDestination: nucker.id,
               jobResource: RESOURCE_GHODIUM,
               jobNeededAmount: nucker.ghodiumCapacity - nucker.ghodium,
@@ -431,36 +516,19 @@ class RoleTruck implements IRole {
     }
 
     const nonEmptyContainers: StructureContainer[] = creep.room.find(FIND_STRUCTURES, {
-      filter: i => i.structureType === "container" && _.sum(i.store) >= 0
+      filter: i => i.structureType === "container" && _.sum(i.store) > 500
     }) as StructureContainer[];
 
     for (var nonEmptyContainersIndex in nonEmptyContainers) {
       const nonEmptyContainer = nonEmptyContainers[nonEmptyContainersIndex];
-
       const resourceType = findNonEmptyResourceInStore(nonEmptyContainer.store) as ResourceConstant;
-      if (storage) {
-        yield {
-          jobNeededAmount: nonEmptyContainer.store[resourceType] as any,
-          jobResource: resourceType,
-          jobTag: "empty-container-" + nonEmptyContainer.id,
-          targetSource: nonEmptyContainer.id,
-          targetDestination: storage.id
-        };
-      } else if (resourceType === "energy") {
-        const structureThatNeedsEnergy = sourceManager.getStructureThatNeedsEnergy(creep) as StructureExtension;
-        if (resourceType && structureThatNeedsEnergy) {
-          yield {
-            jobNeededAmount: Math.min(
-              nonEmptyContainer.store.energy,
-              structureThatNeedsEnergy.energyCapacity - structureThatNeedsEnergy.energy
-            ) as any,
-            jobResource: resourceType,
-            jobTag: "empty-container-" + nonEmptyContainer.id,
-            targetSource: nonEmptyContainer.id,
-            targetDestination: structureThatNeedsEnergy.id
-          };
-        }
-      }
+      const job = this.createRetrievalJob({
+        amount: nonEmptyContainer.store[resourceType] as any,
+        creep: creep,
+        resource: resourceType,
+        sourceId: nonEmptyContainer.id,
+        tag: "empty-container"
+      });
     }
   }
 
@@ -516,6 +584,7 @@ class RoleTruck implements IRole {
       memory.isDepositing = !job.targetSource;
       memory.idle = false;
       memory.jobTag = job.jobTag;
+      memory.lastJobRefreshTime = Game.time;
     } else {
       memory.idle = true;
     }
