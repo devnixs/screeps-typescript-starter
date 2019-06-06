@@ -17,6 +17,7 @@ type roles =
   | "truck"
   | "versatile"
   | "attacker"
+  | "pestcontrol"
   | "dismantler";
 
 // memory extension samples

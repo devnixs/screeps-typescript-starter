@@ -478,12 +478,21 @@ export class Chemist {
   getPossibleReactions() {
     const allNeededResources = Object.keys(desiredStocks)
       .filter(i => this.isCraftable(i as ResourceConstant))
-      .filter(i => this.desiredStocks(i as any) > this.getAssetStock(i as ResourceConstant)) as ResourceConstant[];
+      .map(resource => {
+        const desiredStock = this.desiredStocks(resource as any);
+        const currentStock = this.getAssetStock(resource as ResourceConstant);
+        return {
+          resource: resource as ResourceConstant,
+          desiredStock,
+          currentStock,
+          neededStock: desiredStock - currentStock,
+          achievedPercent: desiredStock > 0 ? currentStock / desiredStock : 1
+        };
+      })
+      .filter(i => i.currentStock > i.desiredStock);
 
-    const resourcesByImportance = _.sortBy(allNeededResources, i => RESOURCE_IMPORTANCE.indexOf(i));
-    const reactions = resourcesByImportance.map(i =>
-      this.getReaction(i, this.desiredStocks(i as any) - this.getAssetStock(i))
-    );
+    const resourcesByImportance = _.sortBy(allNeededResources, i => i.achievedPercent);
+    const reactions = resourcesByImportance.map(i => this.getReaction(i.resource, i.neededStock));
     const possibleReactions = reactions.filter(
       i =>
         this.getAssetStock(i.source1) >= i.amount &&

@@ -6,14 +6,14 @@ export const requiredDismantlersForAnAttack = 2;
 
 export const wallsMinHp = (roomLevel: number) => {
   if (roomLevel === 8) {
-    return 1000000;
+    return 10000000;
   }
   return 500000;
 };
 
 export const rampartMinHp = (roomLevel: number) => {
   if (roomLevel === 8) {
-    return 1000000;
+    return 10000000;
   }
   return 500000;
 };

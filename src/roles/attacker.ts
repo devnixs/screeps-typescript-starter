@@ -130,11 +130,11 @@ class RoleAttacker implements IRole {
       targetStructure ||
       creep.pos.findClosestByRange(FIND_HOSTILE_STRUCTURES, {
         filter: i => i.structureType !== "rampart" && i.structureType !== "controller"
-      });
+      }); */
 
     targetStructure = targetStructure || creep.pos.findClosestByRange(FIND_CONSTRUCTION_SITES);
 
-    targetStructure = targetStructure || creep.pos.findClosestByRange(FIND_HOSTILE_STRUCTURES); */
+    // targetStructure = targetStructure || creep.pos.findClosestByRange(FIND_HOSTILE_STRUCTURES);
 
     targetStructure = targetStructure || creep.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
     if (targetStructure) {

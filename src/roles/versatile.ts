@@ -37,6 +37,11 @@ class RoleVersatile implements IRole {
       }
     }
 
+    if (creep.fatigue > 0) {
+      creep.heal(creep);
+      return;
+    }
+
     const attackFlag = Game.flags["versatile_attack"];
 
     if (!memory.status) {
@@ -86,6 +91,16 @@ class RoleVersatile implements IRole {
           }
 
           if (targetStructure) {
+            // special case for creep spawning stomping us.
+            // If it's almost spawned, we back off to avoid being walked upon.
+            if (targetStructure.structureType === "spawn") {
+              const spawn = targetStructure as StructureSpawn;
+              if (spawn.spawning && spawn.spawning.remainingTime < 5) {
+                this.goHome(creep);
+                return;
+              }
+            }
+
             const dismantleResult = creep.dismantle(targetStructure);
             if (creep.dismantle(targetStructure) === ERR_NOT_IN_RANGE) {
               var gotoResult = creep.goTo(targetStructure);
@@ -128,13 +143,6 @@ class RoleVersatile implements IRole {
       // go back home
       creep.goTo(new RoomPosition(25, 25, creep.memory.homeRoom || ""));
       return;
-    }
-
-    let restSpot: RoomPosition | null;
-    restSpot = Game.flags["dismantler_rest"] && Game.flags["dismantler_rest"].pos;
-    restSpot = restSpot || findRestSpot(creep);
-    if (restSpot) {
-      creep.goTo(restSpot);
     }
   }
 

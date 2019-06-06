@@ -312,11 +312,11 @@ class RoleTruck implements IRole {
 
       const resourceType = resourcesInThatContainer[resourceId] as ResourceConstant;
       const job = this.createRetrievalJob({
-        amount: filledContainer.store[resourceType] as any,
+        amount: containerWithMultipleResources.store[resourceType] as any,
         creep: creep,
         tag: "empty-container",
         resource: resourceType,
-        sourceId: filledContainer.id
+        sourceId: containerWithMultipleResources.id
       });
       if (job) {
         yield job;
@@ -331,16 +331,7 @@ class RoleTruck implements IRole {
         (i.obj.cooldown === 0 || i.obj.mineralAmount > 300)
     )[0];
 
-    if (storage && terminal) {
-      var assets = storage.store;
-
-      let terminalOversupply: string | undefined;
-      let terminalUndersupply: string | undefined;
-
-      const wantsToKeepForThisRoom = this.getWantsToKeepForThisRoom(creep.room.name);
-
-      const terminal = creep.room.terminal;
-
+    if (storage) {
       var linkThatNeedsEmptying =
         creep.room.memory.links && creep.room.memory.links.find(i => i.state == "needs-emptying");
 
@@ -375,6 +366,17 @@ class RoleTruck implements IRole {
           return job;
         }
       }
+    }
+
+    if (storage && terminal) {
+      var assets = storage.store;
+
+      let terminalOversupply: string | undefined;
+      let terminalUndersupply: string | undefined;
+
+      const wantsToKeepForThisRoom = this.getWantsToKeepForThisRoom(creep.room.name);
+
+      const terminal = creep.room.terminal;
 
       if (
         terminal &&
@@ -436,6 +438,34 @@ class RoleTruck implements IRole {
         )[0];
       }
 
+      if (creep.room.controller && creep.room.controller.level === 8 && terminal) {
+        var nucker: StructureNuker | undefined = creep.room.find(FIND_STRUCTURES, {
+          filter: i => i.structureType === "nuker"
+        })[0] as any;
+
+        if (nucker) {
+          if (nucker.energy < nucker.energyCapacity && storage.store.energy > 100000) {
+            yield {
+              targetSource: storage.id,
+              targetDestination: nucker.id,
+              jobResource: "energy",
+              jobNeededAmount: nucker.energyCapacity - nucker.energy,
+              jobTag: "refill-e-nuker-" + nucker.id
+            };
+          }
+          const availableGhodium = terminal.store[RESOURCE_GHODIUM] || 0;
+          if (nucker.ghodium < nucker.ghodiumCapacity && availableGhodium > 0) {
+            yield {
+              targetSource: terminal.id,
+              targetDestination: nucker.id,
+              jobResource: RESOURCE_GHODIUM,
+              jobNeededAmount: nucker.ghodiumCapacity - nucker.ghodium,
+              jobTag: "refill-g-nuker-" + nucker.id
+            };
+          }
+        }
+      }
+
       var labThatNeedsRefills = labs.filter(i => {
         if (!i.memory.needsResource) {
           return;
@@ -468,33 +498,6 @@ class RoleTruck implements IRole {
           jobNeededAmount: lab.obj.mineralAmount,
           jobTag: "empty-lab-" + lab.obj.id
         };
-      }
-
-      if (creep.room.controller && creep.room.controller.level === 8 && terminal) {
-        var nucker: StructureNuker | undefined = creep.room.find(FIND_STRUCTURES, {
-          filter: i => i.structureType === "nuker"
-        })[0] as any;
-        if (nucker) {
-          if (nucker.energy < nucker.energyCapacity && storage.store.energy > 100000) {
-            yield {
-              targetSource: storage.id,
-              targetDestination: nucker.id,
-              jobResource: "energy",
-              jobNeededAmount: nucker.energyCapacity - nucker.energy,
-              jobTag: "refill-e-nuker-" + nucker.id
-            };
-          }
-          const availableGhodium = terminal.store[RESOURCE_GHODIUM] || 0;
-          if (nucker.ghodium < nucker.ghodiumCapacity && availableGhodium > 0) {
-            yield {
-              targetSource: terminal.id,
-              targetDestination: nucker.id,
-              jobResource: RESOURCE_GHODIUM,
-              jobNeededAmount: nucker.ghodiumCapacity - nucker.ghodium,
-              jobTag: "refill-g-nuker-" + nucker.id
-            };
-          }
-        }
       }
     }
 

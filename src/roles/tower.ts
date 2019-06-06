@@ -133,9 +133,11 @@ class RoleTower {
   private getDamagedStructureInRoom(tower: StructureTower): AnyStructure | null {
     const maxEnergyInExtensions = tower.room.energyAvailable === tower.room.energyCapacityAvailable;
     const allowWallsAndRemparts =
-      maxEnergyInExtensions && (tower.room.storage ? tower.room.storage.store.energy > 700000 : false);
-    const minHpRampart = rampartMinHp(tower.room.controller ? tower.room.controller.level : 0);
-    const minHpWalls = wallsMinHp(tower.room.controller ? tower.room.controller.level : 0);
+      Game.cpu.bucket > 9000 &&
+      maxEnergyInExtensions &&
+      (tower.room.storage ? tower.room.storage.store.energy > 950000 : false);
+    // const minHpRampart = rampartMinHp(tower.room.controller ? tower.room.controller.level : 0);
+    // const minHpWalls = wallsMinHp(tower.room.controller ? tower.room.controller.level : 0);
 
     // only repair really damaged stuff
     var damagedOther = tower.room.find(FIND_MY_STRUCTURES, {
@@ -148,11 +150,8 @@ class RoleTower {
 
     var damagedRoads = tower.room.find(FIND_STRUCTURES, {
       filter: structure =>
-        (allowWallsAndRemparts && structure.structureType === STRUCTURE_RAMPART && structure.hits < minHpRampart) ||
-        (allowWallsAndRemparts &&
-          structure.structureType === "constructedWall" &&
-          structure.hits > 0 &&
-          structure.hits < minHpWalls) ||
+        (allowWallsAndRemparts && structure.structureType === STRUCTURE_RAMPART) ||
+        (allowWallsAndRemparts && structure.structureType === "constructedWall" && structure.hits > 0) ||
         ((structure.structureType == STRUCTURE_ROAD || structure.structureType == STRUCTURE_CONTAINER) &&
           structure.hits < structure.hitsMax / 2)
     });

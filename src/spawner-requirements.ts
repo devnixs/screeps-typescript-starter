@@ -268,6 +268,8 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     .filter(i => i)
     .map(i => i as RoleRequirement);
 
+  const dismantlerFlag = Game.flags["dismantler_attack"];
+
   return [
     ...harvesterDefinitions,
     {
@@ -302,11 +304,17 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     {
       percentage: 20,
       role: "dismantler",
-      maxCount: Game.flags["dismantler_attack"] ? requiredDismantlersForAnAttack : 0,
+      maxCount:
+        dismantlerFlag &&
+        dismantlerFlag.room &&
+        dismantlerFlag.room.controller &&
+        !dismantlerFlag.room.controller.safeMode
+          ? 2
+          : 0,
       countAllRooms: true,
-      bodyTemplate: [TOUGH, TOUGH, TOUGH, WORK, WORK, RANGED_ATTACK, MOVE, MOVE, MOVE],
+      bodyTemplate: [MOVE, WORK],
       sortBody: [TOUGH, WORK, MOVE, RANGED_ATTACK],
-      onlyRooms: ["E25N48"],
+      onlyRooms: ["E22N36", "E22N35", "E19N37"],
       subRole: "room1",
       additionalMemory: {} as IDismantlerMemory
     },
@@ -318,7 +326,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       // bodyTemplate: [TOUGH, TOUGH, RANGED_ATTACK, WORK, MOVE, HEAL, HEAL, HEAL, HEAL],
       bodyTemplate: [TOUGH, RANGED_ATTACK, WORK, WORK, WORK, MOVE, HEAL, HEAL, HEAL],
       sortBody: [TOUGH, RANGED_ATTACK, WORK, MOVE, HEAL],
-      onlyRooms: ["E19N37", "E22N36", "E22N35"],
+      onlyRooms: ["E22N36"],
       additionalMemory: {
         boostable: true
       } as IDismantlerMemory
@@ -354,6 +362,14 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       additionalMemory: {
         boostable: false
       } as IDismantlerMemory
+    },
+    {
+      percentage: 20,
+      role: "pestcontrol",
+      maxCount: Game.flags["pest_control"] ? 2 : 0,
+      countAllRooms: false,
+      onlyRooms: ["E22N36"],
+      exactBody: [MOVE, MOVE, MOVE]
     },
     {
       percentage: 20,
