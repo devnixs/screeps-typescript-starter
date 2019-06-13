@@ -397,7 +397,7 @@ class RoleTruck implements IRole {
         terminal &&
         terminal.store.energy > desiredEnergyInTerminal &&
         storage &&
-        _.sum(storage.store) < storage.storeCapacity - (terminal.store.energy - desiredEnergyInTerminal)
+        _.sum(storage.store) < storage.storeCapacity - 10000
       ) {
         yield {
           targetSource: terminal.id,

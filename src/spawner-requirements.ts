@@ -37,7 +37,7 @@ export interface RoleRequirement {
 // Stuff that needs to be computed once.
 
 let claimerCount = 0;
-let closestRoomToClaimTarget = "";
+let closestRoomToClaimTarget: string | undefined = "";
 
 let builderHelperCount = 0;
 let builderHelperTarget: string | undefined = undefined;
@@ -101,7 +101,8 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
   const enemies = spawn.room.find(FIND_HOSTILE_CREEPS);
   const constructionSites = spawn.room.find(FIND_MY_CONSTRUCTION_SITES);
 
-  const storageQuantity = spawn.room.storage && _.sum(spawn.room.storage.store);
+  const storageQuantity = spawn.room.storage ? _.sum(spawn.room.storage.store) : 0;
+  const isStorageAlmostFull = storageQuantity > 900000;
 
   let upgraderRatio: number;
   let maxUpgraderCount: number = 1;
@@ -126,7 +127,8 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
   }
 
   if (spawn.room.controller && spawn.room.controller.level === 8) {
-    if (spawn.room.controller.ticksToDowngrade <= 6000) {
+    // added x1000 to force upgraders temporarily to increase GCL
+    if (spawn.room.controller.ticksToDowngrade <= 6000 * 1000) {
       maxUpgraderCount = 1;
       upgraderRatio = 1;
     } else {
@@ -243,7 +245,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
           role: "static-harvester",
           subRole: source.id,
           maxCount:
-            storageQuantity && spawn.room.storage && storageQuantity >= spawn.room.storage.storeCapacity * 0.95 ? 0 : 1,
+            storageQuantity && spawn.room.storage && storageQuantity >= spawn.room.storage.storeCapacity * 0.96 ? 0 : 1,
           bodyTemplate: [WORK],
           bodyTemplatePrepend: [MOVE],
           minEnergy: BODYPART_COST.work + BODYPART_COST.move,
@@ -291,7 +293,8 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       bodyTemplate: [MOVE, WORK, CARRY],
       capMaxEnergy: 1900,
       onlyRooms: builderHelperSource ? [builderHelperSource] : undefined,
-      subRole: builderHelperTarget
+      subRole: builderHelperTarget,
+      disableIfLowOnCpu: true
     },
     {
       percentage: 2,
@@ -404,7 +407,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     {
       percentage: 4,
       role: "long-distance-harvester",
-      maxCount: 1,
+      maxCount: isStorageAlmostFull ? 0 : 1,
       countAllRooms: true,
       bodyTemplate: [MOVE, WORK, CARRY],
       subRole: "room10",
@@ -422,7 +425,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     {
       percentage: 4,
       role: "long-distance-harvester",
-      maxCount: 1,
+      maxCount: isStorageAlmostFull ? 0 : 1,
       countAllRooms: true,
       bodyTemplate: [MOVE, WORK, CARRY],
       subRole: "room11",
@@ -440,7 +443,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     {
       percentage: 4,
       role: "long-distance-harvester",
-      maxCount: 1,
+      maxCount: isStorageAlmostFull ? 0 : 1,
       countAllRooms: true,
       bodyTemplate: [MOVE, WORK, CARRY],
       subRole: "room12",
@@ -458,7 +461,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     {
       percentage: 4,
       role: "long-distance-harvester",
-      maxCount: 1,
+      maxCount: isStorageAlmostFull ? 0 : 1,
       countAllRooms: true,
       bodyTemplate: [MOVE, WORK, CARRY],
       subRole: "room13",
@@ -476,7 +479,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     {
       percentage: 4,
       role: "long-distance-harvester",
-      maxCount: 1,
+      maxCount: isStorageAlmostFull ? 0 : 1,
       countAllRooms: true,
       bodyTemplate: [MOVE, WORK, CARRY],
       subRole: "room14",
@@ -494,7 +497,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     {
       percentage: 4,
       role: "long-distance-harvester",
-      maxCount: 1,
+      maxCount: isStorageAlmostFull ? 0 : 1,
       countAllRooms: true,
       bodyTemplate: [MOVE, WORK, CARRY],
       subRole: "room15",
@@ -512,7 +515,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     {
       percentage: 4,
       role: "long-distance-harvester",
-      maxCount: 1,
+      maxCount: isStorageAlmostFull ? 0 : 1,
       countAllRooms: true,
       bodyTemplate: [MOVE, WORK, CARRY],
       subRole: "room16",
@@ -530,7 +533,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     {
       percentage: 4,
       role: "long-distance-harvester",
-      maxCount: 1,
+      maxCount: isStorageAlmostFull ? 0 : 1,
       countAllRooms: true,
       bodyTemplate: [MOVE, WORK, CARRY],
       subRole: "room17",
@@ -548,7 +551,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     {
       percentage: 4,
       role: "long-distance-harvester",
-      maxCount: 1,
+      maxCount: isStorageAlmostFull ? 0 : 1,
       countAllRooms: true,
       bodyTemplate: [MOVE, WORK, CARRY],
       subRole: "room18",
@@ -566,7 +569,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     {
       percentage: 4,
       role: "long-distance-harvester",
-      maxCount: 1,
+      maxCount: isStorageAlmostFull ? 0 : 1,
       countAllRooms: true,
       bodyTemplate: [MOVE, WORK, CARRY],
       subRole: "room19",
@@ -587,7 +590,8 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       maxCount: maxUpgraderCount,
       bodyTemplate:
         maxEnergyInRoom < 500 || links.length === 0 ? [MOVE, WORK, CARRY] : [MOVE, WORK, WORK, WORK, WORK, CARRY],
-      capMaxEnergy: 600 * upgraderRatio
+      capMaxEnergy: 600 * upgraderRatio,
+      disableIfLowOnCpu: true
     },
     {
       percentage: 1,

@@ -28,6 +28,7 @@ import { roleAttacker } from "roles/attacker";
 import { getCpuAverage } from "utils/cpu";
 import { Observer } from "utils/observer";
 import { rolePestControl, RolePestControl } from "roles/pestcontrol";
+import { SafeModeActivator } from "utils/safemode-activator";
 
 // profiler.enable();
 
@@ -125,6 +126,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
 
     Observer.runAllObservers();
     RolePestControl.checkReconstruction();
+    SafeModeActivator.activeSafeModeIfNecessary();
 
     // Automatically delete memory of missing creeps
     for (const name in Memory.creeps) {
@@ -178,22 +180,6 @@ export const loop = ErrorMapper.wrapLoop(() => {
     if (Game.time >= 4536722 + 3000 && Game.flags["dismantler_attack"]) {
       Game.flags["dismantler_attack"].remove();
     } */
-
-    if (Game.time % 100 === 0) {
-      const nukers = [
-        "5cf4d67bb955b90a068d2ff3",
-        "5cd9dd2e750b744549894f57",
-        "5cd22df4376757774227c9e5",
-        "5ca8a0f090334956271b22b2",
-        "5c97dc6a9776d8512ddb1c2b"
-      ];
-      nukers.forEach(nukerId => {
-        const nuker = Game.getObjectById<StructureNuker>(nukerId);
-        if (nuker && nuker.cooldown === 0) {
-          nuker.launchNuke(new RoomPosition(37, 19, "E24N38"));
-        }
-      });
-    }
 
     if (error) {
       throw error;

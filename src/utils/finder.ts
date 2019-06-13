@@ -26,6 +26,9 @@ let findClosestRoom = function(targetRoom: string) {
   });
 
   var closest = _.sortBy(roomsAndDistances, i => i.distance);
+  if (!closest.length) {
+    return undefined;
+  }
 
   Memory.closestRooms[targetRoom] = closest[0].roomName;
 

@@ -1,6 +1,6 @@
 export class Observer {
   static runAllObservers() {
-    //E22N36
+    /*     //E22N36
     var observer1 = Game.getObjectById("5cf5150f2d06a97e67901da7") as StructureObserver;
 
     //E19N37
@@ -19,6 +19,6 @@ export class Observer {
 
     if (observer3) {
       observer3.observeRoom("E25N37");
-    }
+    } */
   }
 }

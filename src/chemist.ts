@@ -489,7 +489,7 @@ export class Chemist {
           achievedPercent: desiredStock > 0 ? currentStock / desiredStock : 1
         };
       })
-      .filter(i => i.currentStock > i.desiredStock);
+      .filter(i => i.currentStock < i.desiredStock && i.desiredStock > 0);
 
     const resourcesByImportance = _.sortBy(allNeededResources, i => i.achievedPercent);
     const reactions = resourcesByImportance.map(i => this.getReaction(i.resource, i.neededStock));

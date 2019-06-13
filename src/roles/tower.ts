@@ -135,7 +135,7 @@ class RoleTower {
     const allowWallsAndRemparts =
       Game.cpu.bucket > 9000 &&
       maxEnergyInExtensions &&
-      (tower.room.storage ? tower.room.storage.store.energy > 950000 : false);
+      (tower.room.storage ? tower.room.storage.store.energy > 930000 : false);
     // const minHpRampart = rampartMinHp(tower.room.controller ? tower.room.controller.level : 0);
     // const minHpWalls = wallsMinHp(tower.room.controller ? tower.room.controller.level : 0);
 
