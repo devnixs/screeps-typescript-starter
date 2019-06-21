@@ -143,7 +143,7 @@ class SourceManager {
 
   getEnergyFromStorageIfPossible(creep: Creep) {
     const storage = creep.room.storage;
-    if (storage) {
+    if (storage && storage.store.energy > 2000) {
       const withdrawResult = creep.withdraw(storage, RESOURCE_ENERGY);
       if (withdrawResult === ERR_NOT_IN_RANGE) {
         creep.goTo(storage);

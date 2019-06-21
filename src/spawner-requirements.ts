@@ -277,13 +277,13 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     {
       percentage: 2,
       role: "truck",
-      maxCount: spawn.room.memory.trucksCount || 1,
+      maxCount: spawn.room.memory.trucksCount || 2,
       bodyTemplate: [MOVE, CARRY, CARRY]
     },
     {
       percentage: 2,
       role: "builder",
-      maxCount: needsBuilder ? 1 : 0,
+      maxCount: needsBuilder ? 3 : 0,
       bodyTemplate: [MOVE, WORK, CARRY]
     },
     {

@@ -1,5 +1,6 @@
 import { sourceManager } from "../utils/source-manager";
 import { roleHarvester } from "./harvester";
+import { roleBuilder } from "./builder";
 import { findRestSpot } from "utils/finder";
 import { profiler } from "../utils/profiler";
 
@@ -62,7 +63,8 @@ class RoleReparator implements IRole {
     }
 
     if (!damaged) {
-      return this.goToRest(creep);
+      return roleBuilder.run(creep);
+      // return this.goToRest(creep);
     }
 
     if (memory.repairing) {
