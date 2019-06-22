@@ -277,13 +277,13 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     {
       percentage: 2,
       role: "truck",
-      maxCount: spawn.room.memory.trucksCount || 2,
+      maxCount: spawn.room.memory.trucksCount || 1,
       bodyTemplate: [MOVE, CARRY, CARRY]
     },
     {
       percentage: 2,
       role: "builder",
-      maxCount: needsBuilder ? 3 : 0,
+      maxCount: needsBuilder ? 1 : 0,
       bodyTemplate: [MOVE, WORK, CARRY]
     },
     {
@@ -440,7 +440,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
         targetRoomY: 39
       } as Partial<ILongDistanceHarvesterMemory>
     },
-    {
+    /*     {
       percentage: 4,
       role: "long-distance-harvester",
       maxCount: isStorageAlmostFull ? 0 : 1,
@@ -475,7 +475,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
         targetRoomX: 36,
         targetRoomY: 26
       } as Partial<ILongDistanceHarvesterMemory>
-    },
+    }, */
     {
       percentage: 4,
       role: "long-distance-harvester",
