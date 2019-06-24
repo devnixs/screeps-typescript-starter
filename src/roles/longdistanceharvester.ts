@@ -45,7 +45,7 @@ class RoleLongDistanceHarvester implements IRole {
         }
 
         const damagedRoad: StructureRoad = creep.pos.findInRange(FIND_STRUCTURES, 3, {
-          filter: structure => structure.structureType === "road" && structure.hits < structure.hitsMax
+          filter: structure => structure.structureType === "road" && structure.hits < structure.hitsMax * 0.75
         })[0] as any;
 
         if (damagedRoad) {

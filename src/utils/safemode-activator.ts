@@ -42,9 +42,13 @@ export class SafeModeActivator {
         // test if can access spawn
         var canAccessLastSpawn = enemy.pos.inRangeTo(lastSpawn, 8);
         if (canAccessLastSpawn) {
-          const result = room.controller && room.controller.activateSafeMode();
-          if (result === OK) {
-            Game.notify("Activated safe mode on room " + room.name);
+          // has at least 100K rampart
+          const rampart = lastSpawn.pos.lookFor("structure").find(a => a.structureType === "rampart");
+          if (!rampart || rampart.hits < 100000) {
+            const result = room.controller && room.controller.activateSafeMode();
+            if (result === OK) {
+              Game.notify("Activated safe mode on room " + room.name);
+            }
           }
         }
       }

@@ -7,6 +7,7 @@ import { IHarvesterMemory } from "./roles/harvester";
 import { IStaticHarvesterMemory } from "roles/static-harvester";
 import { findClosestRoom } from "utils/finder";
 import { RoleBuilder } from "roles/builder";
+import { IReserverMemory } from "roles/reserver";
 
 export interface RoleRequirement {
   role: roles;
@@ -156,9 +157,12 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       } else if (availableEnergy > 20000) {
         upgraderRatio = 2;
         maxUpgraderCount = 1;
-      } else {
+      } else if (availableEnergy > 10000) {
         upgraderRatio = 1;
         maxUpgraderCount = 1;
+      } else {
+        upgraderRatio = 1;
+        maxUpgraderCount = 0;
       }
     } else {
       const containers: StructureContainer[] = spawn.room.find(FIND_STRUCTURES, {
@@ -277,7 +281,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     {
       percentage: 2,
       role: "truck",
-      maxCount: spawn.room.memory.trucksCount || 1,
+      maxCount: spawn.room.memory.trucksCount || 2,
       bodyTemplate: [MOVE, CARRY, CARRY]
     },
     {
@@ -403,6 +407,105 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       capMaxEnergy: 1800,
       sortBody: [MOVE, WORK, CARRY],
       disableIfLowOnCpu: true
+    },
+    {
+      percentage: 4,
+      role: "long-distance-harvester",
+      maxCount: isStorageAlmostFull ? 0 : 2,
+      countAllRooms: true,
+      bodyTemplate: [MOVE, WORK, CARRY],
+      subRole: "screepsplus1",
+      onlyRooms: ["E1S15"],
+      capMaxEnergy: 2000,
+      disableIfLowOnCpu: true,
+      additionalMemory: {
+        homeSpawnPosition: spawn.pos,
+        home: spawn.pos.roomName,
+        targetRoomName: "E2S15",
+        targetRoomX: 32,
+        targetRoomY: 22
+      } as Partial<ILongDistanceHarvesterMemory>
+    },
+    {
+      percentage: 4,
+      role: "reserver",
+      maxCount: isStorageAlmostFull ? 0 : 1,
+      countAllRooms: true,
+      exactBody: [CLAIM, MOVE],
+      subRole: "screepsplus1-reserver1",
+      onlyRooms: ["E1S15"],
+      disableIfLowOnCpu: true,
+      additionalMemory: {
+        homeSpawnPosition: spawn.pos,
+        home: spawn.pos.roomName,
+        targetRoomName: "E2S15"
+      } as Partial<IReserverMemory>
+    },
+    {
+      percentage: 4,
+      role: "long-distance-harvester",
+      maxCount: isStorageAlmostFull ? 0 : 2,
+      countAllRooms: true,
+      bodyTemplate: [MOVE, WORK, CARRY],
+      subRole: "screepsplus2",
+      onlyRooms: ["E1S15"],
+      capMaxEnergy: 2000,
+      disableIfLowOnCpu: true,
+      additionalMemory: {
+        homeSpawnPosition: spawn.pos,
+        home: spawn.pos.roomName,
+        targetRoomName: "E2S14",
+        targetRoomX: 22,
+        targetRoomY: 40
+      } as Partial<ILongDistanceHarvesterMemory>
+    },
+    {
+      percentage: 4,
+      role: "reserver",
+      maxCount: isStorageAlmostFull ? 0 : 1,
+      countAllRooms: true,
+      exactBody: [CLAIM, MOVE],
+      subRole: "screepsplu2-reserver2",
+      onlyRooms: ["E1S15"],
+      disableIfLowOnCpu: true,
+      additionalMemory: {
+        homeSpawnPosition: spawn.pos,
+        home: spawn.pos.roomName,
+        targetRoomName: "E2S14"
+      } as Partial<IReserverMemory>
+    },
+    {
+      percentage: 4,
+      role: "long-distance-harvester",
+      maxCount: isStorageAlmostFull ? 0 : 2,
+      countAllRooms: true,
+      bodyTemplate: [MOVE, WORK, CARRY],
+      subRole: "screepsplus3",
+      onlyRooms: ["E1S15"],
+      capMaxEnergy: 2000,
+      disableIfLowOnCpu: true,
+      additionalMemory: {
+        homeSpawnPosition: spawn.pos,
+        home: spawn.pos.roomName,
+        targetRoomName: "E2S16",
+        targetRoomX: 24,
+        targetRoomY: 3
+      } as Partial<ILongDistanceHarvesterMemory>
+    },
+    {
+      percentage: 4,
+      role: "reserver",
+      maxCount: isStorageAlmostFull ? 0 : 1,
+      countAllRooms: true,
+      exactBody: [CLAIM, MOVE],
+      subRole: "screepsplus3-reserver3",
+      onlyRooms: ["E1S15"],
+      disableIfLowOnCpu: true,
+      additionalMemory: {
+        homeSpawnPosition: spawn.pos,
+        home: spawn.pos.roomName,
+        targetRoomName: "E2S16"
+      } as Partial<IReserverMemory>
     },
     {
       percentage: 4,

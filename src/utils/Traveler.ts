@@ -140,7 +140,12 @@ export class Traveler {
 
     // consume path
     if (state.stuckCount === 0 && !newPath) {
-      travelData.path = travelData.path.substr(1);
+      try {
+        travelData.path = travelData.path.substr(1);
+      } catch (e) {
+        console.log("Error with creep " + creep.name);
+        console.log(e);
+      }
     }
 
     let nextDirection = parseInt(travelData.path[0], 10);

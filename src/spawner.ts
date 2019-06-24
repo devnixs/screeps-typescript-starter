@@ -79,7 +79,7 @@ class Spawner {
       i =>
         i.memory.homeRoom === spawn.room.name &&
         (i.ticksToLive === undefined ||
-          i.ticksToLive > i.body.length * 3 + (i.room.name != spawn.room.name ? 250 : i.pos.getRangeTo(spawn)))
+          i.ticksToLive > i.body.length * 3 + (i.room.name != spawn.room.name ? 100 : i.pos.getRangeTo(spawn)))
     );
 
     const counts = _.countBy(creepsInThisRoom, i => this.getRoleSlug(i.memory.role, i.memory.subRole));

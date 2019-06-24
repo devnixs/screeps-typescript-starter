@@ -340,7 +340,9 @@ class RoleTruck implements IRole {
         creep.room.memory.links.find(i => i.state == "needs-refill" && i.type === "input-output");
 
       if (linkThatNeedsEmptying && linkThatNeedsEmptying.needsAmount !== undefined) {
-        const overSupply = linkThatNeedsEmptying.needsAmount;
+        var linkObject = Game.getObjectById(linkThatNeedsEmptying.id) as StructureLink;
+
+        const overSupply = linkObject.energy - linkThatNeedsEmptying.needsAmount;
         const job = this.createRetrievalJob({
           amount: Math.min(overSupply, creep.carryCapacity),
           creep: creep,

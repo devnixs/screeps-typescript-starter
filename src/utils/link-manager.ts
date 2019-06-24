@@ -5,7 +5,7 @@ interface LinkAndMemory {
   linkObj: StructureLink;
 }
 
-const minTransferSize = 50;
+const minTransferSize = 200;
 
 export class LinkManager {
   constructor(private room: Room) {}
@@ -17,11 +17,11 @@ export class LinkManager {
       this.assignLinks();
     }
 
-    if (Game.time % 3 || debugMode) {
+    if (Game.time % 1 === 0 || debugMode) {
       this.doTransfers();
     }
 
-    if (Game.time % 3 || debugMode) {
+    if (Game.time % 1 === 0 || debugMode) {
       this.setStates();
     }
 
@@ -37,16 +37,29 @@ export class LinkManager {
     return 800;
   }
 
+  static totalEnergyInNetworkTarget() {
+    return 800;
+  }
+
   setStates() {
     const links = this.links;
+    const totalEnergyInNetwork = _.sum(links.map(link => link.linkObj.energy));
+
     for (let index in links) {
       const link = links[index];
       if (link.linkMemory.type === "input-output") {
-        if (link.linkObj.energy < LinkManager.inputOutputLinkTargetEnergy()) {
+        if (
+          link.linkObj.energy < LinkManager.inputOutputLinkTargetEnergy() &&
+          totalEnergyInNetwork < LinkManager.totalEnergyInNetworkTarget()
+        ) {
           link.linkMemory.needsAmount = LinkManager.inputOutputLinkTargetEnergy() - link.linkObj.energy;
           link.linkMemory.state = "needs-refill";
         } else if (link.linkObj.energy > LinkManager.inputOutputLinkTargetEnergy()) {
           link.linkMemory.needsAmount = link.linkObj.energy - LinkManager.inputOutputLinkTargetEnergy();
+          link.linkMemory.state = "needs-emptying";
+        } else if (link.linkObj.energy > 100 && totalEnergyInNetwork > LinkManager.totalEnergyInNetworkTarget()) {
+          const excessEnergyInNetwork = totalEnergyInNetwork - LinkManager.totalEnergyInNetworkTarget();
+          link.linkMemory.needsAmount = Math.max(link.linkObj.energy - excessEnergyInNetwork, 0);
           link.linkMemory.state = "needs-emptying";
         } else {
           link.linkMemory.state = "idle";
@@ -118,12 +131,14 @@ export class LinkManager {
   }
 
   transferEnergyToAvailableLink(link: LinkAndMemory, links: LinkAndMemory[], maxEnergyToTransfer: number) {
+    console.log(link.linkMemory.id, link.linkMemory.type);
     let outputLinkNotFull = links.find(
       i =>
         i.linkMemory.type === "output" &&
         link.linkMemory.id !== i.linkMemory.id &&
         i.linkObj.energy < i.linkObj.energyCapacity - minTransferSize
     );
+    console.log("Target : ", outputLinkNotFull && outputLinkNotFull.linkMemory.id);
 
     if (outputLinkNotFull) {
       link.linkObj.transferEnergy(outputLinkNotFull.linkObj);
@@ -134,6 +149,7 @@ export class LinkManager {
           link.linkMemory.id !== i.linkMemory.id &&
           i.linkObj.energy < i.linkObj.energyCapacity - minTransferSize
       );
+      console.log("Target : ", inputOutputLinkNotFull && inputOutputLinkNotFull.linkMemory.id);
       if (inputOutputLinkNotFull) {
         const energyCapacityAvailable =
           inputOutputLinkNotFull.linkObj.energyCapacity - inputOutputLinkNotFull.linkObj.energy;
@@ -179,7 +195,9 @@ export class LinkManager {
   }
 
   get links(): LinkAndMemory[] {
-    return this.room.memory.links.map(i => ({ linkMemory: i, linkObj: Game.getObjectById(i.id) as StructureLink }));
+    return this.room.memory.links
+      .map(i => ({ linkMemory: i, linkObj: Game.getObjectById(i.id) as StructureLink }))
+      .filter(i => i.linkObj);
   }
 
   static runForAllRooms() {

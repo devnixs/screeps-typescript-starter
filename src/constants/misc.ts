@@ -8,14 +8,14 @@ export const wallsMinHp = (roomLevel: number) => {
   if (roomLevel === 8) {
     return 10000000;
   }
-  return 10000000;
+  return 8500000;
 };
 
 export const rampartMinHp = (roomLevel: number) => {
   if (roomLevel === 8) {
     return 10000000;
   }
-  return 10000000;
+  return 8500000;
 };
 
 // How much we should store in the terminal

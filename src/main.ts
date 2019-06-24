@@ -29,6 +29,7 @@ import { getCpuAverage } from "utils/cpu";
 import { Observer } from "utils/observer";
 import { rolePestControl, RolePestControl } from "roles/pestcontrol";
 import { SafeModeActivator } from "utils/safemode-activator";
+import { roleReserver } from "roles/reserver";
 
 // profiler.enable();
 
@@ -115,7 +116,11 @@ export const loop = ErrorMapper.wrapLoop(() => {
         if (memory.role == "pestcontrol") {
           rolePestControl.run(creep);
         }
+        if (memory.role == "reserver") {
+          roleReserver.run(creep);
+        }
       } catch (e) {
+        console.error(e, creep.name);
         error = e;
       }
     }

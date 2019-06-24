@@ -65,11 +65,11 @@ export class Merchant {
     const buyOrders = Game.market.getAllOrders(
       i => i.resourceType === resource && i.type === ORDER_BUY && i.remainingAmount >= 500
     );
+    const bestOrder = _.sortBy(buyOrders, i => -1 * i.price)[0];
 
-    if (buyOrders.length >= 5) {
+    if (buyOrders.length >= 5 && bestOrder.price > 0.05) {
       // we need at least 5 orders
       // take the most interesting one
-      const bestOrder = _.sortBy(buyOrders, i => -1 * i.price)[0];
       const tradeAmount = Math.min(bestOrder.remainingAmount, amount, maxTradeAmount);
 
       const result = Game.market.deal(bestOrder.id, tradeAmount, this.room.name);

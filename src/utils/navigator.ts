@@ -34,7 +34,13 @@ Creep.prototype.goTo = function(destination: RoomPosition | { pos: RoomPosition 
     return ERR_INVALID_TARGET;
   }
 
-  return creep.travelTo(target, { preferHighway: true });
+  try {
+    return creep.travelTo(target, { preferHighway: true });
+  } catch (e) {
+    console.log("Cannot move creep ", this.name);
+    console.log(e);
+    return -1;
+  }
 
   /*   let forceNoIgnoreCreeps = false;
 
