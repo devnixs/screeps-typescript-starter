@@ -411,7 +411,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     {
       percentage: 4,
       role: "long-distance-harvester",
-      maxCount: isStorageAlmostFull ? 0 : 2,
+      maxCount: isStorageAlmostFull ? 0 : 1,
       countAllRooms: true,
       bodyTemplate: [MOVE, WORK, CARRY],
       subRole: "screepsplus1",
@@ -426,7 +426,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
         targetRoomY: 22
       } as Partial<ILongDistanceHarvesterMemory>
     },
-    {
+    /*     {
       percentage: 4,
       role: "reserver",
       maxCount: isStorageAlmostFull ? 0 : 1,
@@ -440,7 +440,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
         home: spawn.pos.roomName,
         targetRoomName: "E2S15"
       } as Partial<IReserverMemory>
-    },
+    }, */
     {
       percentage: 4,
       role: "long-distance-harvester",
@@ -459,7 +459,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
         targetRoomY: 40
       } as Partial<ILongDistanceHarvesterMemory>
     },
-    {
+    /*     {
       percentage: 4,
       role: "reserver",
       maxCount: isStorageAlmostFull ? 0 : 1,
@@ -473,11 +473,11 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
         home: spawn.pos.roomName,
         targetRoomName: "E2S14"
       } as Partial<IReserverMemory>
-    },
+    }, */
     {
       percentage: 4,
       role: "long-distance-harvester",
-      maxCount: isStorageAlmostFull ? 0 : 2,
+      maxCount: isStorageAlmostFull ? 0 : 1,
       countAllRooms: true,
       bodyTemplate: [MOVE, WORK, CARRY],
       subRole: "screepsplus3",
@@ -492,7 +492,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
         targetRoomY: 3
       } as Partial<ILongDistanceHarvesterMemory>
     },
-    {
+    /*     {
       percentage: 4,
       role: "reserver",
       maxCount: isStorageAlmostFull ? 0 : 1,
@@ -506,7 +506,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
         home: spawn.pos.roomName,
         targetRoomName: "E2S16"
       } as Partial<IReserverMemory>
-    },
+    }, */
     {
       percentage: 4,
       role: "long-distance-harvester",
