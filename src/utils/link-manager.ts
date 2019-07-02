@@ -52,7 +52,11 @@ export class LinkManager {
           link.linkObj.energy < LinkManager.inputOutputLinkTargetEnergy() &&
           totalEnergyInNetwork < LinkManager.totalEnergyInNetworkTarget()
         ) {
-          link.linkMemory.needsAmount = LinkManager.inputOutputLinkTargetEnergy() - link.linkObj.energy;
+          var totalTarget = LinkManager.totalEnergyInNetworkTarget();
+          var maxAdd = totalTarget - totalEnergyInNetwork;
+          var maxAmount = link.linkObj.energy + maxAdd;
+
+          link.linkMemory.needsAmount = Math.min(LinkManager.inputOutputLinkTargetEnergy(), maxAmount);
           link.linkMemory.state = "needs-refill";
         } else if (link.linkObj.energy > LinkManager.inputOutputLinkTargetEnergy()) {
           link.linkMemory.needsAmount = link.linkObj.energy - LinkManager.inputOutputLinkTargetEnergy();
@@ -132,17 +136,23 @@ export class LinkManager {
 
   transferEnergyToAvailableLink(link: LinkAndMemory, links: LinkAndMemory[], maxEnergyToTransfer: number) {
     console.log(link.linkMemory.id, link.linkMemory.type);
-    let outputLinkNotFull = links.find(
+    let notFullReceptionLinks = links.filter(
       i =>
-        i.linkMemory.type === "output" &&
+        (i.linkMemory.type === "output" ||
+          (link.linkMemory.type === "input" && i.linkMemory.type === "input-output")) &&
         link.linkMemory.id !== i.linkMemory.id &&
         i.linkObj.energy < i.linkObj.energyCapacity - minTransferSize
     );
-    console.log("Target : ", outputLinkNotFull && outputLinkNotFull.linkMemory.id);
 
-    if (outputLinkNotFull) {
-      link.linkObj.transferEnergy(outputLinkNotFull.linkObj);
-    } else if (link.linkMemory.type === "input") {
+    var notFullReceptionLink = _.sortBy(notFullReceptionLinks, i => i.linkObj.energy)[0];
+
+    // console.log("Target : ", outputLinkNotFull && outputLinkNotFull.linkMemory.id);
+
+    if (notFullReceptionLink) {
+      link.linkObj.transferEnergy(notFullReceptionLink.linkObj);
+    }
+
+    /*     else if (link.linkMemory.type === "input") {
       let inputOutputLinkNotFull = links.find(
         i =>
           i.linkMemory.type === "input-output" &&
@@ -159,7 +169,7 @@ export class LinkManager {
           Math.min(energyCapacityAvailable, maxEnergyToTransfer)
         );
       }
-    }
+    } */
   }
 
   assignLinks() {

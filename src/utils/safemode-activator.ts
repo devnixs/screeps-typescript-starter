@@ -33,12 +33,12 @@ export class SafeModeActivator {
     var lastSpawn = spawns[0];
 
     enemies.forEach(enemy => {
-      //if a boosted enemy can freely access the last spawn, trigger safe mode
-      var isBoosted = enemy.body.filter(i => i.boost).length > 5;
+      //if a big enemy can freely access the last spawn, trigger safe mode
+      // var isBoosted = enemy.body.filter(i => i.boost).length > 5;
       var isPlayer = enemy.owner.username != "Invader" && enemy.owner.username != "Source Keeper";
       var isBig = enemy.body.length > 10;
 
-      if (isBoosted && isBig && isPlayer) {
+      if (isBig && isPlayer) {
         // test if can access spawn
         var canAccessLastSpawn = enemy.pos.inRangeTo(lastSpawn, 8);
         if (canAccessLastSpawn) {

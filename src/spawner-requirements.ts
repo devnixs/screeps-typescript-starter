@@ -97,6 +97,10 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
   const towers = spawn.room.find(FIND_MY_STRUCTURES, { filter: i => i.structureType === "tower" });
   const extractors = spawn.room.find(FIND_MY_STRUCTURES, { filter: i => i.structureType === "extractor" });
   const mineralWithReserve = spawn.room.find(FIND_MINERALS, { filter: i => i.mineralAmount > 0 });
+  const amountOfMineralInTerminal =
+    spawn.room.terminal && mineralWithReserve && mineralWithReserve.length
+      ? spawn.room.terminal.store[mineralWithReserve[0].mineralType] || 0
+      : 0;
   // const labs = spawn.room.find(FIND_MY_STRUCTURES, { filter: i => i.structureType === "lab" });
   const links = spawn.room.find(FIND_MY_STRUCTURES, { filter: i => i.structureType === "link" });
   const enemies = spawn.room.find(FIND_HOSTILE_CREEPS);
@@ -402,7 +406,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     {
       percentage: 1,
       role: "miner",
-      maxCount: extractors.length >= 1 && mineralWithReserve.length > 0 ? 1 : 0,
+      maxCount: extractors.length >= 1 && mineralWithReserve.length > 0 && amountOfMineralInTerminal < 100000 ? 1 : 0,
       bodyTemplate: [MOVE, WORK, CARRY, WORK, CARRY, WORK, CARRY],
       capMaxEnergy: 1800,
       sortBody: [MOVE, WORK, CARRY],
@@ -416,7 +420,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       bodyTemplate: [MOVE, WORK, CARRY],
       subRole: "screepsplus1",
       onlyRooms: ["E1S15"],
-      capMaxEnergy: 2000,
+      capMaxEnergy: 1500,
       disableIfLowOnCpu: true,
       additionalMemory: {
         homeSpawnPosition: spawn.pos,
@@ -449,7 +453,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       bodyTemplate: [MOVE, WORK, CARRY],
       subRole: "screepsplus2",
       onlyRooms: ["E1S15"],
-      capMaxEnergy: 2000,
+      capMaxEnergy: 1500,
       disableIfLowOnCpu: true,
       additionalMemory: {
         homeSpawnPosition: spawn.pos,
@@ -482,7 +486,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       bodyTemplate: [MOVE, WORK, CARRY],
       subRole: "screepsplus3",
       onlyRooms: ["E1S15"],
-      capMaxEnergy: 2000,
+      capMaxEnergy: 1500,
       disableIfLowOnCpu: true,
       additionalMemory: {
         homeSpawnPosition: spawn.pos,

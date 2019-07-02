@@ -98,6 +98,13 @@ class RoleTruck implements IRole {
       }
     } else {
       if (this.runEnergyTruck(creep) !== OK) {
+        new RoomVisual(creep.room.name).circle(creep.pos, {
+          radius: 0.3,
+          fill: "transparent",
+          stroke: "#DCDCAA",
+          strokeWidth: 0.15,
+          opacity: 0.9
+        });
         this.goToRestSpot(creep);
 
         const checkTime = "sim" in Game.rooms ? 1 : 3;
@@ -343,29 +350,34 @@ class RoleTruck implements IRole {
         var linkObject = Game.getObjectById(linkThatNeedsEmptying.id) as StructureLink;
 
         const overSupply = linkObject.energy - linkThatNeedsEmptying.needsAmount;
-        const job = this.createRetrievalJob({
-          amount: Math.min(overSupply, creep.carryCapacity),
-          creep: creep,
-          tag: "empty-link-" + linkThatNeedsEmptying.id,
-          resource: "energy",
-          sourceId: linkThatNeedsEmptying.id
-        });
-        if (job) {
-          yield job;
+        if (overSupply > 100) {
+          const job = this.createRetrievalJob({
+            amount: Math.min(overSupply, creep.carryCapacity),
+            creep: creep,
+            tag: "empty-link-" + linkThatNeedsEmptying.id,
+            resource: "energy",
+            sourceId: linkThatNeedsEmptying.id
+          });
+          if (job) {
+            yield job;
+          }
         }
       }
 
       if (linkThatNeedsRefill && linkThatNeedsRefill.needsAmount !== undefined) {
-        const overSupply = linkThatNeedsRefill.needsAmount;
-        const job = this.createRefillJob({
-          amount: overSupply,
-          creep: creep,
-          tag: "refill-link-" + linkThatNeedsRefill.id,
-          resource: "energy",
-          targetId: linkThatNeedsRefill.id
-        });
-        if (job) {
-          return job;
+        var linkObject = Game.getObjectById(linkThatNeedsRefill.id) as StructureLink;
+        const underSupply = linkThatNeedsRefill.needsAmount - linkObject.energy;
+        if (underSupply > 100) {
+          const job = this.createRefillJob({
+            amount: underSupply,
+            creep: creep,
+            tag: "refill-link-" + linkThatNeedsRefill.id,
+            resource: "energy",
+            targetId: linkThatNeedsRefill.id
+          });
+          if (job) {
+            yield job;
+          }
         }
       }
     }

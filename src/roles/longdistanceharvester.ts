@@ -29,21 +29,20 @@ class RoleLongDistanceHarvester implements IRole {
 
     // if creep is supposed to transfer energy to a structure
     if (memory.working == true) {
+      // first let's see if a road needs to be built
+      const constructionSite = creep.pos.findClosestByRange(FIND_CONSTRUCTION_SITES);
+      if (constructionSite && constructionSite.pos.inRangeTo(creep, 5)) {
+        creep.goTo(constructionSite);
+        creep.build(constructionSite);
+        return;
+      }
+
       // if in home room
       if (creep.room.name == memory.home) {
         sourceManager.store(creep);
       }
       // if not in home room...
       else {
-        // first let's see if a road needs to be built
-        const constructionSite = creep.pos.findClosestByRange(FIND_CONSTRUCTION_SITES);
-        if (constructionSite) {
-          if (creep.build(constructionSite) === ERR_NOT_IN_RANGE) {
-            creep.goTo(constructionSite);
-          }
-          return;
-        }
-
         const damagedRoad: StructureRoad = creep.pos.findInRange(FIND_STRUCTURES, 3, {
           filter: structure => structure.structureType === "road" && structure.hits < structure.hitsMax * 0.75
         })[0] as any;
