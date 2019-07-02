@@ -32,6 +32,7 @@ import { SafeModeActivator } from "utils/safemode-activator";
 import { roleReserver } from "roles/reserver";
 import { roleLongDistanceTruck } from "roles/longdistancetruck";
 import { RemotesManager } from "remotes-manager";
+import { roleRemoteDefender } from "roles/remote-defender";
 
 // profiler.enable();
 
@@ -124,6 +125,9 @@ export const loop = ErrorMapper.wrapLoop(() => {
         }
         if (memory.role == "reserver") {
           roleReserver.run(creep);
+        }
+        if (memory.role == "remote-defender") {
+          roleRemoteDefender.run(creep);
         }
       } catch (e) {
         console.error(e, creep.name);

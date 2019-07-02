@@ -16,10 +16,21 @@ class RoleLongDistanceHarvester implements IRole {
     const totalCargoContent = _.sum(creep.carry);
 
     if (totalCargoContent > 0) {
-      const constructionSite = creep.pos.findClosestByRange(FIND_CONSTRUCTION_SITES);
+      const constructionSite = creep.pos.findClosestByRange(FIND_CONSTRUCTION_SITES, {
+        filter: i => i.structureType === "container"
+      });
       if (constructionSite && constructionSite.pos.inRangeTo(creep, 5)) {
-        creep.goTo(constructionSite);
-        creep.build(constructionSite);
+        if (creep.build(constructionSite) === ERR_NOT_IN_RANGE) {
+          creep.goTo(constructionSite);
+        }
+        return;
+      }
+      const damagedContainer = creep.pos
+        .lookFor("structure")
+        .filter(i => i.structureType === "container" && i.hits < i.hitsMax * 0.75)[0];
+
+      if (damagedContainer) {
+        creep.repair(damagedContainer);
         return;
       }
     }

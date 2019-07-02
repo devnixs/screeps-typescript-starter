@@ -1,3 +1,5 @@
+import { getUsername } from "utils/misc-utils";
+
 export interface IReserverMemory extends CreepMemory {
   targetRoomName: string;
 }
@@ -11,8 +13,19 @@ class RoleReserver implements IRole {
     } else {
       var ctrl = creep.room.controller;
 
-      if (ctrl && creep.reserveController(ctrl) === ERR_NOT_IN_RANGE) {
-        creep.goTo(ctrl);
+      if (ctrl) {
+        const reserveResult = creep.reserveController(ctrl);
+        if (reserveResult === ERR_NOT_IN_RANGE) {
+          creep.goTo(ctrl);
+        }
+        if (Game.time % 1000 === 0) {
+          // We're in range
+          if (reserveResult === OK) {
+            if (ctrl.sign && ctrl.sign.username !== getUsername()) {
+              creep.signController(ctrl, "(V) (°,,,,°) (V)");
+            }
+          }
+        }
       }
     }
   }

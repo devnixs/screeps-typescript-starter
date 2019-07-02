@@ -26,6 +26,9 @@ export class RemotesManager {
 
     this.assignTrucks();
     this.createRoads();
+    this.checkReservation();
+    this.checkEnemy();
+    this.checkHasTooMuchEnergy();
   }
 
   createRoads() {
@@ -44,7 +47,7 @@ export class RemotesManager {
           console.log("Found room", pos.x, pos.y, pos.roomName);
           const structureExists = room.lookForAt("structure", pos.x, pos.y)[0];
           const constructionSiteExists = room.lookForAt("constructionSite", pos.x, pos.y)[0];
-          if (!constructionSiteExists && !structureExists) {
+          if (!constructionSiteExists && !structureExists && pos.x > 0 && pos.x < 49 && pos.y > 0 && pos.y < 49) {
             const constructionSiteResult = room.createConstructionSite(pos.x, pos.y, STRUCTURE_ROAD);
             if (constructionSiteResult !== OK) {
               console.log("Construction site result = ", constructionSiteResult);
@@ -71,21 +74,105 @@ export class RemotesManager {
   }
 
   assignTrucks() {
-    const remotes = _.sortBy(this.room.memory.remotes.filter(i => i.container), i => -1 * i.energy);
-    const trucks = this.availableRemoteTrucks();
-    for (var index = 0; index < Math.min(remotes.length, trucks.length); index++) {
-      const remote = remotes[index];
-      const truck = trucks[index];
+    const trucks = this.remoteTrucks();
+    const availableTrucks = trucks.filter(
+      i =>
+        (i.memory as ILongDistanceTruckMemory).targetContainer === undefined &&
+        !(i.memory as ILongDistanceTruckMemory).depositing
+    );
+
+    const remotes = _.sortBy(
+      this.room.memory.remotes.filter(
+        i =>
+          i.container &&
+          trucks.filter(t => (t.memory as ILongDistanceTruckMemory).targetContainer === i.container).length < 3
+      ),
+      i => -1 * i.energy
+    );
+
+    for (var index = 0; index < availableTrucks.length; index++) {
+      const remote = remotes[index % remotes.length];
+      const truck = availableTrucks[index];
 
       const memory = truck.memory as ILongDistanceTruckMemory;
-      remote.assignedTruck = truck.id;
       memory.targetContainer = remote.container;
+      truck.say(remote.room + " " + remote.energy);
+    }
+  }
+
+  checkEnemy() {
+    if (Game.time % 3 === 0) {
+      this.room.memory.remotes.forEach(remote => {
+        const targetRoom = Game.rooms[remote.room];
+
+        const enemy =
+          targetRoom &&
+          targetRoom.find(FIND_HOSTILE_CREEPS, {
+            filter: i => i.body.find(bodyPart => bodyPart.type === "attack" || bodyPart.type === "ranged_attack")
+          })[0];
+        remote.hasEnemy = !!enemy;
+      });
     }
   }
 
   availableRemoteTrucks() {
     const allCreeps = _.values(Game.creeps) as Creep[];
+    return allCreeps.filter(
+      i =>
+        i.memory.homeRoom === this.room.name &&
+        i.memory.role === "long-distance-truck" &&
+        (i.memory as ILongDistanceTruckMemory).targetContainer === undefined &&
+        !(i.memory as ILongDistanceTruckMemory).depositing
+    );
+  }
+
+  remoteTrucks() {
+    const allCreeps = _.values(Game.creeps) as Creep[];
     return allCreeps.filter(i => i.memory.homeRoom === this.room.name && i.memory.role === "long-distance-truck");
+  }
+
+  checkReservation() {
+    if (Game.time % 10 > 0) {
+      return;
+    }
+    this.room.memory.remotes.forEach(remote => {
+      const targetRoom = Game.rooms[remote.room];
+      if (!targetRoom) {
+        remote.needsReservation = false;
+      } else {
+        const isUnderThreshold =
+          targetRoom.controller &&
+          targetRoom.controller.reservation &&
+          targetRoom.controller.reservation.ticksToEnd < 3000;
+
+        remote.needsReservation = isUnderThreshold;
+      }
+    });
+  }
+
+  checkHasTooMuchEnergy() {
+    if (Game.time % 10 > 0) {
+      return;
+    }
+    this.room.memory.remotes.forEach(remote => {
+      const targetRoom = Game.rooms[remote.room];
+      if (!targetRoom) {
+        remote.hasTooMuchEnergy = false;
+      } else {
+        const container = Game.getObjectById(remote.container) as StructureContainer | null;
+        if (!container) {
+          remote.hasTooMuchEnergy = false;
+        } else {
+          const droppedEnergy = container.pos.lookFor(LOOK_RESOURCES).filter(i => i.resourceType === "energy")[0];
+          const droppedEnergyAmount = droppedEnergy ? droppedEnergy.amount : 0;
+
+          const energyInContainer = container.store.energy;
+          const totalEnergyWaiting = energyInContainer + droppedEnergyAmount;
+
+          remote.hasTooMuchEnergy = totalEnergyWaiting > 3000;
+        }
+      }
+    });
   }
 
   runForOneRemote(remote: RemoteRoomDefinition) {

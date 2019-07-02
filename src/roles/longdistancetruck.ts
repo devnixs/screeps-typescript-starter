@@ -18,11 +18,13 @@ class RoleLongDistanceTruck implements IRole {
     if (memory.depositing == true && totalCargoContent == 0) {
       // switch state
       memory.depositing = false;
+      delete memory.targetContainer;
     }
     // if creep is harvesting energy but is full
     else if (!memory.depositing && totalCargoContent == creep.carryCapacity) {
       // switch state
       memory.depositing = true;
+      delete memory.targetContainer;
     }
 
     // if creep is supposed to transfer energy to a structure
@@ -30,8 +32,9 @@ class RoleLongDistanceTruck implements IRole {
       // first let's see if a road needs to be built
       const constructionSite = creep.pos.findClosestByRange(FIND_CONSTRUCTION_SITES);
       if (constructionSite && constructionSite.pos.inRangeTo(creep, 5)) {
-        creep.goTo(constructionSite);
-        creep.build(constructionSite);
+        if (creep.build(constructionSite) === ERR_NOT_IN_RANGE) {
+          creep.goTo(constructionSite);
+        }
         return;
       }
 
@@ -60,14 +63,26 @@ class RoleLongDistanceTruck implements IRole {
     }
     // if creep is supposed to harvest energy from source
     else {
+      const droppedEnergyInRange = creep.pos
+        .findInRange(FIND_DROPPED_RESOURCES, 1)
+        .filter(i => i.resourceType === "energy" && i.amount > 50)[0];
+      if (droppedEnergyInRange) {
+        creep.pickup(droppedEnergyInRange);
+        return;
+      }
+
       // if in target room
       const container = Game.getObjectById(memory.targetContainer) as StructureContainer;
       if (!container) {
         return;
       }
       if (creep.room.name == container.room.name) {
-        if (creep.withdraw(container, "energy") === ERR_NOT_IN_RANGE) {
+        const withdrawResult = creep.withdraw(container, "energy");
+        if (withdrawResult === ERR_NOT_IN_RANGE) {
           creep.goTo(container);
+        }
+        if (withdrawResult === OK) {
+          memory.depositing = true;
         }
         return;
       }

@@ -9,6 +9,7 @@ import { findClosestRoom } from "utils/finder";
 import { RoleBuilder } from "roles/builder";
 import { IReserverMemory } from "roles/reserver";
 import { ILongDistanceTruckMemory } from "roles/longdistancetruck";
+import { IRemoteDefenderMemory } from "roles/remote-defender";
 
 export interface RoleRequirement {
   role: roles;
@@ -287,7 +288,9 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       role: "long-distance-harvester",
       maxCount: isStorageAlmostFull ? 0 : 1,
       countAllRooms: false,
-      exactBody: [WORK, WORK, WORK, WORK, WORK, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE],
+      exactBody: remote.hasTooMuchEnergy
+        ? [WORK, WORK, WORK, CARRY, MOVE, MOVE]
+        : [WORK, WORK, WORK, WORK, WORK, CARRY, MOVE, MOVE, MOVE],
       subRole: remote.room + "-" + remote.x + "-" + remote.y,
       disableIfLowOnCpu: true,
       additionalMemory: {
@@ -300,24 +303,46 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     } as RoleRequirement;
   });
 
-  const reservers = spawn.room.memory.remotes.map(remote => {
-    return {
-      percentage: 4,
-      role: "reserver",
-      maxCount: isStorageAlmostFull ? 0 : 1,
-      countAllRooms: true,
-      exactBody: [CLAIM, MOVE],
-      subRole: remote.room,
-      disableIfLowOnCpu: true,
-      additionalMemory: {
-        homeSpawnPosition: spawn.pos,
-        home: spawn.pos.roomName,
-        targetRoomName: remote.room
-      } as Partial<IReserverMemory>
-    } as RoleRequirement;
-  });
+  const remoteDefenders = spawn.room.memory.remotes
+    .filter(i => i.hasEnemy)
+    .map(remote => {
+      return {
+        percentage: 20,
+        role: "remote-defender",
+        maxCount: 1,
+        countAllRooms: false,
+        bodyTemplate: [MOVE, MOVE, TOUGH, ATTACK, ATTACK, HEAL],
+        sortBody: [TOUGH, ATTACK, MOVE, HEAL],
+        disableIfLowOnCpu: true,
+        additionalMemory: {
+          homeSpawnPosition: spawn.pos,
+          home: spawn.pos.roomName,
+          targetRoom: remote.room
+        } as Partial<IRemoteDefenderMemory>
+      } as RoleRequirement;
+    });
+
+  const reservers = spawn.room.memory.remotes
+    .filter(i => i.needsReservation && !i.hasTooMuchEnergy)
+    .map(remote => {
+      return {
+        percentage: 4,
+        role: "reserver",
+        maxCount: isStorageAlmostFull ? 0 : 1,
+        countAllRooms: true,
+        exactBody: [CLAIM, MOVE, CLAIM, MOVE],
+        subRole: remote.room,
+        disableIfLowOnCpu: true,
+        additionalMemory: {
+          homeSpawnPosition: spawn.pos,
+          home: spawn.pos.roomName,
+          targetRoomName: remote.room
+        } as Partial<IReserverMemory>
+      } as RoleRequirement;
+    });
 
   return [
+    ...remoteDefenders,
     ...harvesterDefinitions,
     {
       percentage: 2,
@@ -344,7 +369,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     {
       percentage: 2,
       role: "reparator",
-      maxCount: 1, // handled by towers
+      maxCount: 0, // handled by towers
       bodyTemplate: [MOVE, WORK, CARRY],
       capMaxEnergy: 1400,
       disableIfLowOnCpu: true
@@ -453,9 +478,10 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     {
       percentage: 4,
       role: "long-distance-truck",
-      maxCount: isStorageAlmostFull ? 0 : spawn.room.memory.remotes.length / 2,
-      exactBody: [WORK, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE],
+      maxCount: isStorageAlmostFull ? 0 : spawn.room.memory.remotes.length * 2,
+      bodyTemplate: [CARRY, CARRY, MOVE],
       disableIfLowOnCpu: true,
+      bodyTemplatePrepend: [WORK, WORK, MOVE],
       additionalMemory: {
         homeSpawnPosition: spawn.pos,
         home: spawn.pos.roomName
