@@ -1,6 +1,6 @@
 import { getSpawnerRequirements, RoleRequirement } from "spawner-requirements";
 import { profiler } from "./utils/profiler";
-import { getCpuAverage } from "utils/cpu";
+import { getCpuAverage, isLowOnCpu } from "utils/cpu";
 
 const costs = {
   [MOVE]: 50,
@@ -106,20 +106,18 @@ class Spawner {
       };
     });
 
-    const currentCpu = Game.cpu.bucket;
-    const cpuAverage = getCpuAverage();
-    const isLowOnCpu = currentCpu < 7000 || cpuAverage > 19;
+    const lowOnCpu = isLowOnCpu();
 
     const roleNeededToBeCreated = roleInfos.filter(
       i =>
         i.currentPercentage < i.desiredPercentage &&
-        (!i.requirement.disableIfLowOnCpu || !isLowOnCpu) &&
+        (!i.requirement.disableIfLowOnCpu || !lowOnCpu) &&
         (i.requirement.maxCount === undefined || i.currentCount < i.requirement.maxCount)
     )[0];
 
     const roleThatCanBeCreated = roleInfos.filter(
       i =>
-        (!i.requirement.disableIfLowOnCpu || !isLowOnCpu) &&
+        (!i.requirement.disableIfLowOnCpu || !lowOnCpu) &&
         (i.requirement.maxCount === undefined || i.currentCount < i.requirement.maxCount)
     )[0];
 

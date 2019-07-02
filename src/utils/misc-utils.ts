@@ -177,3 +177,10 @@ export function rotatedMatrix<T>(matrix: T[][], clockwiseTurns: 0 | 1 | 2 | 3): 
   }
   return mat;
 }
+
+export function getMyRooms() {
+  return Object.keys(Game.rooms)
+    .map(i => Game.rooms[i])
+    .filter(i => i.controller && i.controller.my)
+    .map(i => Game.rooms[i.name]);
+}

@@ -19,7 +19,7 @@ class RoleTower {
       this.refreshDamagedStructures(tower);
     }
 
-    if (Game.time % 5 === 0) {
+    if (Game.time % 2 === 0) {
       this.refreshEnemy(tower);
       this.refreshDamagedCreep(tower);
     }

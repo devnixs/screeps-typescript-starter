@@ -35,7 +35,7 @@ Creep.prototype.goTo = function(destination: RoomPosition | { pos: RoomPosition 
   }
 
   try {
-    return creep.travelTo(target, { preferHighway: true });
+    return creep.travelTo(target, { preferHighway: true, stuckValue: 1 });
   } catch (e) {
     console.log("Cannot move creep ", this.name);
     console.log(e);

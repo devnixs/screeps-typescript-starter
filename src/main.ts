@@ -30,6 +30,8 @@ import { Observer } from "utils/observer";
 import { rolePestControl, RolePestControl } from "roles/pestcontrol";
 import { SafeModeActivator } from "utils/safemode-activator";
 import { roleReserver } from "roles/reserver";
+import { roleLongDistanceTruck } from "roles/longdistancetruck";
+import { RemotesManager } from "remotes-manager";
 
 // profiler.enable();
 
@@ -51,6 +53,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
     Chemist.runForAllRooms();
     LinkManager.runForAllRooms();
     Merchant.runForAllRooms();
+    RemotesManager.runForAllRooms();
 
     let error: any = null;
 
@@ -104,6 +107,9 @@ export const loop = ErrorMapper.wrapLoop(() => {
         if (memory.role == "long-distance-harvester") {
           roleLongDistanceHarvester.run(creep);
         }
+        if (memory.role == "long-distance-truck") {
+          roleLongDistanceTruck.run(creep);
+        }
         if (memory.role == "miner") {
           roleMiner.run(creep);
         }
@@ -140,7 +146,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
       }
     }
 
-    if (Game.time % 13 === 0) {
+    if (Game.time % 130 === 0) {
       console.log("Bucket :" + Game.cpu.bucket);
       console.log("Used :" + Game.cpu.getUsed());
       //console.log("Limit :" + Game.cpu.limit);
@@ -153,7 +159,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
       console.log("Used a lot of cpu : ", Game.cpu.getUsed(), Game.time);
     }
 
-    if (Game.time % 7 === 0) {
+    if (Game.time % 70 === 0) {
       Memory.cpuUsages = Memory.cpuUsages || [];
       Memory.cpuUsages.push(Game.cpu.getUsed());
       if (Memory.cpuUsages.length > 100) {

@@ -8,6 +8,7 @@ import { IStaticHarvesterMemory } from "roles/static-harvester";
 import { findClosestRoom } from "utils/finder";
 import { RoleBuilder } from "roles/builder";
 import { IReserverMemory } from "roles/reserver";
+import { ILongDistanceTruckMemory } from "roles/longdistancetruck";
 
 export interface RoleRequirement {
   role: roles;
@@ -280,6 +281,42 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
 
   const dismantlerFlag = Game.flags["dismantler_attack"];
 
+  const remoteHarvesters = spawn.room.memory.remotes.map(remote => {
+    return {
+      percentage: 4,
+      role: "long-distance-harvester",
+      maxCount: isStorageAlmostFull ? 0 : 1,
+      countAllRooms: false,
+      exactBody: [WORK, WORK, WORK, WORK, WORK, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE],
+      subRole: remote.room + "-" + remote.x + "-" + remote.y,
+      disableIfLowOnCpu: true,
+      additionalMemory: {
+        homeSpawnPosition: spawn.pos,
+        home: spawn.pos.roomName,
+        targetRoomName: remote.room,
+        targetRoomX: remote.x,
+        targetRoomY: remote.y
+      } as Partial<ILongDistanceHarvesterMemory>
+    } as RoleRequirement;
+  });
+
+  const reservers = spawn.room.memory.remotes.map(remote => {
+    return {
+      percentage: 4,
+      role: "reserver",
+      maxCount: isStorageAlmostFull ? 0 : 1,
+      countAllRooms: true,
+      exactBody: [CLAIM, MOVE],
+      subRole: remote.room,
+      disableIfLowOnCpu: true,
+      additionalMemory: {
+        homeSpawnPosition: spawn.pos,
+        home: spawn.pos.roomName,
+        targetRoomName: remote.room
+      } as Partial<IReserverMemory>
+    } as RoleRequirement;
+  });
+
   return [
     ...harvesterDefinitions,
     {
@@ -412,24 +449,19 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       sortBody: [MOVE, WORK, CARRY],
       disableIfLowOnCpu: true
     },
+    ...remoteHarvesters,
     {
       percentage: 4,
-      role: "long-distance-harvester",
-      maxCount: isStorageAlmostFull ? 0 : 1,
-      countAllRooms: true,
-      bodyTemplate: [MOVE, WORK, CARRY],
-      subRole: "screepsplus1",
-      onlyRooms: ["E1S15"],
-      capMaxEnergy: 1500,
+      role: "long-distance-truck",
+      maxCount: isStorageAlmostFull ? 0 : spawn.room.memory.remotes.length / 2,
+      exactBody: [WORK, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE],
       disableIfLowOnCpu: true,
       additionalMemory: {
         homeSpawnPosition: spawn.pos,
-        home: spawn.pos.roomName,
-        targetRoomName: "E2S15",
-        targetRoomX: 32,
-        targetRoomY: 22
-      } as Partial<ILongDistanceHarvesterMemory>
+        home: spawn.pos.roomName
+      } as Partial<ILongDistanceTruckMemory>
     },
+    ...reservers,
     /*     {
       percentage: 4,
       role: "reserver",

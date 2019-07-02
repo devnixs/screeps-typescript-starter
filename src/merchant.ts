@@ -151,8 +151,8 @@ export class Merchant {
       undersuppliedRoom = _.sortBy(undersuppliedRooms, room => room.storage && room.storage.store.energy)[0];
     }
 
-    console.log("A:", oversuppliedRooms[0] && oversuppliedRooms[0].name);
-    console.log("B:", undersuppliedRoom && undersuppliedRoom.name);
+    /*     console.log("A:", oversuppliedRooms[0] && oversuppliedRooms[0].name);
+    console.log("B:", undersuppliedRoom && undersuppliedRoom.name); */
 
     _.forEach(oversuppliedRooms, oversuppliedRoom => {
       if (undersuppliedRoom) {

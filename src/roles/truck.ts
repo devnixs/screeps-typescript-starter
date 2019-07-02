@@ -107,7 +107,7 @@ class RoleTruck implements IRole {
         });
         this.goToRestSpot(creep);
 
-        const checkTime = "sim" in Game.rooms ? 1 : 3;
+        const checkTime = "sim" in Game.rooms ? 1 : 1;
         if (Game.time % checkTime === 0) {
           // periodically check for jobs
           this.setJob(creep);

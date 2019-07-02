@@ -9,3 +9,10 @@ export function getCpuAverage() {
 
   return cpuAverage;
 }
+
+export function isLowOnCpu() {
+  return false;
+  /*   const currentCpu = Game.cpu.bucket;
+  const cpuAverage = getCpuAverage();
+  return currentCpu < 7000 || cpuAverage > 19; */
+}

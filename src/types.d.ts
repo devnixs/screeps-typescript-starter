@@ -10,6 +10,7 @@ type roles =
   | "fighter"
   | "explorer"
   | "long-distance-harvester"
+  | "long-distance-truck"
   | "pickaboo"
   | "healer"
   | "claimer"
@@ -57,6 +58,19 @@ interface RoomMemory {
   nextCheckNeedsBuilder: number;
 
   trucksCount: number | null;
+
+  remotes: RemoteRoomDefinition[];
+}
+
+interface RemoteRoomDefinition {
+  room: string;
+  x: number;
+  y: number;
+
+  state: "needs-emptying" | "idle";
+  assignedTruck: string;
+  container: string | undefined;
+  energy: number;
 }
 
 interface Vector {

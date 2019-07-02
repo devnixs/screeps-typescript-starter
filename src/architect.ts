@@ -203,7 +203,8 @@ export class Architect {
   iterateFromAtoB(pos1: Vector, pos2: Vector, callback: (pos: Vector, index: number, isLast: boolean) => void) {
     var positions = this.room.findPath(
       new RoomPosition(pos1.x, pos1.y, this.room.name),
-      new RoomPosition(pos2.x, pos2.y, this.room.name)
+      new RoomPosition(pos2.x, pos2.y, this.room.name),
+      { ignoreCreeps: true }
     );
     if (positions.length) {
       for (let stepIndex in positions) {
