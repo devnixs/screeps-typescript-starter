@@ -13,7 +13,7 @@ const costs = {
   [CLAIM]: 600
 };
 
-var delay = "sim" in Game.rooms ? 1 : 5;
+var delay = "sim" in Game.rooms ? 1 : 2;
 
 class Spawner {
   run() {
