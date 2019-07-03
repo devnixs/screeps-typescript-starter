@@ -29,6 +29,8 @@ class RoleRemoteDefender implements IRole {
     let hostile: Creep | null = null;
     hostile = creep.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
 
+    const canHeal = creep.getActiveBodyparts(HEAL);
+
     if (hostile) {
       if (hostile.pos.isNearTo(creep.pos)) {
         creep.attack(hostile);
@@ -44,21 +46,21 @@ class RoleRemoteDefender implements IRole {
       memory.status = "attacking";
     }
 
-    if (memory.status === "attacking") {
+    if (memory.status === "attacking" && canHeal) {
       const needsHealing = this.needsHealing(creep);
       if (needsHealing) {
         memory.status = "healing";
       }
     }
 
-    if (memory.status === "healing") {
+    if (memory.status === "healing" && canHeal) {
       const isFullyHealed = this.isFullyHealed(creep);
       if (isFullyHealed) {
         memory.status = "attacking";
       }
     }
 
-    if (memory.status === "healing") {
+    if (memory.status === "healing" && canHeal) {
       creep.heal(creep);
     } else {
       if (!memory.targetRoom) {
@@ -66,14 +68,61 @@ class RoleRemoteDefender implements IRole {
         return;
       } else {
         if (memory.targetRoom != creep.room.name) {
-          creep.goTo(new RoomPosition(25, 25, memory.targetRoom));
+          const room = Game.rooms[memory.targetRoom];
+          if (room) {
+            const hostile = room.find(FIND_HOSTILE_CREEPS)[0];
+            if (hostile) {
+              creep.goTo(hostile);
+            } else {
+              room.controller && creep.goTo(room.controller);
+            }
+          } else {
+            creep.goTo(new RoomPosition(25, 25, memory.targetRoom));
+          }
           return;
         } else {
           if (hostile) {
             creep.goTo(hostile);
+          } else {
+            this.reassign(creep);
+            if (this.healFriends(creep) === -1) {
+              const rest = findRestSpot(creep);
+              if (rest) {
+                creep.goTo(rest);
+              }
+            }
           }
         }
       }
+    }
+  }
+
+  reassign(creep: Creep) {
+    const homeRoom = Game.rooms[creep.memory.homeRoom];
+    if (homeRoom) {
+      const remotes = homeRoom.memory.remotes;
+      const remoteWithEnemy = remotes.find(i => i.hasEnemy);
+      if (remoteWithEnemy) {
+        const memory = creep.memory as IRemoteDefenderMemory;
+        memory.subRole = remoteWithEnemy.room;
+        memory.targetRoom = remoteWithEnemy.room;
+        delete memory.rest;
+      }
+    }
+  }
+
+  healFriends(creep: Creep) {
+    const damagedCreep = creep.room.find(FIND_MY_CREEPS, { filter: creep => creep.hits < creep.hitsMax })[0];
+    if (damagedCreep) {
+      creep.goTo(damagedCreep);
+      if (damagedCreep.pos.isNearTo(creep)) {
+        creep.heal(damagedCreep);
+      } else {
+        creep.rangedHeal(damagedCreep);
+      }
+      return OK;
+    } else {
+      return -1;
     }
   }
 

@@ -21,9 +21,7 @@ class RoleReserver implements IRole {
         if (Game.time % 1000 === 0) {
           // We're in range
           if (reserveResult === OK) {
-            if (ctrl.sign && ctrl.sign.username !== getUsername()) {
-              creep.signController(ctrl, "(V) (°,,,,°) (V)");
-            }
+            creep.signController(ctrl, "(V) (°,,,,°) (V)");
           }
         }
       }

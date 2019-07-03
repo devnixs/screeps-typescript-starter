@@ -33,6 +33,8 @@ interface CreepMemory {
   lastPos: { x: number; y: number };
   noMovementTicksCount: number;
   boostable: boolean;
+
+  rest: any;
 }
 
 interface RoomMemory {
@@ -64,6 +66,7 @@ interface RoomMemory {
 }
 
 interface RemoteRoomDefinition {
+  threatLevel: number;
   hasTooMuchEnergy: boolean;
   needsReservation: boolean | undefined;
   room: string;

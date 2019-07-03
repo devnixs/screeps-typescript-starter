@@ -150,9 +150,10 @@ export const loop = ErrorMapper.wrapLoop(() => {
       }
     }
 
-    if (Game.time % 130 === 0) {
+    if (Game.time % 1300 === 0) {
       console.log("Bucket :" + Game.cpu.bucket);
       console.log("Used :" + Game.cpu.getUsed());
+      console.log("Average CPU : ", getCpuAverage());
       //console.log("Limit :" + Game.cpu.limit);
       //console.log("TickLimit :" + Game.cpu.tickLimit);
     }
@@ -163,13 +164,12 @@ export const loop = ErrorMapper.wrapLoop(() => {
       console.log("Used a lot of cpu : ", Game.cpu.getUsed(), Game.time);
     }
 
-    if (Game.time % 70 === 0) {
+    if (Game.time % 7 === 0) {
       Memory.cpuUsages = Memory.cpuUsages || [];
       Memory.cpuUsages.push(Game.cpu.getUsed());
       if (Memory.cpuUsages.length > 100) {
         Memory.cpuUsages.shift();
       }
-      console.log("Average CPU : ", getCpuAverage());
     }
 
     // shutdown attack

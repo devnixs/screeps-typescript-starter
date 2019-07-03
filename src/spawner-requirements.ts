@@ -26,6 +26,7 @@ export interface RoleRequirement {
   subRole?: string;
   onlyRooms?: string[];
   disableIfLowOnCpu?: boolean;
+  maxRepeat?: number;
 }
 
 // MOVE	            50	Moves the creep. Reduces creep fatigue by 2/tick. See movement.
@@ -147,10 +148,10 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       const availableEnergy = spawn.room.storage.store.energy;
       if (availableEnergy > 700000) {
         upgraderRatio = 10;
-        maxUpgraderCount = 2;
-      } else if (availableEnergy > 600000) {
+        maxUpgraderCount = 5;
+      } else if (availableEnergy > 500000) {
         upgraderRatio = 8;
-        maxUpgraderCount = 1;
+        maxUpgraderCount = 2;
       } else if (availableEnergy > 300000) {
         upgraderRatio = 6;
         maxUpgraderCount = 1;
@@ -306,13 +307,15 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
   const remoteDefenders = spawn.room.memory.remotes
     .filter(i => i.hasEnemy)
     .map(remote => {
+      console.log("Creating defender with level ", remote.threatLevel);
       return {
         percentage: 20,
         role: "remote-defender",
         maxCount: 1,
-        countAllRooms: false,
         bodyTemplate: [MOVE, MOVE, TOUGH, ATTACK, ATTACK, HEAL],
+        maxRepeat: Math.ceil(remote.threatLevel),
         sortBody: [TOUGH, ATTACK, MOVE, HEAL],
+        subRole: remote.room,
         disableIfLowOnCpu: true,
         additionalMemory: {
           homeSpawnPosition: spawn.pos,
@@ -326,7 +329,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     .filter(i => i.needsReservation && !i.hasTooMuchEnergy)
     .map(remote => {
       return {
-        percentage: 4,
+        percentage: 20,
         role: "reserver",
         maxCount: isStorageAlmostFull ? 0 : 1,
         countAllRooms: true,
@@ -478,10 +481,11 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     {
       percentage: 4,
       role: "long-distance-truck",
-      maxCount: isStorageAlmostFull ? 0 : spawn.room.memory.remotes.length * 2,
-      bodyTemplate: [CARRY, CARRY, MOVE],
+      maxCount: isStorageAlmostFull ? 0 : Math.ceil(spawn.room.memory.remotes.length * 1.5),
+      bodyTemplate: [MOVE, CARRY, CARRY],
       disableIfLowOnCpu: true,
-      bodyTemplatePrepend: [WORK, WORK, MOVE],
+      maxRepeat: 6,
+      bodyTemplatePrepend: [WORK, CARRY, MOVE],
       additionalMemory: {
         homeSpawnPosition: spawn.pos,
         home: spawn.pos.roomName
@@ -507,8 +511,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       percentage: 1,
       role: "upgrader",
       maxCount: maxUpgraderCount,
-      bodyTemplate:
-        maxEnergyInRoom < 500 || links.length === 0 ? [MOVE, WORK, CARRY] : [MOVE, WORK, WORK, WORK, WORK, CARRY],
+      bodyTemplate: [MOVE, WORK, WORK, WORK, WORK, CARRY],
       capMaxEnergy: 600 * upgraderRatio,
       disableIfLowOnCpu: true
     },

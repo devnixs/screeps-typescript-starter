@@ -41,7 +41,8 @@ class Spawner {
     parts: BodyPartConstant[],
     prependBodyTemplate: BodyPartConstant[] | undefined,
     maxEnergy: number,
-    sortOrder?: BodyPartConstant[]
+    sortOrder?: BodyPartConstant[],
+    maxRepeat?: number
   ) {
     const current: BodyPartConstant[] = prependBodyTemplate ? prependBodyTemplate.concat() : [];
     let cost = 0;
@@ -54,6 +55,20 @@ class Spawner {
       cost = this.getBodyPrice(current);
     }
     current.pop();
+
+    const maxLength =
+      (prependBodyTemplate ? prependBodyTemplate.length : 0) + (maxRepeat ? maxRepeat * parts.length : MAX_CREEP_SIZE);
+
+    while (current.length > maxLength) {
+      //  console.log("Removing parts to fit max size", current.length, maxLength, maxRepeat);
+      current.pop();
+    }
+
+    // round to integer number of templates
+    while ((current.length - (prependBodyTemplate || []).length) % parts.length > 0) {
+      // console.log("Removing parts to fit template", current.length, parts.length);
+      current.pop();
+    }
 
     const minParts = parts.length + (prependBodyTemplate ? prependBodyTemplate.length : 0);
     if (current.length < minParts) {
@@ -192,7 +207,8 @@ class Spawner {
         role.bodyTemplate,
         role.bodyTemplatePrepend,
         Math.min(maxEnergyPossible, maxEnergy),
-        role.sortBody
+        role.sortBody,
+        role.maxRepeat
       );
 
       if (debug) {
@@ -203,7 +219,7 @@ class Spawner {
     }
 
     if (!body) {
-      console.log("Not enough energy to create the body");
+      console.log("Not enough energy to create the body", role.role);
       return;
     }
 

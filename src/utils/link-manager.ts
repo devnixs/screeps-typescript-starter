@@ -135,7 +135,7 @@ export class LinkManager {
   }
 
   transferEnergyToAvailableLink(link: LinkAndMemory, links: LinkAndMemory[], maxEnergyToTransfer: number) {
-    console.log(link.linkMemory.id, link.linkMemory.type);
+    // console.log(link.linkMemory.id, link.linkMemory.type);
     let notFullReceptionLinks = links.filter(
       i =>
         (i.linkMemory.type === "output" ||

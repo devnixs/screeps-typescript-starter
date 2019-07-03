@@ -1,7 +1,6 @@
 import { getMyRooms } from "utils/misc-utils";
 import { findEmptySpotCloseTo } from "utils/finder";
 import { ILongDistanceTruckMemory } from "roles/longdistancetruck";
-import { SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION } from "constants";
 
 export class RemotesManager {
   constructor(private room: Room) {}
@@ -34,17 +33,14 @@ export class RemotesManager {
   createRoads() {
     const remotes = this.room.memory.remotes;
     if (Game.time % 1000 === 0 && remotes.length) {
-      console.log("Creating roads");
       const homeSpawn = this.room.find(FIND_MY_SPAWNS)[0];
 
       const rnd = Math.floor(Math.random() * remotes.length);
       const remote = remotes[rnd];
 
       this.iterateFromAtoB(homeSpawn.pos, new RoomPosition(remote.x, remote.y, remote.room), (pos, index, isLast) => {
-        console.log("Found path", pos.x, pos.y, pos.roomName);
         const room = Game.rooms[pos.roomName];
         if (room) {
-          console.log("Found room", pos.x, pos.y, pos.roomName);
           const structureExists = room.lookForAt("structure", pos.x, pos.y)[0];
           const constructionSiteExists = room.lookForAt("constructionSite", pos.x, pos.y)[0];
           if (!constructionSiteExists && !structureExists && pos.x > 0 && pos.x < 49 && pos.y > 0 && pos.y < 49) {
@@ -110,7 +106,33 @@ export class RemotesManager {
           targetRoom.find(FIND_HOSTILE_CREEPS, {
             filter: i => i.body.find(bodyPart => bodyPart.type === "attack" || bodyPart.type === "ranged_attack")
           })[0];
+
         remote.hasEnemy = !!enemy;
+        if (enemy) {
+          const threatLevel = _.sum(
+            enemy.body.map(i => {
+              let threat = 0;
+              if (i.type === "attack") {
+                threat = 0.4;
+              }
+              if (i.type === "ranged_attack") {
+                threat = 0.4;
+              }
+              if (i.type === "heal") {
+                threat = 0.4;
+              }
+              if (i.type === "tough") {
+                threat = 0.4;
+              }
+              if (i.boost) {
+                threat = threat * 2;
+              }
+              return threat;
+            })
+          );
+          console.log("Found threat ", threatLevel, " at room " + remote.room);
+          remote.threatLevel = threatLevel;
+        }
       });
     }
   }
