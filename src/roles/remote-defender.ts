@@ -1,5 +1,5 @@
 import { requiredHealersForAnAttack } from "../constants/misc";
-import { findRestSpot } from "utils/finder";
+import { findRestSpot, findHostile } from "utils/finder";
 import { boostCreep } from "utils/boost-manager";
 
 export interface IRemoteDefenderMemory extends CreepMemory {
@@ -26,8 +26,7 @@ class RoleRemoteDefender implements IRole {
     // const rooms = Object.keys(Game.rooms).map(i => Game.rooms[i]);
     const memory: IRemoteDefenderMemory = creep.memory as any;
 
-    let hostile: Creep | null = null;
-    hostile = creep.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
+    let hostile = findHostile(creep);
 
     const canHeal = creep.getActiveBodyparts(HEAL);
 
@@ -62,6 +61,7 @@ class RoleRemoteDefender implements IRole {
 
     if (memory.status === "healing" && canHeal) {
       creep.heal(creep);
+      creep.goTo(hostile);
     } else {
       if (!memory.targetRoom) {
         this.goHome(creep);
@@ -82,12 +82,14 @@ class RoleRemoteDefender implements IRole {
           return;
         } else {
           if (hostile) {
+            creep.say("Yarr!", true);
             creep.goTo(hostile);
           } else {
             this.reassign(creep);
             if (this.healFriends(creep) === -1) {
-              const rest = findRestSpot(creep);
+              const rest = findRestSpot(creep, { x: 25, y: 25 });
               if (rest) {
+                creep.say("Zzz");
                 creep.goTo(rest);
               }
             }
@@ -106,7 +108,6 @@ class RoleRemoteDefender implements IRole {
         const memory = creep.memory as IRemoteDefenderMemory;
         memory.subRole = remoteWithEnemy.room;
         memory.targetRoom = remoteWithEnemy.room;
-        delete memory.rest;
       }
     }
   }

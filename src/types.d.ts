@@ -66,6 +66,8 @@ interface RoomMemory {
 }
 
 interface RemoteRoomDefinition {
+  energyGeneration: number;
+  energyGeneration: number;
   threatLevel: number;
   hasTooMuchEnergy: boolean;
   needsReservation: boolean | undefined;
@@ -73,7 +75,6 @@ interface RemoteRoomDefinition {
   x: number;
   y: number;
 
-  state: "needs-emptying" | "idle";
   container: string | undefined;
   energy: number;
   hasEnemy: boolean;

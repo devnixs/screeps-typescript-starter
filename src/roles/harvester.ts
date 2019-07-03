@@ -1,5 +1,6 @@
 import { sourceManager } from "../utils/source-manager";
 import { profiler } from "../utils/profiler";
+import { roleUpgrader } from "./upgrader";
 
 export interface IHarvesterMemory extends CreepMemory {
   isDepositing?: boolean;
@@ -39,7 +40,9 @@ class RoleHarvester implements IRole {
       } else if (sourceManager.storeInCloseContainer(creep) === OK) {
         return;
       } else {
-        sourceManager.store(creep);
+        if (sourceManager.store(creep) === -1) {
+          return roleUpgrader.run(creep);
+        }
       }
     }
   }

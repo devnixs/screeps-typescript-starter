@@ -1,5 +1,6 @@
 import { sourceManager } from "utils/source-manager";
 import { profiler } from "../utils/profiler";
+import { findHostile } from "utils/finder";
 
 export interface ILongDistanceHarvesterMemory extends CreepMemory {
   home: string;
@@ -15,7 +16,15 @@ class RoleLongDistanceHarvester implements IRole {
 
     const totalCargoContent = _.sum(creep.carry);
 
-    if (totalCargoContent > 0) {
+    const enemy = findHostile(creep);
+    if (enemy && enemy.pos.getRangeTo(creep.pos.x, creep.pos.y) < 10) {
+      // flee
+      creep.say("RUN!");
+      creep.goTo(new RoomPosition(20, 20, memory.homeRoom));
+      return;
+    }
+
+    if (totalCargoContent >= creep.carryCapacity / 2) {
       const constructionSite = creep.pos.findClosestByRange(FIND_CONSTRUCTION_SITES, {
         filter: i => i.structureType === "container"
       });
@@ -48,6 +57,7 @@ class RoleLongDistanceHarvester implements IRole {
         })[0];
         if (container && creep.pos.getRangeTo(container) > 0) {
           creep.goTo(container);
+          return;
         }
 
         sourceManager.harvestEnergyFromSpecificSource(creep, source);

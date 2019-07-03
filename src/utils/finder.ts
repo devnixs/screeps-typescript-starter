@@ -86,16 +86,27 @@ let findNonEmptyResourcesInStore = function findNonEmptyResourcesInStore(store: 
   return Object.keys(store).filter(i => (store as any)[i] > 0) as any;
 };
 
+export function findHostile(creep: Creep) {
+  const hostile = creep.room.find(FIND_HOSTILE_CREEPS, {
+    filter: creep =>
+      creep.getActiveBodyparts(ATTACK) ||
+      creep.getActiveBodyparts(RANGED_ATTACK) ||
+      creep.getActiveBodyparts(WORK) ||
+      creep.getActiveBodyparts(HEAL)
+  })[0];
+  return hostile;
+}
+
 interface IRestPosition {
   X: number;
   Y: number;
   roomName: string;
 }
 
-let findRestSpot = function findRestSpot(creep: Creep) {
+let findRestSpot = function findRestSpot(creep: Creep, closeTo?: { x: number; y: number }) {
   const memory = (creep.memory as any) as { rest: IRestPosition };
 
-  if (!memory.rest) {
+  if (!memory.rest || memory.rest.roomName !== creep.room.name) {
     const specificRestFlag = Object.keys(Game.flags)
       .filter(i => i.indexOf(creep.memory.role + "_rest") === 0)
       .map(i => Game.flags[i])
@@ -111,7 +122,7 @@ let findRestSpot = function findRestSpot(creep: Creep) {
     if (restFlag) {
       memory.rest = { X: restFlag.pos.x, Y: restFlag.pos.y, roomName: creep.room.name };
     } else {
-      const startPosition = { x: _.random(5, 44), y: _.random(5, 44) };
+      const startPosition = closeTo || { x: _.random(5, 44), y: _.random(5, 44) };
       const emptySpot = findEmptySpotCloseTo(startPosition, creep.room);
       if (emptySpot) {
         memory.rest = { X: emptySpot.x, Y: emptySpot.y, roomName: creep.room.name };
@@ -150,7 +161,7 @@ let findEmptySpotCloseTo = function findEmptySpotCloseTo(pos: SimplePos, room: R
       for (let j = -1; j <= 1; j++) {
         const possibleX = current.x + i;
         const possibleY = current.y + j;
-        if (Math.abs(i) + Math.abs(j) === 1 && possibleX >= 0 && possibleY >= 0 && possibleX < 50 && possibleY < 50) {
+        if (Math.abs(i) + Math.abs(j) === 1 && possibleX >= 1 && possibleY >= 1 && possibleX < 49 && possibleY < 49) {
           if (!closedList.find(i => i.x === possibleX && i.y === possibleY)) {
             openList.push({ x: possibleX, y: possibleY });
           }

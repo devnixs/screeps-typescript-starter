@@ -43,19 +43,19 @@ export class Architect {
 
     var creations = [
       this.createInitialSpawn,
-      /*       this.createSourcesRoads,
+      this.createSourcesRoads,
       this.createControllerRoads,
-      this.createColonyRoads, */
+      this.createColonyRoads,
       this.createCloseToSpawn(STRUCTURE_EXTENSION),
-      // this.createContainers,
+      this.createContainers,
       this.createMineralRoads,
       this.createExtractor,
-      //  this.createCloseToSpawn(STRUCTURE_NUKER),
+      this.createCloseToSpawn(STRUCTURE_NUKER),
       this.createCloseToSpawn(STRUCTURE_TOWER),
-      //  this.createCloseToSpawn(STRUCTURE_STORAGE),
+      this.createCloseToSpawn(STRUCTURE_STORAGE),
       this.createCloseTo(this.room.storage, STRUCTURE_TERMINAL),
       this.createCloseToSpawn(STRUCTURE_SPAWN),
-      //  this.createCloseToSpawn(STRUCTURE_OBSERVER),
+      this.createCloseToSpawn(STRUCTURE_OBSERVER),
       //  this.createCloseToSpawn(STRUCTURE_POWER_SPAWN),
       this.createLinks
     ];

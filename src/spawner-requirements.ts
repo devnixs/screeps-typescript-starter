@@ -78,7 +78,7 @@ function initOneTimeValues() {
     var afterCpu = Game.cpu.getUsed();
     console.log("Used CPU: ", afterCpu - initialCpu);
     builderHelperTarget = colonyThatNeedsHelpBuilding.name;
-    builderHelperCount = 1;
+    builderHelperCount = 2;
     console.log("Found colonyThatNeedsHelpBuilding : ", colonyThatNeedsHelpBuilding.name);
     console.log("builderHelperTarget : ", colonyThatNeedsHelpBuilding.name);
     console.log("builderHelperSource : ", builderHelperSource);
@@ -111,21 +111,23 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
 
   const storageQuantity = spawn.room.storage ? _.sum(spawn.room.storage.store) : 0;
   const isStorageAlmostFull = storageQuantity > 900000;
+  const controllerLevel = spawn.room.controller ? spawn.room.controller.level : 0;
 
   let upgraderRatio: number;
   let maxUpgraderCount: number = 1;
 
-  var needsBuilder = false;
-  if (!spawn.room.memory.nextCheckNeedsBuilder || spawn.room.memory.nextCheckNeedsBuilder < Game.time) {
+  // OPTIMIZATION POSSIBLE
+  var needsBuilder = !!RoleBuilder.findTargetStructure(spawn.room, false);
+  /*   if (!spawn.room.memory.nextCheckNeedsBuilder || spawn.room.memory.nextCheckNeedsBuilder < Game.time) {
     var targetStructure = RoleBuilder.findTargetStructure(spawn.room, false);
     if (!targetStructure) {
-      spawn.room.memory.nextCheckNeedsBuilder = Game.time + 1000;
+      spawn.room.memory.nextCheckNeedsBuilder = Game.time + 100;
     } else {
-      spawn.room.memory.nextCheckNeedsBuilder = Game.time + 300;
+      spawn.room.memory.nextCheckNeedsBuilder = Game.time + 20;
       needsBuilder = true;
     }
   }
-
+ */
   if (links.length === 0) {
     if (constructionSites.length) {
       maxUpgraderCount = 1;
@@ -185,10 +187,10 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
         const ratio = totalEnergy / totalStorage;
         if (ratio >= 0.7) {
           upgraderRatio = 10;
-          maxUpgraderCount = 6;
+          maxUpgraderCount = 10;
         } else if (ratio >= 0.5) {
           upgraderRatio = 8;
-          maxUpgraderCount = 4;
+          maxUpgraderCount = 6;
         } else if (ratio >= 0.25) {
           upgraderRatio = 6;
           maxUpgraderCount = 2;
@@ -289,10 +291,10 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       role: "long-distance-harvester",
       maxCount: isStorageAlmostFull ? 0 : 1,
       countAllRooms: false,
-      exactBody: remote.hasTooMuchEnergy
-        ? [WORK, WORK, WORK, CARRY, MOVE, MOVE]
-        : [WORK, WORK, WORK, WORK, WORK, CARRY, MOVE, MOVE, MOVE],
+      exactBody: [WORK],
+      maxRepeat: remote.energyGeneration / HARVEST_POWER,
       subRole: remote.room + "-" + remote.x + "-" + remote.y,
+      bodyTemplatePrepend: [CARRY, MOVE, MOVE, MOVE],
       disableIfLowOnCpu: true,
       additionalMemory: {
         homeSpawnPosition: spawn.pos,
@@ -307,12 +309,11 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
   const remoteDefenders = spawn.room.memory.remotes
     .filter(i => i.hasEnemy)
     .map(remote => {
-      console.log("Creating defender with level ", remote.threatLevel);
       return {
         percentage: 20,
         role: "remote-defender",
         maxCount: 1,
-        bodyTemplate: [MOVE, MOVE, TOUGH, ATTACK, ATTACK, HEAL],
+        bodyTemplate: [MOVE, MOVE, MOVE, MOVE, TOUGH, ATTACK, ATTACK, HEAL],
         maxRepeat: Math.ceil(remote.threatLevel),
         sortBody: [TOUGH, ATTACK, MOVE, HEAL],
         subRole: remote.room,
@@ -331,7 +332,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       return {
         percentage: 20,
         role: "reserver",
-        maxCount: isStorageAlmostFull ? 0 : 1,
+        maxCount: isStorageAlmostFull || controllerLevel < 4 ? 0 : 1,
         countAllRooms: true,
         exactBody: [CLAIM, MOVE, CLAIM, MOVE],
         subRole: remote.room,
@@ -363,11 +364,17 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       percentage: 2,
       role: "builder",
       maxCount: builderHelperCount,
-      bodyTemplate: [MOVE, WORK, CARRY],
-      capMaxEnergy: 1900,
+      bodyTemplate: [MOVE, MOVE, WORK, CARRY],
       onlyRooms: builderHelperSource ? [builderHelperSource] : undefined,
       subRole: builderHelperTarget,
       disableIfLowOnCpu: true
+    },
+    {
+      percentage: 1,
+      role: "claimer",
+      maxCount: claimerCount,
+      onlyRooms: closestRoomToClaimTarget ? [closestRoomToClaimTarget] : undefined,
+      exactBody: [MOVE, CLAIM]
     },
     {
       percentage: 2,
@@ -481,7 +488,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     {
       percentage: 4,
       role: "long-distance-truck",
-      maxCount: isStorageAlmostFull ? 0 : Math.ceil(spawn.room.memory.remotes.length * 1.5),
+      maxCount: isStorageAlmostFull ? 0 : Math.ceil(spawn.room.memory.remotes.filter(i => i.energy > 0).length * 1.7),
       bodyTemplate: [MOVE, CARRY, CARRY],
       disableIfLowOnCpu: true,
       maxRepeat: 6,
@@ -511,16 +518,9 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       percentage: 1,
       role: "upgrader",
       maxCount: maxUpgraderCount,
-      bodyTemplate: [MOVE, WORK, WORK, WORK, WORK, CARRY],
+      bodyTemplate: controllerLevel < 4 ? [MOVE, WORK, CARRY] : [MOVE, WORK, WORK, WORK, WORK, CARRY],
       capMaxEnergy: 600 * upgraderRatio,
       disableIfLowOnCpu: true
-    },
-    {
-      percentage: 1,
-      role: "claimer",
-      maxCount: claimerCount,
-      onlyRooms: closestRoomToClaimTarget ? [closestRoomToClaimTarget] : undefined,
-      exactBody: [MOVE, CLAIM]
     },
     {
       percentage: 1,

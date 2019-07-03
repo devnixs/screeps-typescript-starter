@@ -1,4 +1,5 @@
 import { getUsername } from "utils/misc-utils";
+import { findHostile } from "utils/finder";
 
 export interface IReserverMemory extends CreepMemory {
   targetRoomName: string;
@@ -12,6 +13,14 @@ class RoleReserver implements IRole {
       creep.goTo(new RoomPosition(20, 20, memory.targetRoomName));
     } else {
       var ctrl = creep.room.controller;
+
+      const enemy = findHostile(creep);
+      if (enemy && enemy.pos.getRangeTo(creep.pos.x, creep.pos.y) < 10) {
+        // flee
+        creep.say("RUN!");
+        creep.goTo(new RoomPosition(20, 20, memory.homeRoom));
+        return;
+      }
 
       if (ctrl) {
         const reserveResult = creep.reserveController(ctrl);

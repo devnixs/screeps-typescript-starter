@@ -86,6 +86,10 @@ export class RemotesManager {
       i => -1 * i.energy
     );
 
+    if (!remotes.length) {
+      return;
+    }
+
     for (var index = 0; index < availableTrucks.length; index++) {
       const remote = remotes[index % remotes.length];
       const truck = availableTrucks[index];
@@ -104,13 +108,19 @@ export class RemotesManager {
         const enemy =
           targetRoom &&
           targetRoom.find(FIND_HOSTILE_CREEPS, {
-            filter: i => i.body.find(bodyPart => bodyPart.type === "attack" || bodyPart.type === "ranged_attack")
+            filter: i =>
+              i.body.find(
+                bodyPart => bodyPart.hits > 0 && (bodyPart.type === "attack" || bodyPart.type === "ranged_attack")
+              )
           })[0];
 
         remote.hasEnemy = !!enemy;
         if (enemy) {
           const threatLevel = _.sum(
             enemy.body.map(i => {
+              if (i.hits === 0) {
+                return;
+              }
               let threat = 0;
               if (i.type === "attack") {
                 threat = 0.4;
@@ -130,7 +140,11 @@ export class RemotesManager {
               return threat;
             })
           );
-          console.log("Found threat ", threatLevel, " at room " + remote.room);
+          targetRoom.visual.text("DANGER " + threatLevel, 20, 20, {
+            color: "white",
+            backgroundColor: "black",
+            opacity: 0.5
+          });
           remote.threatLevel = threatLevel;
         }
       });
@@ -167,7 +181,29 @@ export class RemotesManager {
           targetRoom.controller.reservation &&
           targetRoom.controller.reservation.ticksToEnd < 3000;
 
-        remote.needsReservation = isUnderThreshold;
+        const hasStorage = this.room.storage;
+
+        remote.needsReservation = isUnderThreshold && !hasStorage;
+      }
+    });
+  }
+
+  checkEnergyGeneration() {
+    if (Game.time % 10 > 0) {
+      return;
+    }
+    this.room.memory.remotes.forEach(remote => {
+      const targetRoom = Game.rooms[remote.room];
+      if (!targetRoom) {
+        remote.energyGeneration = 0;
+      } else {
+        const source = targetRoom.lookForAt("source", remote.x, remote.y)[0];
+        if (!source) {
+          remote.energyGeneration = 0;
+        } else {
+          const generation = Math.ceil(source.energyCapacity / 300);
+          remote.energyGeneration = generation;
+        }
       }
     });
   }

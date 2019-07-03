@@ -297,10 +297,7 @@ class SourceManager {
         transferResult = creep.transfer(targetStructure, RESOURCE_ENERGY);
       }
     } else {
-      const restSpot = findRestSpot(creep);
-      if (restSpot) {
-        creep.goTo(restSpot);
-      }
+      return -1;
     }
     return OK;
   }

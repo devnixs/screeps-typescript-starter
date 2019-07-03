@@ -2,6 +2,7 @@ import { sourceManager } from "../utils/source-manager";
 import { findRestSpot } from "utils/finder";
 import { profiler } from "../utils/profiler";
 import { wallsMinHp, rampartMinHp } from "constants/misc";
+import { roleHarvester } from "./harvester";
 
 interface IBuilderMemory extends CreepMemory {
   building: boolean;
@@ -65,6 +66,9 @@ export class RoleBuilder implements IRole {
         // suicide
         // console.log("Suiciding idle builder", creep.room.name);
         // creep.suicide();
+        if (creep.room.name != memory.homeRoom) {
+          return roleHarvester.run(creep);
+        }
         return this.goToRest(creep);
       }
     }

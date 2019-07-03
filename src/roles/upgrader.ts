@@ -15,7 +15,6 @@ class RoleUpgrader implements IRole {
     const memory: IUpgraderMemory = creep.memory as any;
     if (memory.upgrading && creep.carry.energy == 0) {
       memory.upgrading = false;
-      creep.say("🔄 harvest");
     }
 
     if (
@@ -23,7 +22,6 @@ class RoleUpgrader implements IRole {
       (isCloseToController ? creep.carry.energy > 0 : creep.carry.energy === creep.carryCapacity)
     ) {
       memory.upgrading = true;
-      creep.say("⚡ upgrade");
     }
 
     if (memory.upgrading) {
