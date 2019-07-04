@@ -63,13 +63,27 @@ interface RoomMemory {
   trucksCount: number | null;
 
   remotes: RemoteRoomDefinition[];
+
+  needsDefenders: DefenseDefinition[];
+
+  explorations: ExplorationDefinition[];
+}
+
+interface ExplorationDefinition {
+  roomName: string;
+  lastExplorationDate: number;
+
+  isEnemyRoom: boolean | undefined;
+  needsExploration: boolean;
+}
+
+interface DefenseDefinition {
+  threatLevel: number;
+  room: string;
 }
 
 interface RemoteRoomDefinition {
-  energyGeneration: number;
-  energyGeneration: number;
-  threatLevel: number;
-  hasTooMuchEnergy: boolean;
+  energyGeneration: number | undefined;
   needsReservation: boolean | undefined;
   room: string;
   x: number;
@@ -77,7 +91,6 @@ interface RemoteRoomDefinition {
 
   container: string | undefined;
   energy: number;
-  hasEnemy: boolean;
 }
 
 interface Vector {

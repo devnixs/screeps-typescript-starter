@@ -1,5 +1,6 @@
 import { sourceManager } from "utils/source-manager";
 import { profiler } from "../utils/profiler";
+import { findHostile } from "utils/finder";
 
 export interface ILongDistanceTruckMemory extends CreepMemory {
   depositing?: boolean;
@@ -13,6 +14,14 @@ class RoleLongDistanceTruck implements IRole {
     const memory: ILongDistanceTruckMemory = creep.memory as any;
 
     const totalCargoContent = _.sum(creep.carry);
+
+    const enemy = findHostile(creep);
+    if (enemy && enemy.pos.getRangeTo(creep.pos.x, creep.pos.y) < 10) {
+      // flee
+      creep.say("RUN!");
+      creep.goTo(new RoomPosition(20, 20, memory.homeRoom));
+      return;
+    }
 
     // if creep is bringing energy to a structure but has no energy left
     if (memory.depositing == true && totalCargoContent == 0) {

@@ -33,6 +33,7 @@ import { roleReserver } from "roles/reserver";
 import { roleLongDistanceTruck } from "roles/longdistancetruck";
 import { RemotesManager } from "remotes-manager";
 import { roleRemoteDefender } from "roles/remote-defender";
+import { DefenseManager } from "defense";
 
 // profiler.enable();
 
@@ -138,7 +139,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
     roleTower.runAllTowers();
 
     Architect.runForAllRooms();
-
+    DefenseManager.runForAllRooms();
     Observer.runAllObservers();
     RolePestControl.checkReconstruction();
     SafeModeActivator.activeSafeModeIfNecessary();

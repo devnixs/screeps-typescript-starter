@@ -26,7 +26,6 @@ export class RemotesManager {
     this.assignTrucks();
     this.createRoads();
     this.checkReservation();
-    this.checkEnemy();
     // this.checkHasTooMuchEnergy();
     this.checkEnergyGeneration();
   }
@@ -101,57 +100,6 @@ export class RemotesManager {
     }
   }
 
-  checkEnemy() {
-    if (Game.time % 3 === 0) {
-      this.room.memory.remotes.forEach(remote => {
-        const targetRoom = Game.rooms[remote.room];
-
-        const enemy =
-          targetRoom &&
-          targetRoom.find(FIND_HOSTILE_CREEPS, {
-            filter: i =>
-              i.body.find(
-                bodyPart => bodyPart.hits > 0 && (bodyPart.type === "attack" || bodyPart.type === "ranged_attack")
-              )
-          })[0];
-
-        remote.hasEnemy = !!enemy;
-        if (enemy) {
-          const threatLevel = _.sum(
-            enemy.body.map(i => {
-              if (i.hits === 0) {
-                return;
-              }
-              let threat = 0;
-              if (i.type === "attack") {
-                threat = 0.4;
-              }
-              if (i.type === "ranged_attack") {
-                threat = 0.4;
-              }
-              if (i.type === "heal") {
-                threat = 0.4;
-              }
-              if (i.type === "tough") {
-                threat = 0.4;
-              }
-              if (i.boost) {
-                threat = threat * 2;
-              }
-              return threat;
-            })
-          );
-          targetRoom.visual.text("DANGER " + threatLevel, 20, 20, {
-            color: "white",
-            backgroundColor: "black",
-            opacity: 0.5
-          });
-          remote.threatLevel = threatLevel;
-        }
-      });
-    }
-  }
-
   availableRemoteTrucks() {
     const allCreeps = _.values(Game.creeps) as Creep[];
     return allCreeps.filter(
@@ -202,31 +150,6 @@ export class RemotesManager {
         } else {
           const generation = Math.ceil(source.energyCapacity / 300);
           remote.energyGeneration = generation;
-        }
-      }
-    });
-  }
-
-  checkHasTooMuchEnergy() {
-    if (Game.time % 10 > 0) {
-      return;
-    }
-    this.room.memory.remotes.forEach(remote => {
-      const targetRoom = Game.rooms[remote.room];
-      if (!targetRoom) {
-        remote.hasTooMuchEnergy = false;
-      } else {
-        const container = Game.getObjectById(remote.container) as StructureContainer | null;
-        if (!container) {
-          remote.hasTooMuchEnergy = false;
-        } else {
-          const droppedEnergy = container.pos.lookFor(LOOK_RESOURCES).filter(i => i.resourceType === "energy")[0];
-          const droppedEnergyAmount = droppedEnergy ? droppedEnergy.amount : 0;
-
-          const energyInContainer = container.store.energy;
-          const totalEnergyWaiting = energyInContainer + droppedEnergyAmount;
-
-          remote.hasTooMuchEnergy = totalEnergyWaiting > 3000;
         }
       }
     });
