@@ -86,7 +86,7 @@ class SourceManager {
   pickupDroppedEnergy(creep: Creep) {
     const droppedEnergy = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES, {
       filter: i =>
-        i.resourceType === RESOURCE_ENERGY && i.pos.getRangeTo(creep.pos.x, creep.pos.y) <= 5 && i.amount >= 200
+        i.resourceType === RESOURCE_ENERGY && i.pos.getRangeTo(creep.pos.x, creep.pos.y) <= 5 && i.amount >= 300
     });
     if (droppedEnergy) {
       if (creep.pickup(droppedEnergy) === ERR_NOT_IN_RANGE) {

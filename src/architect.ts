@@ -258,6 +258,21 @@ export class Architect {
 
   createCloseToSpawn(structure: BuildableStructureConstant) {
     return () => {
+      const targetStructureFlag = Game.flags["target_" + STRUCTURE_STORAGE];
+      if (targetStructureFlag && targetStructureFlag.room && targetStructureFlag.room.name === this.room.name) {
+        const creationResult = this.room.createConstructionSite(
+          targetStructureFlag.pos.x,
+          targetStructureFlag.pos.y,
+          structure
+        );
+
+        if (creationResult === OK) {
+          targetStructureFlag.remove();
+        }
+
+        return creationResult;
+      }
+
       const spot = this.getEmptySpotCloseToSpawn();
       if (spot) {
         return this.room.createConstructionSite(spot.x, spot.y, structure);

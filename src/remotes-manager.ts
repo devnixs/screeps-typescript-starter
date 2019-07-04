@@ -27,7 +27,8 @@ export class RemotesManager {
     this.createRoads();
     this.checkReservation();
     this.checkEnemy();
-    this.checkHasTooMuchEnergy();
+    // this.checkHasTooMuchEnergy();
+    this.checkEnergyGeneration();
   }
 
   createRoads() {
@@ -96,7 +97,7 @@ export class RemotesManager {
 
       const memory = truck.memory as ILongDistanceTruckMemory;
       memory.targetContainer = remote.container;
-      truck.say(remote.room + " " + remote.energy);
+      truck.say("G" + remote.energy);
     }
   }
 
@@ -173,17 +174,15 @@ export class RemotesManager {
     }
     this.room.memory.remotes.forEach(remote => {
       const targetRoom = Game.rooms[remote.room];
-      if (!targetRoom) {
+      if (!targetRoom || !targetRoom.controller) {
         remote.needsReservation = false;
       } else {
         const isUnderThreshold =
-          targetRoom.controller &&
-          targetRoom.controller.reservation &&
-          targetRoom.controller.reservation.ticksToEnd < 3000;
+          !targetRoom.controller.reservation || targetRoom.controller.reservation.ticksToEnd < 3000;
 
-        const hasStorage = this.room.storage;
+        // const hasStorage = this.room.storage;
 
-        remote.needsReservation = isUnderThreshold && !hasStorage;
+        remote.needsReservation = !!isUnderThreshold; // && !hasStorage;
       }
     });
   }
@@ -275,10 +274,14 @@ export class RemotesManager {
       }
 
       if (!container) {
-        const emptySpot = findEmptySpotCloseTo({ x: source.pos.x, y: source.pos.y }, targetRoom);
-        if (emptySpot) {
-          targetRoom.createConstructionSite(emptySpot.x, emptySpot.y, STRUCTURE_CONTAINER);
-        }
+        const homeSpawn = this.room.find(FIND_MY_SPAWNS)[0];
+
+        this.iterateFromAtoB(homeSpawn.pos, new RoomPosition(remote.x, remote.y, remote.room), (pos, index, isLast) => {
+          const room = Game.rooms[pos.roomName];
+          if (room && isLast) {
+            targetRoom.createConstructionSite(pos.x, pos.y, STRUCTURE_CONTAINER);
+          }
+        });
       } else {
         remote.container = container.id;
       }

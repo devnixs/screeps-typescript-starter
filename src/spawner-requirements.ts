@@ -2,14 +2,13 @@ import { ILongDistanceHarvesterMemory } from "roles/longDistanceHarvester";
 import { IDismantlerMemory } from "roles/dismantler";
 import { requiredFightersForAnAttack, requiredDismantlersForAnAttack } from "./constants/misc";
 import { requiredHealersForAnAttack } from "./constants/misc";
-import { profiler } from "./utils/profiler";
-import { IHarvesterMemory } from "./roles/harvester";
 import { IStaticHarvesterMemory } from "roles/static-harvester";
 import { findClosestRoom } from "utils/finder";
 import { RoleBuilder } from "roles/builder";
 import { IReserverMemory } from "roles/reserver";
 import { ILongDistanceTruckMemory } from "roles/longdistancetruck";
 import { IRemoteDefenderMemory } from "roles/remote-defender";
+import { getMyRooms } from "utils/misc-utils";
 
 export interface RoleRequirement {
   role: roles;
@@ -68,11 +67,12 @@ function initOneTimeValues() {
     console.log("claimerCount : ", claimerCount);
   }
 
+  const myRooms = getMyRooms();
   let colonyThatNeedsHelpBuilding = Object.keys(Game.rooms)
     .map(i => Game.rooms[i])
     .filter(i => i.controller && i.controller.my && i.controller.level === 1)[0];
 
-  if (colonyThatNeedsHelpBuilding) {
+  if (colonyThatNeedsHelpBuilding && myRooms.length > 1) {
     var initialCpu = Game.cpu.getUsed();
     builderHelperSource = findClosestRoom(colonyThatNeedsHelpBuilding.name);
     var afterCpu = Game.cpu.getUsed();
@@ -149,22 +149,22 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     if (spawn.room.storage) {
       const availableEnergy = spawn.room.storage.store.energy;
       if (availableEnergy > 700000) {
-        upgraderRatio = 10;
+        upgraderRatio = 50;
         maxUpgraderCount = 5;
       } else if (availableEnergy > 500000) {
+        upgraderRatio = 30;
+        maxUpgraderCount = 3;
+      } else if (availableEnergy > 300000) {
+        upgraderRatio = 20;
+        maxUpgraderCount = 3;
+      } else if (availableEnergy > 200000) {
+        upgraderRatio = 12;
+        maxUpgraderCount = 3;
+      } else if (availableEnergy > 150000) {
         upgraderRatio = 8;
         maxUpgraderCount = 2;
-      } else if (availableEnergy > 300000) {
-        upgraderRatio = 6;
-        maxUpgraderCount = 1;
-      } else if (availableEnergy > 200000) {
-        upgraderRatio = 4;
-        maxUpgraderCount = 1;
-      } else if (availableEnergy > 150000) {
-        upgraderRatio = 3;
-        maxUpgraderCount = 1;
       } else if (availableEnergy > 20000) {
-        upgraderRatio = 2;
+        upgraderRatio = 4;
         maxUpgraderCount = 1;
       } else if (availableEnergy > 10000) {
         upgraderRatio = 1;
@@ -291,7 +291,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       role: "long-distance-harvester",
       maxCount: isStorageAlmostFull ? 0 : 1,
       countAllRooms: false,
-      exactBody: [WORK],
+      bodyTemplate: [WORK],
       maxRepeat: remote.energyGeneration / HARVEST_POWER,
       subRole: remote.room + "-" + remote.x + "-" + remote.y,
       bodyTemplatePrepend: [CARRY, MOVE, MOVE, MOVE],
@@ -332,9 +332,9 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       return {
         percentage: 20,
         role: "reserver",
-        maxCount: isStorageAlmostFull || controllerLevel < 4 ? 0 : 1,
-        countAllRooms: true,
-        exactBody: [CLAIM, MOVE, CLAIM, MOVE],
+        maxCount: isStorageAlmostFull ? 0 : 1,
+        bodyTemplate: [CLAIM, MOVE],
+        maxRepeat: 2,
         subRole: remote.room,
         disableIfLowOnCpu: true,
         additionalMemory: {
@@ -514,14 +514,24 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
         targetRoomName: "E2S15"
       } as Partial<IReserverMemory>
     }, */
-    {
-      percentage: 1,
-      role: "upgrader",
-      maxCount: maxUpgraderCount,
-      bodyTemplate: controllerLevel < 4 ? [MOVE, WORK, CARRY] : [MOVE, WORK, WORK, WORK, WORK, CARRY],
-      capMaxEnergy: 600 * upgraderRatio,
-      disableIfLowOnCpu: true
-    },
+    controllerLevel < 4
+      ? {
+          percentage: 1,
+          role: "upgrader",
+          maxCount: maxUpgraderCount,
+          bodyTemplate: [MOVE, WORK, CARRY],
+          capMaxEnergy: 600 * upgraderRatio,
+          disableIfLowOnCpu: true
+        }
+      : {
+          percentage: 1,
+          role: "upgrader",
+          maxCount: maxUpgraderCount,
+          bodyTemplate: [WORK],
+          bodyTemplatePrepend: [MOVE, MOVE, CARRY, CARRY],
+          maxRepeat: upgraderRatio,
+          disableIfLowOnCpu: true
+        },
     {
       percentage: 1,
       role: "pickaboo",

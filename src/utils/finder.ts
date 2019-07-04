@@ -161,7 +161,7 @@ let findEmptySpotCloseTo = function findEmptySpotCloseTo(pos: SimplePos, room: R
       for (let j = -1; j <= 1; j++) {
         const possibleX = current.x + i;
         const possibleY = current.y + j;
-        if (Math.abs(i) + Math.abs(j) === 1 && possibleX >= 1 && possibleY >= 1 && possibleX < 49 && possibleY < 49) {
+        if ((i !== 0 || j !== 0) && possibleX >= 1 && possibleY >= 1 && possibleX < 49 && possibleY < 49) {
           if (!closedList.find(i => i.x === possibleX && i.y === possibleY)) {
             openList.push({ x: possibleX, y: possibleY });
           }

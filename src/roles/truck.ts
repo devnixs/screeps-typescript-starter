@@ -277,7 +277,7 @@ class RoleTruck implements IRole {
     if (
       droppedResource &&
       droppedResource.amount > 100 &&
-      droppedResource.amount > creep.pos.getRangeTo(droppedResource.pos.x, droppedResource.pos.y) * 20
+      droppedResource.amount > creep.pos.getRangeTo(droppedResource.pos.x, droppedResource.pos.y) * 10
     ) {
       const job = this.createRetrievalJob({
         amount: droppedResource.amount,
