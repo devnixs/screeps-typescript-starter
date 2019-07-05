@@ -1,3 +1,5 @@
+import { profiler } from "./profiler";
+
 export const ROOMTYPE_SOURCEKEEPER = "SK";
 export const ROOMTYPE_CORE = "CORE";
 export const ROOMTYPE_CONTROLLER = "CTRL";
@@ -221,3 +223,5 @@ export class Cartographer {
     };
   }
 }
+
+profiler.registerClass(Cartographer, "Cartographer");

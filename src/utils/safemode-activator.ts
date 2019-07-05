@@ -1,3 +1,5 @@
+import { profiler } from "./profiler";
+
 export class SafeModeActivator {
   static activeSafeModeIfNecessary() {
     if (Game.time % 2 > 0) {
@@ -55,3 +57,5 @@ export class SafeModeActivator {
     });
   }
 }
+
+profiler.registerClass(SafeModeActivator, "SafeModeActivator");

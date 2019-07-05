@@ -54,9 +54,11 @@ function initOneTimeValues() {
     lastInitializationTick = Game.time;
   }
 
+  const canColonize = Game.gcl.level > getMyRooms().length;
   const claimFlag = Game.flags["claimer_target"];
   if (
     claimFlag &&
+    canColonize &&
     Game.map.isRoomAvailable(claimFlag.pos.roomName) &&
     !(claimFlag.room && claimFlag.room.controller && claimFlag.room.controller.my)
   ) {
@@ -73,7 +75,7 @@ function initOneTimeValues() {
     .filter(
       i =>
         (i.controller && i.controller.my && i.controller.level === 1) ||
-        i.find(FIND_FLAGS, { filter: flag => flag.name === "claimer_target" }).length
+        (i.find(FIND_FLAGS, { filter: flag => flag.name === "claimer_target" }).length && canColonize)
     )[0];
 
   if (colonyThatNeedsHelpBuilding && myRooms.length > 1) {
@@ -289,26 +291,28 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
 
   const dismantlerFlag = Game.flags["dismantler_attack"];
 
-  const remoteHarvesters = spawn.room.memory.remotes.map(remote => {
-    return {
-      percentage: 4,
-      role: "long-distance-harvester",
-      maxCount: isStorageAlmostFull ? 0 : 1,
-      countAllRooms: false,
-      bodyTemplate: [WORK],
-      maxRepeat: remote.energyGeneration / HARVEST_POWER,
-      subRole: remote.room + "-" + remote.x + "-" + remote.y,
-      bodyTemplatePrepend: [CARRY, MOVE, MOVE, MOVE],
-      disableIfLowOnCpu: true,
-      additionalMemory: {
-        homeSpawnPosition: spawn.pos,
-        home: spawn.pos.roomName,
-        targetRoomName: remote.room,
-        targetRoomX: remote.x,
-        targetRoomY: remote.y
-      } as Partial<ILongDistanceHarvesterMemory>
-    } as RoleRequirement;
-  });
+  const remoteHarvesters = spawn.room.memory.remotes
+    .filter(i => !i.disabled)
+    .map(remote => {
+      return {
+        percentage: 4,
+        role: "long-distance-harvester",
+        maxCount: isStorageAlmostFull ? 0 : 1,
+        countAllRooms: false,
+        bodyTemplate: [WORK],
+        maxRepeat: remote.energyGeneration / HARVEST_POWER,
+        subRole: remote.room + "-" + remote.x + "-" + remote.y,
+        bodyTemplatePrepend: [CARRY, MOVE, MOVE, MOVE],
+        disableIfLowOnCpu: true,
+        additionalMemory: {
+          homeSpawnPosition: spawn.pos,
+          home: spawn.pos.roomName,
+          targetRoomName: remote.room,
+          targetRoomX: remote.x,
+          targetRoomY: remote.y
+        } as Partial<ILongDistanceHarvesterMemory>
+      } as RoleRequirement;
+    });
 
   const remoteDefenders = (spawn.room.memory.needsDefenders || []).map(remote => {
     return {
@@ -328,7 +332,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
   });
 
   const reservers = spawn.room.memory.remotes
-    .filter(i => i.needsReservation)
+    .filter(i => i.needsReservation && !i.disabled)
     .map(remote => {
       return {
         percentage: 20,
@@ -489,7 +493,14 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     {
       percentage: 4,
       role: "long-distance-truck",
-      maxCount: isStorageAlmostFull ? 0 : Math.ceil(spawn.room.memory.remotes.filter(i => i.energy > 0).length * 1.7),
+      maxCount: isStorageAlmostFull
+        ? 0
+        : Math.ceil(
+            spawn.room.memory.remotes
+              .filter(i => i.energy > 0 && !i.disabled)
+              .map(i => i.distance / 30) // 1 truck for every 30 distance
+              .reduce((acc, i) => acc + i, 0)
+          ),
       bodyTemplate: [MOVE, CARRY, CARRY],
       disableIfLowOnCpu: true,
       maxRepeat: 6,
@@ -544,6 +555,13 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       capMaxEnergy: 60,
       onlyRooms: ["E27N47"],
       additionalMemory: {} as IDismantlerMemory
+    },
+    {
+      exactBody: [MOVE],
+      percentage: 1,
+      role: "scout",
+      maxCount: (spawn.room.memory.explorations || []).find(i => i.needsExploration) ? 1 : 0,
+      countAllRooms: false
     }
   ];
 }

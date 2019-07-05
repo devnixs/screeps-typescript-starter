@@ -1,6 +1,7 @@
 import { requiredHealersForAnAttack } from "../constants/misc";
 import { findRestSpot, findHostile } from "utils/finder";
 import { boostCreep } from "utils/boost-manager";
+import { profiler } from "utils/profiler";
 
 export interface IRemoteDefenderMemory extends CreepMemory {
   status: "healing" | "attacking";
@@ -146,4 +147,5 @@ class RoleRemoteDefender implements IRole {
   }
 }
 
+profiler.registerClass(RoleRemoteDefender, "RoleRemoteDefender");
 export const roleRemoteDefender = new RoleRemoteDefender();

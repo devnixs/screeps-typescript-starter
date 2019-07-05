@@ -35,7 +35,7 @@ export class DefenseManager {
   }
 
   checkRemotes() {
-    _.uniq(this.room.memory.remotes.map(i => i.room)).forEach(room => {
+    _.uniq(this.room.memory.remotes.filter(i => !i.disabled).map(i => i.room)).forEach(room => {
       const remoteRoom = Game.rooms[room];
       if (remoteRoom) {
         this.addDefenders(remoteRoom);

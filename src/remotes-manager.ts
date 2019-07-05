@@ -1,6 +1,7 @@
 import { getMyRooms } from "utils/misc-utils";
 import { findEmptySpotCloseTo } from "utils/finder";
 import { ILongDistanceTruckMemory } from "roles/longdistancetruck";
+import { profiler } from "utils/profiler";
 
 export class RemotesManager {
   constructor(private room: Room) {}
@@ -28,10 +29,42 @@ export class RemotesManager {
     this.checkReservation();
     // this.checkHasTooMuchEnergy();
     this.checkEnergyGeneration();
+    this.disableNotRentableRooms();
+  }
+
+  disableNotRentableRooms() {
+    if (Game.time % 1000 > 0) {
+      return;
+    }
+
+    const spawns = this.room.find(FIND_MY_SPAWNS).length;
+    const maxTravelAllowed = spawns * 300 + 100;
+
+    // enable all
+    this.room.memory.remotes.forEach(i => (i.disabled = false));
+
+    let remotes = this.getEnabledRemotes();
+    let currentTravel = _.sum(remotes.map(i => i.distance));
+
+    while (currentTravel > maxTravelAllowed) {
+      // disable worst room
+      remotes = this.getEnabledRemotes();
+      let remotesSorted = _.sortBy(remotes, i => -1 * i.distance);
+
+      const worstRemote = remotesSorted[0];
+      remotes.filter(i => i.room === worstRemote.room).forEach(remote => (remote.disabled = true));
+
+      remotes = this.getEnabledRemotes();
+      currentTravel = _.sum(remotes.map(i => i.distance));
+    }
+  }
+
+  getEnabledRemotes() {
+    return this.room.memory.remotes.filter(i => !i.disabled);
   }
 
   createRoads() {
-    const remotes = this.room.memory.remotes;
+    const remotes = this.getEnabledRemotes();
     if (Game.time % 1000 === 0 && remotes.length) {
       const homeSpawn = this.room.find(FIND_MY_SPAWNS)[0];
 
@@ -78,7 +111,7 @@ export class RemotesManager {
     );
 
     const remotes = _.sortBy(
-      this.room.memory.remotes.filter(
+      this.getEnabledRemotes().filter(
         i =>
           i.container &&
           trucks.filter(t => (t.memory as ILongDistanceTruckMemory).targetContainer === i.container).length < 3
@@ -120,7 +153,7 @@ export class RemotesManager {
     if (Game.time % 10 > 0) {
       return;
     }
-    this.room.memory.remotes.forEach(remote => {
+    this.getEnabledRemotes().forEach(remote => {
       const targetRoom = Game.rooms[remote.room];
       if (!targetRoom || !targetRoom.controller) {
         remote.needsReservation = false;
@@ -130,7 +163,7 @@ export class RemotesManager {
 
         // const hasStorage = this.room.storage;
 
-        remote.needsReservation = !!isUnderThreshold; // && !hasStorage;
+        remote.needsReservation = !!isUnderThreshold;
       }
     });
   }
@@ -139,7 +172,7 @@ export class RemotesManager {
     if (Game.time % 10 > 0) {
       return;
     }
-    this.room.memory.remotes.forEach(remote => {
+    this.getEnabledRemotes().forEach(remote => {
       const targetRoom = Game.rooms[remote.room];
       if (!targetRoom) {
         remote.energyGeneration = 0;
@@ -216,3 +249,5 @@ export class RemotesManager {
     }
   }
 }
+
+profiler.registerClass(RemotesManager, "RemotesManager");

@@ -21,6 +21,7 @@ type roles =
   | "attacker"
   | "pestcontrol"
   | "reserver"
+  | "scout"
   | "dismantler";
 
 // memory extension samples
@@ -67,6 +68,9 @@ interface RoomMemory {
   needsDefenders: DefenseDefinition[];
 
   explorations: ExplorationDefinition[];
+
+  lastProgress: number | undefined;
+  lastProgressChecktime: number;
 }
 
 interface ExplorationDefinition {
@@ -83,7 +87,8 @@ interface DefenseDefinition {
 }
 
 interface RemoteRoomDefinition {
-  energyGeneration: number | undefined;
+  distance: number;
+  energyGeneration: number;
   needsReservation: boolean | undefined;
   room: string;
   x: number;
@@ -91,6 +96,8 @@ interface RemoteRoomDefinition {
 
   container: string | undefined;
   energy: number;
+
+  disabled: boolean;
 }
 
 interface Vector {

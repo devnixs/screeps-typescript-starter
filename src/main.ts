@@ -15,6 +15,7 @@ import { rolePickaBoo } from "roles/pickaboo";
 import { roleClaimer } from "roles/claimer";
 
 import "./utils/navigator";
+import "./utils/stats";
 import { roleMiner } from "roles/miner";
 import { roleHealer } from "roles/healer";
 import { Chemist } from "chemist";
@@ -34,6 +35,8 @@ import { roleLongDistanceTruck } from "roles/longdistancetruck";
 import { RemotesManager } from "remotes-manager";
 import { roleRemoteDefender } from "roles/remote-defender";
 import { DefenseManager } from "defense";
+import { ExplorationManager } from "exploration";
+import { roleScout } from "roles/scout";
 
 // profiler.enable();
 
@@ -54,7 +57,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
     spawner.run();
     Chemist.runForAllRooms();
     LinkManager.runForAllRooms();
-    Merchant.runForAllRooms();
+    // Merchant.runForAllRooms();
     RemotesManager.runForAllRooms();
 
     let error: any = null;
@@ -130,8 +133,11 @@ export const loop = ErrorMapper.wrapLoop(() => {
         if (memory.role == "remote-defender") {
           roleRemoteDefender.run(creep);
         }
+        if (memory.role == "scout") {
+          roleScout.run(creep);
+        }
       } catch (e) {
-        console.error(e, creep.name);
+        console.log(e, creep.name);
         error = e;
       }
     }
@@ -141,6 +147,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
     Architect.runForAllRooms();
     DefenseManager.runForAllRooms();
     Observer.runAllObservers();
+    ExplorationManager.runForAllRooms();
     RolePestControl.checkReconstruction();
     SafeModeActivator.activeSafeModeIfNecessary();
 

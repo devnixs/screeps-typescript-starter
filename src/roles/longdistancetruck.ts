@@ -40,7 +40,11 @@ class RoleLongDistanceTruck implements IRole {
     if (memory.depositing == true) {
       // first let's see if a road needs to be built
       const constructionSite = creep.pos.findClosestByRange(FIND_CONSTRUCTION_SITES);
-      if (constructionSite && constructionSite.pos.inRangeTo(creep, 5)) {
+      if (
+        constructionSite &&
+        constructionSite.pos.inRangeTo(creep, 5) &&
+        constructionSite.structureType !== "rampart"
+      ) {
         if (creep.build(constructionSite) === ERR_NOT_IN_RANGE) {
           creep.goTo(constructionSite);
         }
