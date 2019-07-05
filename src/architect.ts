@@ -46,14 +46,14 @@ export class Architect {
       this.createSourcesRoads,
       this.createControllerRoads,
       this.createColonyRoads,
-      this.createCloseToSpawn(STRUCTURE_STORAGE),
+      this.createStorage,
       this.createCloseToSpawn(STRUCTURE_EXTENSION),
       this.createContainers,
       this.createMineralRoads,
       this.createExtractor,
       this.createCloseToSpawn(STRUCTURE_NUKER),
       this.createCloseToSpawn(STRUCTURE_TOWER),
-      this.createCloseTo(this.room.storage, STRUCTURE_TERMINAL),
+      this.createTerminal,
       this.createCloseToSpawn(STRUCTURE_SPAWN),
       this.createCloseToSpawn(STRUCTURE_OBSERVER),
       //  this.createCloseToSpawn(STRUCTURE_POWER_SPAWN),
@@ -316,6 +316,131 @@ export class Architect {
     }
 
     return -1;
+  }
+
+  createStorage() {
+    if (!this.room.controller || this.room.controller.level < 5 || this.room.storage) {
+      return -1;
+    }
+
+    const spawn = this.room.find(FIND_MY_SPAWNS)[0];
+    if (!spawn) {
+      return -1;
+    }
+
+    let position: RoomPosition | undefined;
+
+    if (
+      this.room.memory.storagePlannedLocation &&
+      this.room.memory.storagePlannedLocation.setupTime > Game.time - 1000
+    ) {
+      position = new RoomPosition(
+        this.room.memory.storagePlannedLocation.x,
+        this.room.memory.storagePlannedLocation.y,
+        this.room.name
+      );
+      delete this.room.memory.storagePlannedLocation;
+    } else {
+      position = PathFinder.search(spawn.pos, this.room.controller.pos).path.find(i =>
+        this.room.controller ? i.getRangeTo(this.room.controller.pos) === 3 : false
+      );
+      if (!position) {
+        return -1;
+      }
+      const destroyedSomethingAroundPosition = this.destroyAroundPosition(position);
+      if (destroyedSomethingAroundPosition === OK) {
+        // wait for next tick
+        this.room.memory.storagePlannedLocation = { x: position.x, y: position.y, setupTime: Game.time };
+        return OK;
+      }
+    }
+
+    let constructionResult = this.room.createConstructionSite(position.x, position.y, STRUCTURE_STORAGE);
+    if (constructionResult === OK) {
+      this.buildRoadsAroundPosition(position);
+      return OK;
+    } else {
+      const emptySpot = findEmptySpotCloseTo(position, this.room);
+      if (emptySpot) {
+        constructionResult = this.room.createConstructionSite(position.x, position.y, STRUCTURE_STORAGE);
+        if (constructionResult === OK) {
+          this.buildRoadsAroundPosition(position);
+          return OK;
+        } else {
+          return -1;
+        }
+      } else {
+        return -1;
+      }
+    }
+  }
+
+  destroyAroundPosition(pos: RoomPosition) {
+    let destroyedOne = false;
+    for (let i = -1; i <= 1; i++) {
+      for (let j = -1; j <= 1; j++) {
+        const targetX = pos.x + i;
+        const targetY = pos.y + i;
+        if (Math.abs(i) + Math.abs(j) <= 1 && targetX >= 1 && targetX < 49 && targetY >= 1 && targetY < 49) {
+          const target = new RoomPosition(targetX, targetY, pos.roomName);
+          const objsAtThisLocation = this.room.lookForAt(LOOK_STRUCTURES, target);
+          objsAtThisLocation.forEach(obj => {
+            console.log("Destroying ", obj.structureType, "at", obj.pos.x, obj.pos.y, obj.pos.roomName);
+            destroyedOne = destroyedOne || obj.destroy() === OK;
+          });
+        }
+      }
+    }
+    return destroyedOne ? OK : -1;
+  }
+
+  buildRoadsAroundPosition(pos: RoomPosition) {
+    for (let i = -1; i <= 1; i++) {
+      for (let j = -1; j <= 1; j++) {
+        const targetX = pos.x + i;
+        const targetY = pos.y + i;
+        if (Math.abs(i) + Math.abs(j) === 1 && targetX >= 1 && targetX < 49 && targetY >= 1 && targetY < 49) {
+          this.room.createConstructionSite(pos.x + i, pos.y + j, STRUCTURE_ROAD);
+        }
+      }
+    }
+  }
+
+  createTerminal() {
+    if (this.room.terminal || !this.room.storage || (this.room.controller && this.room.controller.level < 6)) {
+      return -1;
+    }
+
+    if (
+      this.room.memory.terminalPlannedLocation &&
+      this.room.memory.terminalPlannedLocation.setupTime > Game.time - 1000
+    ) {
+      return this.room.createConstructionSite(
+        this.room.memory.terminalPlannedLocation.x,
+        this.room.memory.terminalPlannedLocation.y,
+        STRUCTURE_TERMINAL
+      );
+    } else {
+      const closestExtension = this.room.storage.pos.findClosestByRange(FIND_MY_STRUCTURES, {
+        filter: i => i.structureType === "extension"
+      });
+
+      if (closestExtension) {
+        const result = closestExtension.destroy();
+        if (result === OK) {
+          this.room.memory.terminalPlannedLocation = {
+            x: closestExtension.pos.x,
+            y: closestExtension.pos.y,
+            setupTime: Game.time
+          };
+          return OK;
+        } else {
+          return -1;
+        }
+      } else {
+        return -1;
+      }
+    }
   }
 
   createContainers() {

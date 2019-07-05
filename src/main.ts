@@ -57,7 +57,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
     spawner.run();
     Chemist.runForAllRooms();
     LinkManager.runForAllRooms();
-    // Merchant.runForAllRooms();
+    Merchant.runForAllRooms();
     RemotesManager.runForAllRooms();
 
     let error: any = null;

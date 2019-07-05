@@ -1,9 +1,11 @@
 import { desiredStocks, buyableElements, desiredEnergyInTerminal, sellableElements } from "constants/misc";
 import { profiler } from "./utils/profiler";
+import { getMyRooms } from "utils/misc-utils";
 
 const minCredits = 10000;
 const minTradeCreditAmount = 200;
 const maxTradeAmount = 500;
+const maxTransferSize = 1000;
 
 export class Merchant {
   constructor(private room: Room) {}
@@ -22,14 +24,14 @@ export class Merchant {
       i =>
         i !== "energy" &&
         sellableElements.indexOf(i) >= 0 &&
-        this.getResource(terminal.store, i) > this.getResource(desiredStocks, i) &&
+        this.getResource(terminal.store, i) > this.getResource(desiredStocks, i) * 10 &&
         this.getResource(terminal.store, i) > 300
     ) as ResourceConstant | undefined;
-
+    /*
     const underSupply = buyableElements.find(
       i => this.getResource(terminal.store, i) < this.getResource(desiredStocks, i)
     ) as ResourceConstant | undefined;
-
+ */
     if (overSupply) {
       // console.log("Oversupply", this.room.name, overSupply);
       const overSupplyAmount =
@@ -45,6 +47,8 @@ export class Merchant {
       }
     }
 
+    // buying is disabled
+    /*
     if (underSupply) {
       if (Game.market.credits < minCredits + minTradeCreditAmount) {
         return;
@@ -58,7 +62,7 @@ export class Merchant {
       if (buyResult === OK) {
         return;
       }
-    }
+    } */
   }
 
   sellResource(resource: ResourceConstant, amount: number) {
@@ -109,65 +113,79 @@ export class Merchant {
   }
 
   static transferExcessiveResources() {
-    const allRooms = Object.keys(Game.rooms).map(i => Game.rooms[i]);
-    var oversuppliedRooms = allRooms.filter(
-      i =>
-        i.storage &&
-        i.storage.store.energy >= i.storage.storeCapacity * 0.75 &&
-        i.controller &&
-        i.controller.my &&
-        i.controller.level === 8 &&
-        i.terminal &&
-        i.terminal.cooldown === 0 &&
-        i.terminal.store.energy >= (2 / 3) * desiredEnergyInTerminal
+    const myRooms = getMyRooms().filter(i => i.controller && i.terminal);
+    if (myRooms.length < 2) {
+      return;
+    }
+    const allResourcesKeys = _.uniq(
+      _.flatten(
+        myRooms.map(room => {
+          const terminal = room.terminal as StructureTerminal;
+          return Object.keys(terminal.store).filter(i => (terminal.store as any)[i] > 1000);
+        })
+      )
+    ).filter(i => i !== "energy");
+
+    const allResources = _.flatten(
+      myRooms.map(room => {
+        const terminal = room.terminal as StructureTerminal;
+
+        const resources = allResourcesKeys.map(res => ({
+          resource: res,
+          amount: (terminal.store as any)[res as any] || 0,
+          room: room,
+          terminalReady: !terminal.cooldown
+        }));
+        return resources;
+      })
     );
-    let undersuppliedRooms = allRooms.filter(
-      i =>
-        i.storage &&
-        _.sum(i.storage.store) < i.storage.storeCapacity * 0.85 &&
-        i.controller &&
-        i.controller.my &&
-        i.controller.level < 8 &&
-        i.controller.level >= 6 &&
-        i.terminal &&
-        _.sum(i.terminal.store) < i.terminal.storeCapacity * 0.8
-    );
 
-    let undersuppliedRoom = _.sortBy(undersuppliedRooms, room => room.storage && room.storage.store.energy)[0];
+    const groups = _.groupBy(allResources, i => i.resource);
 
-    if (!undersuppliedRoom) {
-      let undersuppliedRooms = allRooms.filter(
-        i =>
-          i.storage &&
-          i.controller &&
-          i.controller.my &&
-          i.controller.level === 8 &&
-          i.terminal &&
-          i.storage.store.energy < i.storage.storeCapacity * 0.7 &&
-          _.sum(i.storage.store) < i.storage.storeCapacity * 0.9 &&
-          _.sum(i.terminal.store) < i.terminal.storeCapacity * 0.8
-      );
+    for (let resourceType in groups) {
+      const resources = groups[resourceType];
+      const orderedLowest = _.sortBy(resources, i => i.amount);
+      const orderedHighest = _.sortBy(resources.filter(i => i.terminalReady), i => -1 * i.amount);
+      const lowest = orderedLowest[0];
+      const highest = orderedHighest[0];
 
-      undersuppliedRoom = _.sortBy(undersuppliedRooms, room => room.storage && room.storage.store.energy)[0];
+      if (highest.amount > lowest.amount * 5) {
+        const sourceTerminal = highest.room.terminal as StructureTerminal;
+        const amountToSend = Math.min((highest.amount - lowest.amount) / 4, maxTransferSize);
+        console.log("Sending", amountToSend, resourceType, "from", highest.room.name, "to", lowest.room.name);
+        sourceTerminal.send(resourceType as ResourceConstant, amountToSend, lowest.room.name);
+      }
+    }
+  }
+
+  static transferExcessiveEnergy() {
+    const myRooms = getMyRooms().filter(i => i.controller && i.terminal && i.storage);
+    if (myRooms.length < 2) {
+      return;
     }
 
-    /*     console.log("A:", oversuppliedRooms[0] && oversuppliedRooms[0].name);
-    console.log("B:", undersuppliedRoom && undersuppliedRoom.name); */
+    const energies = myRooms.map(room => {
+      const storage = room.storage as StructureStorage;
+      const terminal = room.terminal as StructureTerminal;
 
-    _.forEach(oversuppliedRooms, oversuppliedRoom => {
-      if (undersuppliedRoom) {
-        var terminal1 = oversuppliedRoom.terminal;
-        var terminal2 = undersuppliedRoom.terminal;
-
-        if (terminal1 && terminal1.cooldown === 0 && terminal2) {
-          console.log("Balancing energy ", oversuppliedRoom.name, "=>", undersuppliedRoom.name);
-          const result = terminal1.send(RESOURCE_ENERGY, desiredEnergyInTerminal / 3, undersuppliedRoom.name);
-          if (result !== OK) {
-            console.log("Cannot balance : ", result);
-          }
-        }
-      }
+      return {
+        amount: storage.store.energy,
+        room: room,
+        terminalReady: !terminal.cooldown
+      };
     });
+
+    const orderedLowest = _.sortBy(energies, i => i.amount);
+    const orderedHighest = _.sortBy(energies.filter(i => i.terminalReady), i => -1 * i.amount);
+    const lowest = orderedLowest[0];
+    const highest = orderedHighest[0];
+
+    if (highest.amount > lowest.amount + 200000) {
+      const sourceTerminal = highest.room.terminal as StructureTerminal;
+      const amountToSend = Math.min((highest.amount - lowest.amount) / 4, maxTransferSize);
+      console.log("Sending", amountToSend, "energy", "from", highest.room.name, "to", lowest.room.name);
+      sourceTerminal.send("energy" as ResourceConstant, amountToSend, lowest.room.name);
+    }
   }
 
   static runForAllRooms() {
@@ -175,6 +193,7 @@ export class Merchant {
       return;
     }
 
+    Merchant.transferExcessiveEnergy();
     Merchant.transferExcessiveResources();
 
     const roomNames = Object.keys(Game.rooms)

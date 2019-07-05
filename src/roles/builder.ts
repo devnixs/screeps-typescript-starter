@@ -16,6 +16,16 @@ export class RoleBuilder implements IRole {
     room: Room,
     forceFind: boolean
   ): { object: ConstructionSite | StructureWall | StructureRampart; isConstructionSite: boolean } | null {
+    var lowRampart = room.find(FIND_STRUCTURES, {
+      filter: i => i.structureType === "rampart" && i.hits < 1000
+    })[0] as (StructureRampart | undefined);
+    if (lowRampart) {
+      return {
+        object: lowRampart,
+        isConstructionSite: false
+      };
+    }
+
     var constructionSites = room.find(FIND_CONSTRUCTION_SITES);
 
     if (constructionSites.length) {
@@ -60,7 +70,7 @@ export class RoleBuilder implements IRole {
       }
     }
 
-    if (!memory.targetStructure || !memory.lastCheck || memory.lastCheck < Game.time - 500) {
+    if (!memory.targetStructure) {
       this.resetTarget(memory, creep.room);
       if (!memory.targetStructure) {
         // suicide
@@ -75,6 +85,7 @@ export class RoleBuilder implements IRole {
 
     if (memory.building && creep.carry.energy == 0) {
       memory.building = false;
+      this.resetTarget(memory, creep.room);
       creep.say("🔄 harvest");
     }
     if (!memory.building && creep.carry.energy == creep.carryCapacity) {

@@ -167,11 +167,11 @@ class RoleTower {
   }
 
   private getEnemyInRoom(tower: StructureTower): Creep | null {
-    var enemies = tower.room.find(FIND_HOSTILE_CREEPS);
+    var enemies = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
 
-    var healersFirst = _.sortBy(enemies, enemy => -1 * enemy.getActiveBodyparts(HEAL));
+    // var healersFirst = _.sortBy(enemies, enemy => -1 * enemy.getActiveBodyparts(HEAL));
 
-    return healersFirst[0];
+    return enemies;
   }
 
   private getTowerList(): StructureTower[] {

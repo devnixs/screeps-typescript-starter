@@ -38,7 +38,15 @@ interface CreepMemory {
   rest: any;
 }
 
+interface PlannedLocation {
+  x: number;
+  y: number;
+  setupTime: number;
+}
+
 interface RoomMemory {
+  storagePlannedLocation: PlannedLocation | undefined;
+  terminalPlannedLocation: PlannedLocation | undefined;
   avoid: any;
   damagedStructureId: string | null;
   enemyId: string | null;
