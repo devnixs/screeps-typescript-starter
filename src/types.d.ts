@@ -45,6 +45,7 @@ interface PlannedLocation {
 }
 
 interface RoomMemory {
+  squareRoadsAreSetup: boolean;
   storagePlannedLocation: PlannedLocation | undefined;
   terminalPlannedLocation: PlannedLocation | undefined;
   avoid: any;

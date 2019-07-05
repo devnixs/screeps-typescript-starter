@@ -27,11 +27,14 @@ export class Architect {
   }
 
   run() {
+    if (Object.keys(Game.constructionSites).length > MAX_CONSTRUCTION_SITES * 0.9) {
+      return;
+    }
     this.room.memory.rnd = this.room.memory.rnd || Math.floor(Math.random() * 10) + 5;
 
     if (Game.time % (delay * this.room.memory.rnd) === 0) {
       console.log("Redoing constructions for room", this.room.name);
-      // sometimes, redo constructions. They might have broken.
+      // sometimes, redo constructions. They might have broke.
       this.room.memory.constructionsAreSetupAtLevel = 0;
     }
 
@@ -47,17 +50,18 @@ export class Architect {
       this.createControllerRoads,
       this.createColonyRoads,
       this.createStorage,
+      this.createTerminal,
       this.createCloseToSpawn(STRUCTURE_EXTENSION),
       this.createContainers,
       this.createMineralRoads,
       this.createExtractor,
       this.createCloseToSpawn(STRUCTURE_NUKER),
       this.createCloseToSpawn(STRUCTURE_TOWER),
-      this.createTerminal,
       this.createCloseToSpawn(STRUCTURE_SPAWN),
       this.createCloseToSpawn(STRUCTURE_OBSERVER),
+      this.setupSquareRoads
       //  this.createCloseToSpawn(STRUCTURE_POWER_SPAWN),
-      this.createLinks
+      // this.createLinks
     ];
 
     if (constructionSites.length === 0) {
@@ -410,6 +414,7 @@ export class Architect {
     if (this.room.terminal || !this.room.storage || (this.room.controller && this.room.controller.level < 6)) {
       return -1;
     }
+    console.log("Creating Terminal");
 
     if (
       this.room.memory.terminalPlannedLocation &&
@@ -424,6 +429,7 @@ export class Architect {
       const closestExtension = this.room.storage.pos.findClosestByRange(FIND_MY_STRUCTURES, {
         filter: i => i.structureType === "extension"
       });
+      console.log("Closest extension", JSON.stringify(closestExtension));
 
       if (closestExtension) {
         const result = closestExtension.destroy();
@@ -440,6 +446,45 @@ export class Architect {
       } else {
         return -1;
       }
+    }
+  }
+
+  setupSquareRoads() {
+    if (this.room.memory.squareRoadsAreSetup || (this.room.controller && this.room.controller.level < 6)) {
+      return -1;
+    }
+    const v = [-6, +6];
+    const w = _.range(-6, 7);
+    const homeSpawn = this.room.find(FIND_MY_SPAWNS)[0];
+    if (!homeSpawn) {
+      return -1;
+    }
+
+    let hasReachedLimit = false;
+
+    v.forEach(i => {
+      w.forEach(j => {
+        const result1 = this.buildRoadIfSpaceAvailable(homeSpawn.pos.x + i, homeSpawn.pos.y + j);
+        const result2 = this.buildRoadIfSpaceAvailable(homeSpawn.pos.x + j, homeSpawn.pos.y + i);
+        hasReachedLimit = hasReachedLimit || result1 === ERR_FULL || result2 === ERR_FULL;
+      });
+    });
+
+    if (!hasReachedLimit) {
+      this.room.memory.squareRoadsAreSetup = true;
+    }
+
+    return OK;
+  }
+
+  buildRoadIfSpaceAvailable(x: number, y: number) {
+    const structureHere = this.room
+      .lookAt(x, y)
+      .find(i => i.type === LOOK_STRUCTURES || (i.type === LOOK_TERRAIN && i.terrain === "wall"));
+    if (structureHere) {
+      return -1;
+    } else {
+      return this.room.createConstructionSite(x, y, STRUCTURE_ROAD);
     }
   }
 

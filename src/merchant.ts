@@ -5,7 +5,7 @@ import { getMyRooms } from "utils/misc-utils";
 const minCredits = 10000;
 const minTradeCreditAmount = 200;
 const maxTradeAmount = 500;
-const maxTransferSize = 1000;
+const maxTransferSize = 5000;
 
 export class Merchant {
   constructor(private room: Room) {}
