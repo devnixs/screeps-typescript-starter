@@ -6,8 +6,8 @@ export const requiredDismantlersForAnAttack = 2;
 
 export const wallsMinHp = (roomLevel: number) => {
   // level 8 = 15M
-  const power = 5;
-  return Math.pow(roomLevel, power) * (15000000 / Math.pow(8, power));
+  const power = 7;
+  return Math.pow(roomLevel, power) * (25000000 / Math.pow(8, power));
 };
 
 export const rampartMinHp = (roomLevel: number) => {
@@ -64,7 +64,7 @@ export const desiredStocks: StoreDefinitionWithoutEnergy = {
   [RESOURCE_LEMERGIUM]: 5000,
   [RESOURCE_KEANIUM]: 5000,
   [RESOURCE_ZYNTHIUM]: 5000,
-  [RESOURCE_CATALYST]: 5000,
+  // [RESOURCE_CATALYST]: 5000,
   [RESOURCE_GHODIUM]: 5000,
 
   [RESOURCE_HYDROXIDE]: 1000,
@@ -91,9 +91,9 @@ export const desiredStocks: StoreDefinitionWithoutEnergy = {
   [RESOURCE_ZYNTHIUM_ACID]: 10000,
   [RESOURCE_ZYNTHIUM_ALKALIDE]: 15000,
   [RESOURCE_GHODIUM_ACID]: 0,
-  [RESOURCE_GHODIUM_ALKALIDE]: 1000,
+  [RESOURCE_GHODIUM_ALKALIDE]: 1000
 
-  [RESOURCE_CATALYZED_UTRIUM_ACID]: 0,
+  /*   [RESOURCE_CATALYZED_UTRIUM_ACID]: 0,
   [RESOURCE_CATALYZED_UTRIUM_ALKALIDE]: 0,
   [RESOURCE_CATALYZED_KEANIUM_ACID]: 0,
   [RESOURCE_CATALYZED_KEANIUM_ALKALIDE]: 0,
@@ -102,6 +102,6 @@ export const desiredStocks: StoreDefinitionWithoutEnergy = {
   [RESOURCE_CATALYZED_ZYNTHIUM_ACID]: 1000,
   [RESOURCE_CATALYZED_ZYNTHIUM_ALKALIDE]: 0,
   [RESOURCE_CATALYZED_GHODIUM_ACID]: 0,
-  [RESOURCE_CATALYZED_GHODIUM_ALKALIDE]: 30000
+  [RESOURCE_CATALYZED_GHODIUM_ALKALIDE]: 30000 */
   // }
 };

@@ -335,7 +335,7 @@ export class Architect {
   }
 
   createStorage() {
-    if (!this.room.controller || this.room.controller.level < 5 || this.room.storage) {
+    if (!this.room.controller || this.room.controller.level < 4 || this.room.storage) {
       return -1;
     }
 
