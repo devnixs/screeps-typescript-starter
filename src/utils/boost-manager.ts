@@ -42,7 +42,7 @@ export function boostCreep(creep: Creep) {
     // find lab that can boost this creep.
     const labGroups = creep.room.memory.labGroups || [];
 
-    const labs = _.flatten(labGroups.map(i => [i.labResult, i.labSource1, i.labSource2]));
+    const labs = _.flatten(labGroups.map(i => i.labResults.concat([i.labSource1, i.labSource2])));
     const labDoingThisBoost = labs.find(lab => lab.boostBodyType === bodyPart);
     if (labDoingThisBoost) {
       const labObject = Game.getObjectById(labDoingThisBoost.id) as StructureLab;

@@ -64,9 +64,9 @@ function initOneTimeValues() {
   ) {
     claimerCount = 1;
     closestRoomToClaimTarget = findClosestRoom(claimFlag.pos.roomName);
-    console.log("Found claim target : ", claimFlag.pos.roomName);
+    /*     console.log("Found claim target : ", claimFlag.pos.roomName);
     console.log("closestRoomToClaimTarget : ", closestRoomToClaimTarget);
-    console.log("claimerCount : ", claimerCount);
+    console.log("claimerCount : ", claimerCount); */
   }
 
   const myRooms = getMyRooms();
@@ -82,22 +82,22 @@ function initOneTimeValues() {
     var initialCpu = Game.cpu.getUsed();
     builderHelperSource = findClosestRoom(colonyThatNeedsHelpBuilding.name);
     var afterCpu = Game.cpu.getUsed();
-    console.log("Used CPU: ", afterCpu - initialCpu);
+    //  console.log("Used CPU: ", afterCpu - initialCpu);
     builderHelperTarget = colonyThatNeedsHelpBuilding.name;
     builderHelperCount = 2;
-    console.log("Found colonyThatNeedsHelpBuilding : ", colonyThatNeedsHelpBuilding.name);
+    /* console.log("Found colonyThatNeedsHelpBuilding : ", colonyThatNeedsHelpBuilding.name);
     console.log("builderHelperTarget : ", colonyThatNeedsHelpBuilding.name);
     console.log("builderHelperSource : ", builderHelperSource);
-    console.log("builderHelperCount : ", builderHelperCount);
+    console.log("builderHelperCount : ", builderHelperCount); */
   }
 }
 
 export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[] {
   initOneTimeValues();
 
-  const hasSafeMode = spawn.room.controller && spawn.room.controller.safeMode;
+  /*   const hasSafeMode = spawn.room.controller && spawn.room.controller.safeMode;
 
-  const maxEnergyInRoom = spawn.room.energyCapacityAvailable;
+  const maxEnergyInRoom = spawn.room.energyCapacityAvailable; */
 
   const harvesters = spawn.room
     .find(FIND_MY_CREEPS)

@@ -54,8 +54,8 @@ export class Chemist {
   }
 
   static settings = {
-    minBatchSize: 100, // anything less than this wastes time
-    maxBatchSize: 500, // manager/queen carry capacity
+    minBatchSize: 400, // anything less than this wastes time
+    maxBatchSize: 1000,
     sleepTime: 100 // sleep for this many ticks once you can't make anything
   };
 
@@ -72,7 +72,7 @@ export class Chemist {
   }
 
   run() {
-    const checkTime = "sim" in Game.rooms ? 1 : 500;
+    const checkTime = "sim" in Game.rooms ? 1 : 10;
     if (Game.time % checkTime === 0) {
       this.setupLabGroups();
     }
@@ -219,54 +219,64 @@ export class Chemist {
   }
 
   setupLabGroups() {
+    const labsInRoom = this.room.find(FIND_MY_STRUCTURES, {
+      filter: structure => structure.structureType === "lab"
+    }) as StructureLab[];
+    if (this.labs.length === labsInRoom.length) {
+      // no need to do anything
+      return;
+    }
+
+    this.room.memory.labGroups = [];
     var labs = this.room.find(FIND_MY_STRUCTURES, {
       filter: structure => structure.structureType === "lab"
     }) as StructureLab[];
-    var labsInGroups = _.flatten(this.labGroups.map(i => [i.labResult.id, i.labSource1.id, i.labSource2.id]));
-    var labsNotInAnyGroup = labs.filter(lab => labsInGroups.indexOf(lab.id) === -1);
 
-    for (let i in labsNotInAnyGroup) {
-      var labNotInAnyGroup = labsNotInAnyGroup[i];
-      var neigboorLabNotInAnyGroup = labNotInAnyGroup.pos.findInRange(FIND_MY_STRUCTURES, 2, {
-        filter: lab =>
-          lab.structureType === "lab" && lab.id !== labNotInAnyGroup.id && labsInGroups.indexOf(lab.id) === -1
-      }) as StructureLab[];
+    // TODO: Create packs of groups
 
-      if (neigboorLabNotInAnyGroup.length >= 2) {
-        this.setupLabGroup(labNotInAnyGroup, neigboorLabNotInAnyGroup[0], neigboorLabNotInAnyGroup[1]);
-        return;
-      }
-    }
+    console.log("Setting up lab groups");
+    this.setupLabGroup(labs);
   }
 
-  setupLabGroup(lab1: StructureLab, lab2: StructureLab, lab3: StructureLab) {
-    this.room.memory.labGroups.push({
-      currentState: "idle",
-      currentTarget: undefined,
-      lastActivity: Game.time,
-      remainingAmountToProduce: 0,
-      labResult: {
-        id: lab1.id,
-        state: "idle",
-        canRun: true,
-        needsAmount: 0,
-        needsResource: "energy"
-      },
-      labSource1: {
-        id: lab2.id,
-        state: "idle",
-        canRun: true,
-        needsAmount: 0,
-        needsResource: "energy"
-      },
-      labSource2: {
-        id: lab3.id,
-        state: "idle",
-        canRun: true,
-        needsAmount: 0,
-        needsResource: "energy"
-      }
-    });
+  setupLabGroup(labs: StructureLab[]) {
+    // find the 2 labs that are in range of most other labs
+    const orderedLabs = _.sortBy(
+      labs,
+      l => -1 * l.pos.findInRange(FIND_MY_STRUCTURES, 2, { filter: j => j.structureType === "lab" }).length
+    );
+    if (orderedLabs.length >= 3) {
+      const results = orderedLabs
+        .filter((l, index) => index >= 2)
+        .map(l => ({
+          id: l.id,
+          state: "idle" as LabState,
+          canRun: true,
+          needsAmount: 0,
+          needsResource: "energy" as ResourceConstant
+        }));
+
+      this.room.memory.labGroups.push({
+        currentState: "idle",
+        currentTarget: undefined,
+        lastActivity: Game.time,
+        remainingAmountToProduce: 0,
+        labResults: results,
+        labSource1: {
+          id: orderedLabs[0].id,
+          state: "idle",
+          canRun: true,
+          needsAmount: 0,
+          needsResource: "energy"
+        },
+        labSource2: {
+          id: orderedLabs[1].id,
+          state: "idle",
+          canRun: true,
+          needsAmount: 0,
+          needsResource: "energy"
+        }
+      });
+    }
   }
 
   runLabs() {
@@ -275,34 +285,37 @@ export class Chemist {
     for (let grpId in activeGroups) {
       const group = activeGroups[grpId];
 
-      const resultLab = Game.getObjectById(group.labResult.id) as StructureLab;
+      const resultLabs = group.labResults.map(l => Game.getObjectById(l.id) as StructureLab);
       const source1 = Game.getObjectById(group.labSource1.id) as StructureLab;
       const source2 = Game.getObjectById(group.labSource2.id) as StructureLab;
 
-      if (resultLab.cooldown || source1.cooldown || source2.cooldown) {
+      if (resultLabs.find(i => i.cooldown > 0) || source1.cooldown || source2.cooldown) {
         // lab is busy.
         // Maybe only the result lab needs to not be cooling down.
         continue;
       }
 
-      this.assignLabGroupState(group, resultLab, source1, source2);
-      const canRun = group.labSource1.canRun && group.labSource2.canRun && group.labResult.canRun;
+      this.assignLabGroupState(group, resultLabs, source1, source2);
+      const canRun = group.labSource1.canRun && group.labSource2.canRun && !group.labResults.find(i => !i.canRun);
       let hasRun = false;
       if (canRun) {
-        const result = resultLab.runReaction(source1, source2);
-        if (result === OK) {
-          hasRun = true;
-          group.lastActivity = Game.time;
-          group.labSource1.needsAmount -= labProduceByTick;
-          group.labSource2.needsAmount -= labProduceByTick;
-          group.remainingAmountToProduce -= labProduceByTick;
+        let result: ScreepsReturnCode = OK;
+        resultLabs.forEach(r => {
+          result = r.runReaction(source1, source2);
+          if (result === OK) {
+            hasRun = true;
+            group.lastActivity = Game.time;
+            group.labSource1.needsAmount -= labProduceByTick;
+            group.labSource2.needsAmount -= labProduceByTick;
+            group.remainingAmountToProduce -= labProduceByTick;
 
-          if (group.remainingAmountToProduce <= 0) {
-            this.returnLabToIdleState(group);
+            if (group.remainingAmountToProduce <= 0) {
+              this.returnLabToIdleState(group);
+            }
+          } else {
+            console.log("Cannot run lab reaction : ", result);
           }
-        } else {
-          console.log("Cannot run lab reaction : ", result);
-        }
+        });
       }
 
       if (!hasRun && (!group.lastActivity || Game.time > group.lastActivity + 400)) {
@@ -317,9 +330,11 @@ export class Chemist {
     group.currentState = "idle";
     group.currentTarget = undefined;
     group.remainingAmountToProduce = 0;
-    group.labResult.state = "needs-emptying";
-    group.labResult.boostResource = undefined;
-    group.labResult.needsAmount = 0;
+    group.labResults.forEach(lab => {
+      lab.state = "needs-emptying";
+      lab.boostResource = undefined;
+      lab.needsAmount = 0;
+    });
     group.labSource1.state = "needs-emptying";
     group.labSource1.needsAmount = 0;
     group.labSource1.boostResource = undefined;
@@ -329,15 +344,18 @@ export class Chemist {
   }
 
   checkLabs() {
-    // All three labs must be defined
+    // All source labs must be defined
     this.room.memory.labGroups = this.labGroups.filter(
-      i =>
-        Game.getObjectById(i.labSource1.id) && Game.getObjectById(i.labSource2.id) && Game.getObjectById(i.labResult.id)
+      i => Game.getObjectById(i.labSource1.id) && Game.getObjectById(i.labSource2.id) // && Game.getObjectById(i.labResult.id)
     );
+    // All result labs must be defined
+    this.room.memory.labGroups.forEach(labGroup => {
+      labGroup.labResults = labGroup.labResults.filter(i => Game.getObjectById(i.id));
+    });
   }
 
-  assignLabGroupState(group: LabGroup, resultLab: StructureLab, source1: StructureLab, source2: StructureLab) {
-    this.assignLabResultState(resultLab, group);
+  assignLabGroupState(group: LabGroup, resultLabs: StructureLab[], source1: StructureLab, source2: StructureLab) {
+    this.assignLabResultState(resultLabs, group);
     this.assignLabSourceState(source1, group, group.labSource1);
     this.assignLabSourceState(source2, group, group.labSource2);
   }
@@ -355,16 +373,21 @@ export class Chemist {
     memory.canRun = source.mineralAmount >= labProduceByTick && source.mineralType === memory.needsResource;
   }
 
-  assignLabResultState(resultLab: StructureLab, group: LabGroup) {
-    if (resultLab.mineralAmount > 300 || resultLab.mineralType !== group.currentTarget) {
-      group.labResult.state = "needs-emptying";
-    } else {
-      group.labResult.state = "running";
-    }
+  assignLabResultState(resultLabs: StructureLab[], group: LabGroup) {
+    resultLabs.forEach((resultLab: StructureLab) => {
+      const labResult = group.labResults.find(i => i.id === resultLab.id);
+      if (labResult) {
+        if (resultLab.mineralAmount > 300 || resultLab.mineralType !== group.currentTarget) {
+          labResult.state = "needs-emptying";
+        } else {
+          labResult.state = "running";
+        }
 
-    group.labResult.canRun =
-      (resultLab.mineralType === group.currentTarget || resultLab.mineralType === null) &&
-      resultLab.mineralAmount < resultLab.mineralCapacity - labProduceByTick;
+        labResult.canRun =
+          (resultLab.mineralType === group.currentTarget || resultLab.mineralType === null) &&
+          resultLab.mineralAmount < resultLab.mineralCapacity - labProduceByTick;
+      }
+    });
   }
 
   assignJobs() {
@@ -395,7 +418,7 @@ export class Chemist {
     group.labSource2.needsResource = reaction.source2;
     group.labSource1.needsAmount = reaction.amount;
     group.labSource2.needsAmount = reaction.amount;
-    group.labResult.boostBodyType = undefined;
+    group.labResults.forEach(l => (l.boostBodyType = undefined));
     group.labSource1.boostBodyType = undefined;
     group.labSource2.boostBodyType = undefined;
     group.remainingAmountToProduce = reaction.amount;
@@ -416,7 +439,7 @@ export class Chemist {
   }
 
   get labs() {
-    return _.sortBy(_.flatten(this.labGroups.map(i => [i.labResult, i.labSource1, i.labSource2])), i => i.id);
+    return _.sortBy(_.flatten(this.labGroups.map(i => i.labResults.concat([i.labSource1, i.labSource2]))), i => i.id);
   }
 
   get runningLabGroups() {
@@ -428,7 +451,10 @@ export class Chemist {
       return {};
     } else {
       // resultLabs should be counted as assets
-      const resultLabs = this.labGroups.map(i => Game.getObjectById(i.labResult.id)).filter(i => i) as StructureLab[];
+      const resultLabs = _.flatten(
+        this.labGroups.map(i => i.labResults.map(l => Game.getObjectById(l.id))).filter(i => i)
+      ) as StructureLab[];
+
       const resultLabAssets = resultLabs
         .filter(i => i.mineralAmount > 0)
         .map(i => ({ [i.mineralType as any]: i.mineralAmount }));

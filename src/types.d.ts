@@ -125,15 +125,17 @@ interface LabGroup {
   lastActivity: number | undefined;
   currentState: "idle" | "running";
   currentTarget: ResourceConstant | undefined;
-  labResult: LabMemory;
+  labResults: LabMemory[];
   labSource1: LabMemory;
   labSource2: LabMemory;
   remainingAmountToProduce: number;
 }
 
+type LabState = "waiting-for-resource" | "needs-emptying" | "running" | "idle";
+
 interface LabMemory {
   id: string;
-  state: "waiting-for-resource" | "needs-emptying" | "running" | "idle";
+  state: LabState;
   needsResource: ResourceConstant;
   needsAmount: number;
   canRun: boolean;

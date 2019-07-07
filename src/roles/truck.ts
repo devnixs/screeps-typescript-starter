@@ -609,7 +609,7 @@ class RoleTruck implements IRole {
 
   getLabs(room: Room) {
     var groups = room.memory.labGroups || [];
-    return _.flatten(groups.map(i => [i.labResult, i.labSource1, i.labSource2]));
+    return _.flatten(groups.map(i => i.labResults.concat([i.labSource1, i.labSource2])));
   }
 }
 

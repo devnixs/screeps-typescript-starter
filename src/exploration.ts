@@ -86,7 +86,7 @@ export class ExplorationManager {
       var roomType = Cartographer.roomType(source.room.name);
 
       const maxDistance = this.room.memory.remotes.length < 6 ? 100 : 80;
-      const maxRemotes = this.room.find(FIND_MY_SPAWNS).length * 4 + 2;
+      const maxRemotes = Math.min(this.room.find(FIND_MY_SPAWNS).length * 4 + 2, 9);
 
       if (existingRemote && !existingRemote.distance) {
         existingRemote.distance = searchResult.path.length;

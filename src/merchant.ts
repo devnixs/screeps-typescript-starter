@@ -29,7 +29,7 @@ export class Merchant {
     ) as ResourceConstant | undefined;
 
     const underSupply = buyableElements.find(
-      i => this.getResource(terminal.store, i) < this.getResource(desiredStocks, i)
+      i => this.getResource(terminal.store, i) < this.getResource(desiredStocks, i) / 5
     ) as ResourceConstant | undefined;
 
     if (overSupply) {
