@@ -27,11 +27,11 @@ export class Merchant {
         this.getResource(terminal.store, i) > this.getResource(desiredStocks, i) * 10 &&
         this.getResource(terminal.store, i) > 300
     ) as ResourceConstant | undefined;
-    /*
+
     const underSupply = buyableElements.find(
       i => this.getResource(terminal.store, i) < this.getResource(desiredStocks, i)
     ) as ResourceConstant | undefined;
- */
+
     if (overSupply) {
       // console.log("Oversupply", this.room.name, overSupply);
       const overSupplyAmount =
@@ -48,7 +48,7 @@ export class Merchant {
     }
 
     // buying is disabled
-    /*
+
     if (underSupply) {
       if (Game.market.credits < minCredits + minTradeCreditAmount) {
         return;
@@ -62,7 +62,7 @@ export class Merchant {
       if (buyResult === OK) {
         return;
       }
-    } */
+    }
   }
 
   sellResource(resource: ResourceConstant, amount: number) {
@@ -113,9 +113,10 @@ export class Merchant {
   }
 
   static transferExcessiveResources() {
+    let returns = -1;
     const myRooms = getMyRooms().filter(i => i.controller && i.terminal);
     if (myRooms.length < 2) {
-      return;
+      return -1;
     }
     const allResourcesKeys = _.uniq(
       _.flatten(
@@ -153,15 +154,17 @@ export class Merchant {
         const sourceTerminal = highest.room.terminal as StructureTerminal;
         const amountToSend = Math.min((highest.amount - lowest.amount) / 4, maxTransferSize);
         console.log("Sending", amountToSend, resourceType, "from", highest.room.name, "to", lowest.room.name);
-        sourceTerminal.send(resourceType as ResourceConstant, amountToSend, lowest.room.name);
+        const sendResult = sourceTerminal.send(resourceType as ResourceConstant, amountToSend, lowest.room.name);
+        returns = returns === OK || sendResult === OK ? OK : -1;
       }
     }
+    return returns;
   }
 
-  static transferExcessiveEnergy() {
+  static transferExcessiveEnergy(): number {
     const myRooms = getMyRooms().filter(i => i.controller && i.terminal && i.storage);
     if (myRooms.length < 2) {
-      return;
+      return -1;
     }
 
     const energies = myRooms.map(room => {
@@ -184,7 +187,9 @@ export class Merchant {
       const sourceTerminal = highest.room.terminal as StructureTerminal;
       const amountToSend = Math.min((highest.amount - lowest.amount) / 4, maxTransferSize);
       console.log("Sending", amountToSend, "energy", "from", highest.room.name, "to", lowest.room.name);
-      sourceTerminal.send("energy" as ResourceConstant, amountToSend, lowest.room.name);
+      return sourceTerminal.send("energy" as ResourceConstant, amountToSend, lowest.room.name);
+    } else {
+      return -1;
     }
   }
 
@@ -193,8 +198,14 @@ export class Merchant {
       return;
     }
 
-    Merchant.transferExcessiveEnergy();
-    Merchant.transferExcessiveResources();
+    let transferResult = Merchant.transferExcessiveEnergy();
+    if (transferResult === OK) {
+      return;
+    }
+    transferResult = Merchant.transferExcessiveResources();
+    if (transferResult === OK) {
+      return;
+    }
 
     const roomNames = Object.keys(Game.rooms)
       .map(room => Game.rooms[room])

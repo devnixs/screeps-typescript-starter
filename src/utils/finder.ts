@@ -87,13 +87,13 @@ let findNonEmptyResourcesInStore = function findNonEmptyResourcesInStore(store: 
 };
 
 export function findHostile(creep: Creep) {
-  const hostile = creep.room.find(FIND_HOSTILE_CREEPS, {
+  const hostile = creep.pos.findClosestByRange(FIND_HOSTILE_CREEPS, {
     filter: creep =>
       creep.getActiveBodyparts(ATTACK) ||
       creep.getActiveBodyparts(RANGED_ATTACK) ||
       creep.getActiveBodyparts(WORK) ||
       creep.getActiveBodyparts(HEAL)
-  })[0];
+  });
   return hostile;
 }
 

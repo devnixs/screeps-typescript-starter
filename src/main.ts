@@ -168,7 +168,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
 
     Memory.rooms = Memory.rooms || {};
 
-    if (Game.cpu.getUsed() > 50) {
+    if (Game.cpu.getUsed() > 100) {
       console.log("Used a lot of cpu : ", Game.cpu.getUsed(), Game.time);
     }
 

@@ -113,6 +113,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
   // const labs = spawn.room.find(FIND_MY_STRUCTURES, { filter: i => i.structureType === "lab" });
   const links = spawn.room.find(FIND_MY_STRUCTURES, { filter: i => i.structureType === "link" });
   const enemies = spawn.room.find(FIND_HOSTILE_CREEPS);
+
   const constructionSites = spawn.room.find(FIND_MY_CONSTRUCTION_SITES);
 
   const storageQuantity = spawn.room.storage ? _.sum(spawn.room.storage.store) : 0;
@@ -300,7 +301,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
         maxCount: isStorageAlmostFull ? 0 : 1,
         countAllRooms: false,
         bodyTemplate: [WORK],
-        maxRepeat: remote.energyGeneration / HARVEST_POWER,
+        maxRepeat: (remote.energyGeneration || 10) / HARVEST_POWER,
         subRole: remote.room + "-" + remote.x + "-" + remote.y,
         bodyTemplatePrepend: [CARRY, MOVE, MOVE, MOVE],
         disableIfLowOnCpu: true,
@@ -314,25 +315,28 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       } as RoleRequirement;
     });
 
-  const remoteDefenders = (spawn.room.memory.needsDefenders || []).map(remote => {
-    return {
-      percentage: 20,
-      role: "remote-defender",
-      maxCount: 1,
-      bodyTemplate: [MOVE, MOVE, MOVE, MOVE, TOUGH, ATTACK, ATTACK, HEAL],
-      maxRepeat: Math.ceil(remote.threatLevel),
-      sortBody: [TOUGH, ATTACK, MOVE, HEAL],
-      subRole: remote.room,
-      disableIfLowOnCpu: true,
-      additionalMemory: {
-        homeSpawnPosition: spawn.pos,
-        home: spawn.pos.roomName
-      } as Partial<IRemoteDefenderMemory>
-    } as RoleRequirement;
-  });
+  const remoteDefenders = (spawn.room.memory.needsDefenders || [])
+    .filter(i => spawn.room.energyCapacityAvailable > 620)
+    .map(remote => {
+      return {
+        percentage: 20,
+        role: "remote-defender",
+        maxCount: Math.ceil(remote.threatLevel / 5),
+        bodyTemplate: [MOVE, MOVE, ATTACK, ATTACK],
+        bodyTemplatePrepend: [HEAL, MOVE],
+        maxRepeat: Math.ceil(remote.threatLevel),
+        sortBody: [TOUGH, MOVE, ATTACK, HEAL],
+        subRole: remote.room,
+        disableIfLowOnCpu: true,
+        additionalMemory: {
+          homeSpawnPosition: spawn.pos,
+          home: spawn.pos.roomName
+        } as Partial<IRemoteDefenderMemory>
+      } as RoleRequirement;
+    });
 
   const reservers = spawn.room.memory.remotes
-    .filter(i => i.needsReservation && !i.disabled)
+    .filter(i => i.needsReservation && !i.disabled && spawn.room.energyCapacityAvailable >= 650)
     .map(remote => {
       return {
         percentage: 20,
@@ -472,11 +476,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     {
       percentage: 1,
       role: "fighter",
-      maxCount: Game.flags["fighter_attack"]
-        ? requiredFightersForAnAttack
-        : enemies.length > 0 && towers.length === 0
-        ? 1
-        : 0,
+      maxCount: enemies.length > 0 && towers.length === 0 ? 1 : 0,
       bodyTemplate: [TOUGH, MOVE, MOVE, ATTACK],
       sortBody: [TOUGH, MOVE, ATTACK]
     },

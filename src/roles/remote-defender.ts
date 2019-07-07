@@ -3,26 +3,10 @@ import { findRestSpot, findHostile } from "utils/finder";
 import { boostCreep } from "utils/boost-manager";
 import { profiler } from "utils/profiler";
 
-export interface IRemoteDefenderMemory extends CreepMemory {
-  status: "healing" | "attacking";
-}
+export interface IRemoteDefenderMemory extends CreepMemory {}
 
 class RoleRemoteDefender implements IRole {
   run(creep: Creep) {
-    if (creep.ticksToLive === 1480) {
-      creep.notifyWhenAttacked(false);
-    }
-
-    if (boostCreep(creep) === OK) {
-      // Don't do anything else
-      return;
-    } else {
-    }
-
-    if (creep.memory.subRole === "stop") {
-      return;
-    }
-
     // const rooms = Object.keys(Game.rooms).map(i => Game.rooms[i]);
     const memory: IRemoteDefenderMemory = creep.memory as any;
 
@@ -30,39 +14,31 @@ class RoleRemoteDefender implements IRole {
 
     const canHeal = creep.getActiveBodyparts(HEAL);
 
+    // ATTACK MODE
     if (hostile) {
+      const isFar = hostile.pos.getRangeTo(creep.pos) > 4;
+      if (isFar && creep.hits < creep.hitsMax) {
+        // heal self before engaging next combat.
+        creep.heal(creep);
+        return;
+      }
+
       if (hostile.pos.isNearTo(creep.pos)) {
         creep.attack(hostile);
+      } else {
+        creep.say("Yarr!", true);
+        creep.goTo(hostile);
+        if (canHeal) {
+          creep.heal(creep);
+        }
       }
-    }
-
-    if (creep.fatigue > 0) {
-      creep.heal(creep);
       return;
-    }
-
-    if (!memory.status) {
-      memory.status = "attacking";
-    }
-
-    if (memory.status === "attacking" && canHeal) {
-      const needsHealing = this.needsHealing(creep);
-      if (needsHealing) {
-        memory.status = "healing";
-      }
-    }
-
-    if (memory.status === "healing" && canHeal) {
-      const isFullyHealed = this.isFullyHealed(creep);
-      if (isFullyHealed) {
-        memory.status = "attacking";
-      }
-    }
-
-    if (memory.status === "healing" && canHeal) {
-      creep.heal(creep);
-      creep.goTo(hostile);
     } else {
+      // PEACEFUL MODE
+      if (creep.hits < creep.hitsMax) {
+        creep.heal(creep);
+      }
+
       if (!memory.subRole) {
         this.goHome(creep);
         return;
@@ -81,17 +57,12 @@ class RoleRemoteDefender implements IRole {
           }
           return;
         } else {
-          if (hostile) {
-            creep.say("Yarr!", true);
-            creep.goTo(hostile);
-          } else {
+          if (this.healFriends(creep) === -1) {
             this.reassign(creep);
-            if (this.healFriends(creep) === -1) {
-              const rest = findRestSpot(creep, { x: 25, y: 25 });
-              if (rest) {
-                creep.say("Zzz");
-                creep.goTo(rest);
-              }
+            const rest = findRestSpot(creep, { x: 25, y: 25 });
+            if (rest) {
+              creep.say("Zzz");
+              creep.goTo(rest);
             }
           }
         }

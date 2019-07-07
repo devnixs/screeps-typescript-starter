@@ -101,8 +101,10 @@ export class ExplorationManager {
         searchResult.path.length
       ); */
 
+      const allowSourceKeepRooms = this.room.controller && this.room.controller.level >= 8;
+
       if (
-        roomType !== "SK" &&
+        (roomType !== "SK" || allowSourceKeepRooms) &&
         searchResult.path.length < maxDistance &&
         this.room.memory.remotes.length < maxRemotes &&
         !existingRemote

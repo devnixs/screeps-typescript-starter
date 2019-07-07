@@ -219,7 +219,7 @@ class Spawner {
     }
 
     if (!body) {
-      // console.log("Not enough energy to create the body", role.role);
+      console.log("Not enough energy to create the body", role.role, spawn.room.name);
       return;
     }
 

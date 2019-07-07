@@ -26,7 +26,19 @@ export class Architect {
     });
   }
 
+  cleanupNonVisibleConstructionSites() {
+    if (Game.time % 1000 > 0) {
+      return;
+    }
+    Object.keys(Game.constructionSites)
+      .map(i => Game.constructionSites[i])
+      .filter(i => !i.room)
+      .forEach(ConstructionSite => ConstructionSite.remove());
+  }
+
   run() {
+    this.cleanupNonVisibleConstructionSites();
+
     if (Object.keys(Game.constructionSites).length > MAX_CONSTRUCTION_SITES * 0.9) {
       return;
     }

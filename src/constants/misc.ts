@@ -5,17 +5,15 @@ export const requiredFightersForAnAttack = 1;
 export const requiredDismantlersForAnAttack = 2;
 
 export const wallsMinHp = (roomLevel: number) => {
-  if (roomLevel === 8) {
-    return 10000000;
-  }
-  return 14000000;
+  // level 8 = 15M
+  const power = 5;
+  return Math.pow(roomLevel, power) * (15000000 / Math.pow(8, power));
 };
 
 export const rampartMinHp = (roomLevel: number) => {
-  if (roomLevel === 8) {
-    return 10000000;
-  }
-  return 14000000;
+  // level 8 = 15M
+  const power = 5;
+  return Math.pow(roomLevel, power) * (15000000 / Math.pow(8, power));
 };
 
 // How much we should store in the terminal
