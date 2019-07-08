@@ -20,9 +20,11 @@ export class RemotesManager {
       memory.remotes = [];
     }
 
-    memory.remotes.forEach(remote => {
-      this.runForOneRemote(remote);
-    });
+    if (Game.time % 4 === 0) {
+      memory.remotes.forEach(remote => {
+        this.runForOneRemote(remote);
+      });
+    }
 
     this.assignTrucks();
     this.createRoads();
@@ -38,7 +40,7 @@ export class RemotesManager {
     }
 
     const spawns = this.room.find(FIND_MY_SPAWNS).length;
-    const maxTravelAllowed = spawns * 300 + 100;
+    let maxTravelAllowed = spawns * 300 + 100;
 
     // enable all
     this.room.memory.remotes.forEach(i => (i.disabled = false));
@@ -161,9 +163,14 @@ export class RemotesManager {
         const isUnderThreshold =
           !targetRoom.controller.reservation || targetRoom.controller.reservation.ticksToEnd < 3000;
 
+        const hasLotsOfWastedEnergy =
+          _.sum(
+            targetRoom.find(FIND_DROPPED_RESOURCES, { filter: i => i.resourceType === "energy" }).map(i => i.amount)
+          ) > 3000;
+
         // const hasStorage = this.room.storage;
 
-        remote.needsReservation = !!isUnderThreshold;
+        remote.needsReservation = !!isUnderThreshold && !hasLotsOfWastedEnergy;
       }
     });
   }
@@ -183,6 +190,18 @@ export class RemotesManager {
         } else {
           const generation = Math.ceil(source.energyCapacity / 300);
           remote.energyGeneration = generation;
+
+          const hasLotsOfWastedEnergy =
+            _.sum(
+              source.pos
+                .findInRange(FIND_DROPPED_RESOURCES, 2, { filter: i => i.resourceType === "energy" })
+                .map(i => i.amount)
+            ) > 1500;
+          if (hasLotsOfWastedEnergy) {
+            // no need to spawn big harvesters if there's a lot of energy wasted.
+
+            remote.energyGeneration = remote.energyGeneration / 4;
+          }
         }
       }
     });
@@ -210,7 +229,9 @@ export class RemotesManager {
       return;
     }
 
-    remote.energy = container.store.energy;
+    const droppedEnergy = targetRoom.lookForAt(LOOK_RESOURCES, container).find(i => i.resourceType === "energy");
+
+    remote.energy = container.store.energy + (droppedEnergy ? droppedEnergy.amount : 0);
   }
 
   createContainer(remote: RemoteRoomDefinition, targetRoom: Room, source: Source) {

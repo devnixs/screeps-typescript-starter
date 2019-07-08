@@ -2,7 +2,7 @@ import { findEmptySpotCloseTo } from "utils/finder";
 import { profiler } from "./utils/profiler";
 
 const isSimulation = "sim" in Game.rooms;
-const delay = isSimulation ? 1 : 100;
+const delay = isSimulation ? 1 : 1000;
 
 export class Architect {
   emptySpot: Vector | undefined;
@@ -67,6 +67,7 @@ export class Architect {
       this.createContainers,
       this.createMineralRoads,
       this.createExtractor,
+      this.addRampartToCriticalStructures,
       this.createCloseToSpawn(STRUCTURE_NUKER),
       this.createCloseToSpawn(STRUCTURE_TOWER),
       this.createCloseToSpawn(STRUCTURE_SPAWN),
@@ -331,6 +332,26 @@ export class Architect {
       }
     }
 
+    return -1;
+  }
+
+  addRampartToCriticalStructures() {
+    let criticalStructures: AnyOwnedStructure[] = this.room.find(FIND_MY_STRUCTURES, {
+      filter: s =>
+        s.structureType === "spawn" ||
+        s.structureType === "tower" ||
+        s.structureType === "storage" ||
+        s.structureType === "terminal"
+    });
+
+    for (let index in criticalStructures) {
+      const structure = criticalStructures[index];
+
+      const rampartExists = this.room.lookForAt(LOOK_STRUCTURES, structure).find(i => i.structureType === "rampart");
+      if (!rampartExists) {
+        return this.room.createConstructionSite(structure.pos.x, structure.pos.y, STRUCTURE_RAMPART);
+      }
+    }
     return -1;
   }
 

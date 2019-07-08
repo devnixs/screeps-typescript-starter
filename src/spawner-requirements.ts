@@ -13,7 +13,11 @@ import { getMyRooms } from "utils/misc-utils";
 export interface RoleRequirement {
   role: roles;
   percentage: number;
+
+  maxRepatAccrossAll?: number;
+  maxRepeat?: number;
   maxCount?: number;
+
   exactBody?: BodyPartConstant[];
   bodyTemplate?: BodyPartConstant[];
   bodyTemplatePrepend?: BodyPartConstant[];
@@ -25,7 +29,6 @@ export interface RoleRequirement {
   subRole?: string;
   onlyRooms?: string[];
   disableIfLowOnCpu?: boolean;
-  maxRepeat?: number;
 }
 
 // MOVE	            50	Moves the creep. Reduces creep fatigue by 2/tick. See movement.
@@ -299,7 +302,6 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
         percentage: 4,
         role: "long-distance-harvester",
         maxCount: isStorageAlmostFull ? 0 : 1,
-        countAllRooms: false,
         bodyTemplate: [WORK],
         maxRepeat: (remote.energyGeneration || 10) / HARVEST_POWER,
         subRole: remote.room + "-" + remote.x + "-" + remote.y,
@@ -316,18 +318,32 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     });
 
   const remoteDefenders = (spawn.room.memory.needsDefenders || [])
-    .filter(i => spawn.room.energyCapacityAvailable > 620)
+    .filter(i => i.mode === "remote" && spawn.room.energyCapacityAvailable > 620)
     .map(remote => {
       return {
         percentage: 20,
         role: "remote-defender",
-        maxCount: Math.ceil(remote.threatLevel / 5),
-        bodyTemplate: [MOVE, MOVE, ATTACK, ATTACK],
-        bodyTemplatePrepend: [HEAL, MOVE],
-        maxRepeat: Math.ceil(remote.threatLevel),
+        bodyTemplate: [MOVE, MOVE, MOVE, ATTACK, ATTACK, HEAL],
+        maxRepatAccrossAll: Math.ceil(remote.threatLevel),
         sortBody: [TOUGH, MOVE, ATTACK, HEAL],
         subRole: remote.room,
-        disableIfLowOnCpu: true,
+        additionalMemory: {
+          homeSpawnPosition: spawn.pos,
+          home: spawn.pos.roomName
+        } as Partial<IRemoteDefenderMemory>
+      } as RoleRequirement;
+    });
+
+  const localDefenders = (spawn.room.memory.needsDefenders || [])
+    .filter(i => i.mode === "local" && spawn.room.energyCapacityAvailable > 620)
+    .map(remote => {
+      return {
+        percentage: 20,
+        role: "local-defender",
+        bodyTemplate: [MOVE, RANGED_ATTACK, RANGED_ATTACK],
+        maxRepatAccrossAll: Math.ceil(remote.threatLevel * 2),
+        bodyTemplatePrepend: [HEAL, HEAL, MOVE],
+        sortBody: [TOUGH, MOVE, ATTACK, HEAL],
         additionalMemory: {
           homeSpawnPosition: spawn.pos,
           home: spawn.pos.roomName
@@ -355,14 +371,15 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     });
 
   return [
-    ...remoteDefenders,
     ...harvesterDefinitions,
     {
-      percentage: 2,
+      percentage: 100,
       role: "truck",
       maxCount: spawn.room.memory.trucksCount || 2,
       bodyTemplate: [MOVE, CARRY, CARRY]
     },
+    ...remoteDefenders,
+    ...localDefenders,
     {
       percentage: 2,
       role: "builder",
@@ -376,6 +393,15 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       bodyTemplate: [MOVE, MOVE, WORK, CARRY],
       onlyRooms: builderHelperSource ? [builderHelperSource] : undefined,
       subRole: builderHelperTarget,
+      disableIfLowOnCpu: true
+    },
+    {
+      percentage: 2,
+      role: "builder",
+      maxCount: 2,
+      bodyTemplate: [MOVE, MOVE, WORK, CARRY],
+      onlyRooms: ["E13S15"],
+      subRole: "E8S15",
       disableIfLowOnCpu: true
     },
     {
@@ -395,23 +421,6 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     },
     {
       percentage: 20,
-      role: "dismantler",
-      maxCount:
-        dismantlerFlag &&
-        dismantlerFlag.room &&
-        dismantlerFlag.room.controller &&
-        !dismantlerFlag.room.controller.safeMode
-          ? 2
-          : 0,
-      countAllRooms: true,
-      bodyTemplate: [MOVE, WORK],
-      sortBody: [TOUGH, WORK, MOVE, RANGED_ATTACK],
-      onlyRooms: ["E22N36", "E22N35", "E19N37"],
-      subRole: "room1",
-      additionalMemory: {} as IDismantlerMemory
-    },
-    {
-      percentage: 20,
       role: "versatile",
       maxCount: Game.flags["versatile_attack"] ? 1 : 0,
       countAllRooms: true,
@@ -422,56 +431,6 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       additionalMemory: {
         boostable: true
       } as IDismantlerMemory
-    },
-    {
-      percentage: 20,
-      role: "attacker",
-      maxCount: Game.flags["attacker_attack_" + spawn.room.name] ? 2 : 0,
-      countAllRooms: false,
-      exactBody: [
-        TOUGH,
-        TOUGH,
-        TOUGH,
-        TOUGH,
-        RANGED_ATTACK,
-        RANGED_ATTACK,
-        RANGED_ATTACK,
-        RANGED_ATTACK,
-        ATTACK,
-        ATTACK,
-        ATTACK,
-        MOVE,
-        MOVE,
-        MOVE,
-        MOVE,
-        MOVE,
-        HEAL,
-        HEAL,
-        HEAL,
-        HEAL,
-        HEAL
-      ],
-      additionalMemory: {
-        boostable: false
-      } as IDismantlerMemory
-    },
-    {
-      percentage: 20,
-      role: "pestcontrol",
-      maxCount: Game.flags["pest_control"] ? 2 : 0,
-      countAllRooms: false,
-      onlyRooms: ["E22N36"],
-      exactBody: [MOVE, MOVE, MOVE]
-    },
-    {
-      percentage: 20,
-      role: "healer",
-      maxCount: Game.flags["fighter_attack"] || Game.flags["dismantler_attack"] ? requiredHealersForAnAttack : 0,
-      bodyTemplate: [HEAL, MOVE, HEAL, MOVE, HEAL, MOVE, HEAL, MOVE],
-      sortBody: [TOUGH, HEAL, MOVE],
-      onlyRooms: ["E27N47"],
-      capMaxEnergy: 1600,
-      minEnergy: 1300
     },
     {
       percentage: 1,
@@ -493,17 +452,16 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     {
       percentage: 4,
       role: "long-distance-truck",
-      maxCount: isStorageAlmostFull
+      maxRepatAccrossAll: isStorageAlmostFull
         ? 0
         : Math.ceil(
             spawn.room.memory.remotes
               .filter(i => i.energy > 0 && !i.disabled)
-              .map(i => i.distance / 30) // 1 truck for every 30 distance
+              .map(i => i.distance / 4) // 1 truck template repetition for every 4 distance
               .reduce((acc, i) => acc + i, 0)
           ),
       bodyTemplate: [MOVE, CARRY, CARRY],
       disableIfLowOnCpu: true,
-      maxRepeat: 6,
       bodyTemplatePrepend: [WORK, CARRY, MOVE],
       additionalMemory: {
         homeSpawnPosition: spawn.pos,
@@ -511,21 +469,6 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       } as Partial<ILongDistanceTruckMemory>
     },
     ...reservers,
-    /*     {
-      percentage: 4,
-      role: "reserver",
-      maxCount: isStorageAlmostFull ? 0 : 1,
-      countAllRooms: true,
-      exactBody: [CLAIM, MOVE],
-      subRole: "screepsplus1-reserver1",
-      onlyRooms: ["E1S15"],
-      disableIfLowOnCpu: true,
-      additionalMemory: {
-        homeSpawnPosition: spawn.pos,
-        home: spawn.pos.roomName,
-        targetRoomName: "E2S15"
-      } as Partial<IReserverMemory>
-    }, */
     controllerLevel < 4
       ? {
           percentage: 1,
@@ -544,18 +487,6 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
           maxRepeat: upgraderRatio * 2,
           disableIfLowOnCpu: true
         },
-    {
-      percentage: 1,
-      role: "pickaboo",
-      maxCount: 0,
-      countAllRooms: true,
-      bodyTemplate: [TOUGH, MOVE],
-      sortBody: [TOUGH, WORK, MOVE],
-      subRole: "room1",
-      capMaxEnergy: 60,
-      onlyRooms: ["E27N47"],
-      additionalMemory: {} as IDismantlerMemory
-    },
     {
       exactBody: [MOVE],
       percentage: 1,

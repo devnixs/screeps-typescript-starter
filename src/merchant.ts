@@ -172,9 +172,9 @@ export class Merchant {
       const terminal = room.terminal as StructureTerminal;
 
       return {
-        amount: storage.store.energy,
+        amount: storage.store.energy + terminal.store.energy,
         room: room,
-        terminalReady: !terminal.cooldown
+        terminalReady: !terminal.cooldown && terminal.store.energy > desiredEnergyInTerminal / 2
       };
     });
 

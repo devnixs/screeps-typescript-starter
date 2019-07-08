@@ -15,6 +15,11 @@ const costs = {
 
 var delay = "sim" in Game.rooms ? 1 : 2;
 
+interface BodyPartCombinationResult {
+  body: BodyPartConstant[] | null;
+  repeats: number;
+}
+
 class Spawner {
   run() {
     // Do the spawning logic once every 20 ticks
@@ -43,7 +48,7 @@ class Spawner {
     maxEnergy: number,
     sortOrder?: BodyPartConstant[],
     maxRepeat?: number
-  ) {
+  ): BodyPartCombinationResult {
     const current: BodyPartConstant[] = prependBodyTemplate ? prependBodyTemplate.concat() : [];
     let cost = 0;
 
@@ -69,14 +74,15 @@ class Spawner {
       // console.log("Removing parts to fit template", current.length, parts.length);
       current.pop();
     }
+    const repeats = (current.length - (prependBodyTemplate || []).length) / parts.length;
 
     const minParts = parts.length + (prependBodyTemplate ? prependBodyTemplate.length : 0);
     if (current.length < minParts) {
       // We want at least one repetition
-      return null;
+      return { body: null, repeats: 0 };
     } else {
       const sorted = sortOrder ? _.sortBy(current, bodyPart => sortOrder.indexOf(bodyPart)) : current;
-      return sorted;
+      return { body: sorted, repeats: repeats };
     }
   }
 
@@ -117,7 +123,12 @@ class Spawner {
         currentPercentage,
         desiredPercentage,
         currentCount: currentCount,
-        requirement: role
+        requirement: role,
+        templateRepeats: _.sum(
+          creepsInThisRoom
+            .filter(i => this.getRoleSlug(i.memory.role, i.memory.subRole) === roleSlug)
+            .map(i => i.memory.r)
+        )
       };
     });
 
@@ -127,13 +138,15 @@ class Spawner {
       i =>
         i.currentPercentage < i.desiredPercentage &&
         (!i.requirement.disableIfLowOnCpu || !lowOnCpu) &&
-        (i.requirement.maxCount === undefined || i.currentCount < i.requirement.maxCount)
+        (i.requirement.maxCount === undefined || i.currentCount < i.requirement.maxCount) &&
+        (i.requirement.maxRepatAccrossAll === undefined || i.templateRepeats < i.requirement.maxRepatAccrossAll)
     )[0];
 
     const roleThatCanBeCreated = roleInfos.filter(
       i =>
         (!i.requirement.disableIfLowOnCpu || !lowOnCpu) &&
-        (i.requirement.maxCount === undefined || i.currentCount < i.requirement.maxCount)
+        (i.requirement.maxCount === undefined || i.currentCount < i.requirement.maxCount) &&
+        (i.requirement.maxRepatAccrossAll === undefined || i.templateRepeats < i.requirement.maxRepatAccrossAll)
     )[0];
 
     if (debugMode) {
@@ -152,9 +165,15 @@ class Spawner {
     }
 
     if (roleNeededToBeCreated) {
-      this.spawnRole(spawn, roleNeededToBeCreated.requirement, debugMode, counts);
+      this.spawnRole(
+        spawn,
+        roleNeededToBeCreated.requirement,
+        debugMode,
+        counts,
+        roleNeededToBeCreated.templateRepeats
+      );
     } else if (roleThatCanBeCreated) {
-      this.spawnRole(spawn, roleThatCanBeCreated.requirement, debugMode, counts);
+      this.spawnRole(spawn, roleThatCanBeCreated.requirement, debugMode, counts, roleThatCanBeCreated.templateRepeats);
     }
   }
 
@@ -166,7 +185,8 @@ class Spawner {
     spawn: StructureSpawn,
     role: RoleRequirement,
     debug: boolean = false,
-    existingRoles: _.Dictionary<number>
+    existingRoles: _.Dictionary<number>,
+    existingTemplateRepeats: number
   ) {
     let creepsCounter = Object.keys(Game.creeps).length + 1;
 
@@ -193,6 +213,7 @@ class Spawner {
     }
 
     let body: BodyPartConstant[] | null;
+    let repeats = 1;
     if (role.exactBody) {
       body = role.exactBody;
       if (debug) {
@@ -203,13 +224,30 @@ class Spawner {
         console.log("Spawning body template : ", role.bodyTemplate);
       }
       const maxEnergy = role.capMaxEnergy || 1000000;
-      body = this.getBodyPartCombinationFromTemplate(
+      let maxRepeats: number | undefined = Math.min(
+        role.maxRepeat || 1000,
+        (role.maxRepatAccrossAll || 1000) - existingTemplateRepeats
+      );
+      maxRepeats = role.maxRepeat || role.maxRepatAccrossAll;
+      if (role.maxRepatAccrossAll && debug) {
+        console.log("Max repeats for role ", role.role, role.maxRepatAccrossAll, spawn.room.name);
+        console.log("Current repeats for role ", role.role, existingTemplateRepeats, spawn.room.name);
+        console.log("Available repeats ", role.role, maxRepeats, spawn.room.name);
+      }
+
+      const result = this.getBodyPartCombinationFromTemplate(
         role.bodyTemplate,
         role.bodyTemplatePrepend,
         Math.min(maxEnergyPossible, maxEnergy),
         role.sortBody,
-        role.maxRepeat
+        maxRepeats
       );
+
+      body = result.body;
+      repeats = result.repeats;
+      if (role.maxRepatAccrossAll && debug) {
+        console.log("Created repeats ", repeats);
+      }
 
       if (debug) {
         console.log("-- Result : ", body);
@@ -231,7 +269,8 @@ class Spawner {
         role: role.role,
         subRole: role.subRole,
         lastPos: { x: spawn.pos.x, y: spawn.pos.y },
-        noMovementTicksCount: 0
+        noMovementTicksCount: 0,
+        r: repeats
       } as CreepMemory
     });
 

@@ -78,7 +78,7 @@ class RoleTruck implements IRole {
             Math.min(firstTarget.jobDepositAmount, maxDeposit)
           );
           if (depositResult === OK || maxDeposit === 0) {
-            memory.destinations.unshift();
+            memory.destinations.shift();
           }
 
           if (totalCargoContent === 0 || memory.destinations.length === 0) {
@@ -351,11 +351,12 @@ class RoleTruck implements IRole {
       }
     }
 
-    const filledContainer: StructureContainer | undefined = creep.room.find(FIND_STRUCTURES, {
+    const filledContainers: StructureContainer[] = creep.room.find(FIND_STRUCTURES, {
       filter: i => i.structureType === "container" && _.sum(i.store) >= i.storeCapacity / 2
-    })[0] as StructureContainer;
+    }) as StructureContainer[];
 
-    if (filledContainer) {
+    for (let filledContainerIndex in filledContainers) {
+      const filledContainer = filledContainers[filledContainerIndex];
       const resourceType = findNonEmptyResourceInStore(filledContainer.store) as ResourceConstant;
       const job = this.createRetrievalJob({
         amount: filledContainer.store[resourceType] as any,
@@ -370,11 +371,31 @@ class RoleTruck implements IRole {
       }
     }
 
-    const containerWithMultipleResources: StructureContainer | undefined = creep.room.find(FIND_STRUCTURES, {
-      filter: i => i.structureType === "container" && findNonEmptyResourcesInStore(i.store).length >= 2
-    })[0] as StructureContainer;
+    const emptyTowers: StructureTower[] = creep.room.find(FIND_MY_STRUCTURES, {
+      filter: i => i.structureType === "tower" && i.energy <= 100
+    }) as any;
 
-    if (containerWithMultipleResources) {
+    if (storage) {
+      for (let emptyTowersIndex in emptyTowers) {
+        const tower = emptyTowers[emptyTowersIndex];
+        yield {
+          jobNeededAmount: tower.energyCapacity - tower.energy,
+          jobResource: "energy",
+          jobTag: "refill-tower-" + tower.id,
+          targetSource: storage.id,
+          targetDestination: tower.id,
+          emoji: "📡"
+        };
+      }
+    }
+
+    const containersWithMultipleResources: StructureContainer[] = creep.room.find(FIND_STRUCTURES, {
+      filter: i => i.structureType === "container" && findNonEmptyResourcesInStore(i.store).length >= 2
+    }) as StructureContainer[];
+
+    for (let containerWithMultipleResourcesIndex in containersWithMultipleResources) {
+      const containerWithMultipleResources = containersWithMultipleResources[containerWithMultipleResourcesIndex];
+
       const resourcesInThatContainer = findNonEmptyResourcesInStore(containerWithMultipleResources.store);
       const resourceId = _.random(0, resourcesInThatContainer.length - 1);
 
@@ -393,25 +414,30 @@ class RoleTruck implements IRole {
     }
 
     var labs = this.getLabs(creep.room).map(i => ({ memory: i, obj: Game.getObjectById(i.id) as StructureLab }));
-    var labThatNeedsEmptying = labs.filter(
+    var labsThatNeedsEmptying = labs.filter(
       i =>
         i.memory.state === "needs-emptying" &&
         i.obj.mineralAmount > 0 &&
         (i.obj.cooldown === 0 || i.obj.mineralAmount > 300)
-    )[0];
+    );
 
     if (storage) {
-      var linkThatNeedsEmptying =
-        creep.room.memory.links && creep.room.memory.links.find(i => i.state == "needs-emptying");
-
-      var linkThatNeedsRefill =
+      var linksThatNeedsEmptying =
         creep.room.memory.links &&
-        creep.room.memory.links.find(i => i.state == "needs-refill" && i.type === "input-output");
+        creep.room.memory.links.filter(i => i.state == "needs-emptying" && i.needsAmount !== undefined);
 
-      if (linkThatNeedsEmptying && linkThatNeedsEmptying.needsAmount !== undefined) {
+      var linksThatNeedsRefill =
+        creep.room.memory.links &&
+        creep.room.memory.links.filter(
+          i => i.state == "needs-refill" && i.type === "input-output" && i.needsAmount !== undefined
+        );
+
+      for (let linksThatNeedsEmptyingIndex in linksThatNeedsEmptying) {
+        const linkThatNeedsEmptying = linksThatNeedsEmptying[linksThatNeedsEmptyingIndex];
+
         var linkObject = Game.getObjectById(linkThatNeedsEmptying.id) as StructureLink;
 
-        const overSupply = linkObject.energy - linkThatNeedsEmptying.needsAmount;
+        const overSupply = linkObject.energy - (linkThatNeedsEmptying.needsAmount || 0);
         if (overSupply > 100) {
           const job = this.createRetrievalJob({
             amount: Math.min(overSupply, creep.carryCapacity),
@@ -427,9 +453,10 @@ class RoleTruck implements IRole {
         }
       }
 
-      if (linkThatNeedsRefill && linkThatNeedsRefill.needsAmount !== undefined) {
+      for (let linksThatNeedsRefillIndex in linksThatNeedsRefill) {
+        const linkThatNeedsRefill = linksThatNeedsRefill[linksThatNeedsRefillIndex];
         var linkObject = Game.getObjectById(linkThatNeedsRefill.id) as StructureLink;
-        const underSupply = linkThatNeedsRefill.needsAmount - linkObject.energy;
+        const underSupply = (linkThatNeedsRefill.needsAmount || 0) - linkObject.energy;
         if (underSupply > 100) {
           const job = this.createRefillJob({
             amount: underSupply,
@@ -554,7 +581,7 @@ class RoleTruck implements IRole {
         }
       }
 
-      var labThatNeedsRefills = labs.filter(i => {
+      var labsThatNeedsRefills = labs.filter(i => {
         if (!i.memory.needsResource) {
           return;
         }
@@ -564,48 +591,34 @@ class RoleTruck implements IRole {
           availableResource > 0 &&
           i.memory.needsAmount > i.obj.mineralAmount
         );
-      })[0];
+      });
 
-      if (labThatNeedsRefills && terminal) {
-        const lab = labThatNeedsRefills;
-        yield {
-          targetSource: terminal.id,
-          targetDestination: lab.obj.id,
-          jobResource: lab.memory.needsResource,
-          jobNeededAmount: lab.memory.needsAmount - lab.obj.mineralAmount,
-          jobTag: "refill-lab-" + lab.obj.id,
-          emoji: "⚗️"
-        };
+      if (terminal) {
+        for (let labsThatNeedsRefillsIndex in labsThatNeedsRefills) {
+          const lab = labsThatNeedsRefills[labsThatNeedsRefillsIndex];
+          yield {
+            targetSource: terminal.id,
+            targetDestination: lab.obj.id,
+            jobResource: lab.memory.needsResource,
+            jobNeededAmount: lab.memory.needsAmount - lab.obj.mineralAmount,
+            jobTag: "refill-lab-" + lab.obj.id,
+            emoji: "⚗️"
+          };
+        }
       }
 
-      if (labThatNeedsEmptying && terminal) {
-        const lab = labThatNeedsEmptying;
-        yield {
-          targetSource: lab.obj.id,
-          targetDestination: terminal.id,
-          jobResource: lab.obj.mineralType as ResourceConstant,
-          jobNeededAmount: lab.obj.mineralAmount,
-          jobTag: "empty-lab-" + lab.obj.id,
-          emoji: "💎"
-        };
-      }
-    }
-
-    const emptyTowers: StructureTower[] = creep.room.find(FIND_MY_STRUCTURES, {
-      filter: i => i.structureType === "tower" && i.energy <= 100
-    }) as any;
-
-    if (storage && emptyTowers.length) {
-      const tower = emptyTowers[0];
-      if (storage) {
-        yield {
-          jobNeededAmount: tower.energyCapacity - tower.energy,
-          jobResource: "energy",
-          jobTag: "refill-tower-" + tower.id,
-          targetSource: storage.id,
-          targetDestination: tower.id,
-          emoji: "📡"
-        };
+      if (terminal) {
+        for (let labsThatNeedsEmptyingIndex in labsThatNeedsEmptying) {
+          const lab = labsThatNeedsEmptying[labsThatNeedsEmptyingIndex];
+          yield {
+            targetSource: lab.obj.id,
+            targetDestination: terminal.id,
+            jobResource: lab.obj.mineralType as ResourceConstant,
+            jobNeededAmount: lab.obj.mineralAmount,
+            jobTag: "empty-lab-" + lab.obj.id,
+            emoji: "💎"
+          };
+        }
       }
     }
 
@@ -701,7 +714,7 @@ class RoleTruck implements IRole {
       memory.idle = false;
       memory.lastJobRefreshTime = Game.time;
 
-      const debugMode = firstJob.jobTag.startsWith("refill-lab") || firstJob.jobTag.startsWith("empty-lab");
+      const debugMode = false;
 
       if (!firstJob.isUnique) {
         // let's see if we can find another source job on our path
@@ -711,9 +724,10 @@ class RoleTruck implements IRole {
         const destinationStructure = Game.getObjectById(firstJob.targetDestination) as Structure;
         while (result.value && currentJobCarry < creep.carryCapacity) {
           if (debugMode) {
-            console.log("Trying to add job ", result.value.jobTag, creep.name);
+            console.log("Initial job ", firstJob.jobTag);
+            console.log("Trying to add job ", result.value.jobTag, creep.name, creep.room.name);
           }
-          let canDo = otherTrucksJobs.indexOf(result.value.jobTag) === 0;
+          let canDo = otherTrucksJobs.indexOf(result.value.jobTag) === -1;
           if (debugMode) {
             console.log("Can do 1 ", canDo);
           }
@@ -721,14 +735,17 @@ class RoleTruck implements IRole {
           if (debugMode) {
             console.log("Can do 2 ", canDo);
           }
-          canDo =
-            canDo && (Game.getObjectById(result.value.targetSource) as Structure).pos.inRangeTo(sourceStructure, 4);
+          const thisJobSource = Game.getObjectById(result.value.targetSource) as Structure | undefined;
+          canDo = canDo && sourceStructure && (!thisJobSource || thisJobSource.pos.inRangeTo(sourceStructure, 4));
           if (debugMode) {
             console.log("Can do 3 ", canDo);
           }
+
+          const thisJobDestination = Game.getObjectById(result.value.targetDestination) as Structure | undefined;
           canDo =
             canDo &&
-            (Game.getObjectById(result.value.targetDestination) as Structure).pos.inRangeTo(destinationStructure, 4);
+            destinationStructure &&
+            (!thisJobDestination || thisJobDestination.pos.inRangeTo(destinationStructure, 4));
           if (debugMode) {
             console.log("Can do 4 ", canDo);
           }

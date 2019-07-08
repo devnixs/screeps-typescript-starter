@@ -37,6 +37,7 @@ import { roleRemoteDefender } from "roles/remote-defender";
 import { DefenseManager } from "defense";
 import { ExplorationManager } from "exploration";
 import { roleScout } from "roles/scout";
+import { roleLocalDefender } from "roles/local-defender";
 
 // profiler.enable();
 
@@ -132,6 +133,9 @@ export const loop = ErrorMapper.wrapLoop(() => {
         }
         if (memory.role == "remote-defender") {
           roleRemoteDefender.run(creep);
+        }
+        if (memory.role == "local-defender") {
+          roleLocalDefender.run(creep);
         }
         if (memory.role == "scout") {
           roleScout.run(creep);

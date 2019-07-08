@@ -12,33 +12,32 @@ class RoleRemoteDefender implements IRole {
 
     let hostile = findHostile(creep);
 
-    const canHeal = creep.getActiveBodyparts(HEAL);
+    if (creep.hits < creep.hitsMax) {
+      creep.heal(creep);
+    }
 
     // ATTACK MODE
     if (hostile) {
-      const isFar = hostile.pos.getRangeTo(creep.pos) > 4;
-      if (isFar && creep.hits < creep.hitsMax) {
-        // heal self before engaging next combat.
-        creep.heal(creep);
-        return;
+      creep.say("Yarr!", true);
+      creep.attack(hostile);
+
+      // find closest empty rempart
+      const closestEmptyRempart = creep.pos.findClosestByRange(FIND_MY_STRUCTURES, {
+        filter: r =>
+          r.structureType === "rampart" &&
+          (r.pos.lookFor(LOOK_CREEPS).length === 0 || (r.pos.x === creep.pos.x && r.pos.y === creep.pos.y))
+      });
+      if (closestEmptyRempart) {
+        if (closestEmptyRempart.pos.x !== creep.pos.x || closestEmptyRempart.pos.y !== creep.pos.y) {
+          creep.goTo(closestEmptyRempart);
+        }
+      } else {
+        creep.goTo(hostile);
       }
 
-      if (hostile.pos.isNearTo(creep.pos)) {
-        creep.attack(hostile);
-      } else {
-        creep.say("Yarr!", true);
-        creep.goTo(hostile);
-        if (canHeal) {
-          creep.heal(creep);
-        }
-      }
       return;
     } else {
       // PEACEFUL MODE
-      if (creep.hits < creep.hitsMax) {
-        creep.heal(creep);
-      }
-
       if (!memory.subRole) {
         this.goHome(creep);
         return;
@@ -57,7 +56,8 @@ class RoleRemoteDefender implements IRole {
           }
           return;
         } else {
-          if (this.healFriends(creep) === -1) {
+          const canHeal = creep.getActiveBodyparts(HEAL);
+          if (!canHeal || this.healFriends(creep) === -1) {
             this.reassign(creep);
             const rest = findRestSpot(creep, { x: 25, y: 25 });
             if (rest) {

@@ -1,6 +1,7 @@
 import { findAndCache, findRestSpot } from "./finder";
 import { LinkManager } from "./link-manager";
 import { profiler } from "../utils/profiler";
+import { desiredEnergyInTerminal } from "constants/misc";
 
 class SourceManager {
   harvestEnergyFromSource(creep: Creep) {
@@ -168,6 +169,12 @@ class SourceManager {
     }
 
     if (!targetStructure) {
+      if (creep.room.terminal && creep.room.terminal.store.energy + 2000 > desiredEnergyInTerminal) {
+        targetStructure = creep.room.terminal;
+      }
+    }
+
+    if (!targetStructure) {
       targetStructure = creep.room.storage && creep.room.storage.store.energy > 0 ? creep.room.storage : undefined;
     }
 
@@ -207,9 +214,11 @@ class SourceManager {
 
     const isTowerOrLab = structure.structureType == STRUCTURE_TOWER || structure.structureType == STRUCTURE_LAB;
 
+    const hasEnoughEnergyInRoom = structure.room.energyAvailable === structure.room.energyCapacityAvailable;
+
     return (
       (isExtOrSpawn && structure.energy < structure.energyCapacity) ||
-      (isTowerOrLab && structure.energy < structure.energyCapacity * 0.5) // we don't want to keep filling towers. Or the creep would keep doing this as the energy goes down every tick
+      (hasEnoughEnergyInRoom && isTowerOrLab && structure.energy < structure.energyCapacity * 0.5) // we don't want to keep filling towers. Or the creep would keep doing this as the energy goes down every tick
     );
   };
 

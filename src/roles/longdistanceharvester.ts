@@ -20,7 +20,8 @@ class RoleLongDistanceHarvester implements IRole {
     if (enemy && enemy.pos.getRangeTo(creep.pos.x, creep.pos.y) < 10) {
       // flee
       creep.say("RUN!");
-      creep.goTo(new RoomPosition(20, 20, memory.homeRoom));
+      const homeRoom = Game.rooms[memory.homeRoom].find(FIND_MY_SPAWNS)[0];
+      creep.goTo(homeRoom);
       return;
     }
 

@@ -16,20 +16,21 @@ export class DefenseManager {
 
     this.room.memory.needsDefenders = [];
     this.checkRemotes();
-    this.addDefenders(this.room);
+    this.runForOwnRoom();
   }
 
   runForOwnRoom() {
     const threatLevel = this.getThreatLevel(this.room);
     const towerCount = this.room.find(FIND_MY_STRUCTURES, { filter: s => s.structureType === "tower" }).length;
-    const towerThreatCompensation = towerCount * 10;
+    const towerThreatCompensation = towerCount * 5;
 
     const threatDifference = threatLevel - towerThreatCompensation;
 
     if (threatDifference > 0) {
       this.room.memory.needsDefenders.push({
         room: this.room.name,
-        threatLevel: threatDifference
+        threatLevel: threatDifference,
+        mode: "local"
       });
     }
   }
@@ -49,7 +50,8 @@ export class DefenseManager {
       console.log("Found thread in room", targetRoom.name);
       this.room.memory.needsDefenders.push({
         room: targetRoom.name,
-        threatLevel: threatLevel
+        threatLevel: threatLevel,
+        mode: targetRoom.name === this.room.name ? "local" : "remote"
       });
     }
   }
@@ -60,7 +62,9 @@ export class DefenseManager {
       targetRoom.find(FIND_HOSTILE_CREEPS, {
         filter: i =>
           i.body.find(
-            bodyPart => bodyPart.hits > 0 && (bodyPart.type === "attack" || bodyPart.type === "ranged_attack")
+            bodyPart =>
+              bodyPart.hits > 0 &&
+              (bodyPart.type === "attack" || bodyPart.type === "ranged_attack" || bodyPart.type === "heal")
           )
       });
 
@@ -73,16 +77,16 @@ export class DefenseManager {
             }
             let threat = 0;
             if (i.type === "attack") {
-              threat = 0.4;
+              threat = 1;
             }
             if (i.type === "ranged_attack") {
-              threat = 0.4;
+              threat = 1;
             }
             if (i.type === "heal") {
-              threat = 0.4;
+              threat = 1;
             }
             if (i.type === "tough") {
-              threat = 0.4;
+              threat = 1;
             }
             if (i.boost) {
               threat = threat * 2;

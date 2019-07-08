@@ -12,6 +12,7 @@ type roles =
   | "long-distance-harvester"
   | "long-distance-truck"
   | "remote-defender"
+  | "local-defender"
   | "pickaboo"
   | "healer"
   | "claimer"
@@ -36,6 +37,8 @@ interface CreepMemory {
   boostable: boolean;
 
   rest: any;
+
+  r?: number; // templateRepeat
 }
 
 interface PlannedLocation {
@@ -93,6 +96,7 @@ interface ExplorationDefinition {
 interface DefenseDefinition {
   threatLevel: number;
   room: string;
+  mode: "local" | "remote";
 }
 
 interface RemoteRoomDefinition {

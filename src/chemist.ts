@@ -55,7 +55,7 @@ export class Chemist {
 
   static settings = {
     minBatchSize: 400, // anything less than this wastes time
-    maxBatchSize: 1000,
+    maxBatchSize: 3000,
     sleepTime: 100 // sleep for this many ticks once you can't make anything
   };
 
@@ -72,7 +72,7 @@ export class Chemist {
   }
 
   run() {
-    const checkTime = "sim" in Game.rooms ? 1 : 10;
+    const checkTime = "sim" in Game.rooms ? 1 : 1000;
     if (Game.time % checkTime === 0) {
       this.setupLabGroups();
     }
