@@ -48,22 +48,27 @@ export class UpgradeManager {
       this.room.memory.upgraderRatio = Math.ceil(Math.pow(storage.store.energy / 100000, 2) * 2);
     } else {
       const containers = this.room.containers;
-
-      const totalStorage = _.sum(containers.map(i => i.storeCapacity));
-      const totalEnergy = _.sum(containers.map(i => i.store.energy));
-
-      const ratio = totalEnergy / totalStorage;
-      if (ratio >= 0.7) {
-        this.room.memory.upgraderRatio = 10;
-      } else if (ratio >= 0.5) {
-        this.room.memory.upgraderRatio = 5;
-      } else if (ratio >= 0.25) {
-        this.room.memory.upgraderRatio = 3;
-      } else if (ratio >= 0.1) {
-        this.room.memory.upgraderRatio = 2;
+      if (containers.length === 0) {
+        this.room.memory.upgraderRatio = 1;
+        this.room.memory.upgraderType = "mobile";
       } else {
-        this.room.memory.upgraderRatio = 0;
+        const totalStorage = _.sum(containers.map(i => i.storeCapacity));
+        const totalEnergy = _.sum(containers.map(i => i.store.energy));
+
+        const ratio = totalEnergy / totalStorage;
+        if (ratio >= 0.7) {
+          this.room.memory.upgraderRatio = 20;
+        } else if (ratio >= 0.5) {
+          this.room.memory.upgraderRatio = 10;
+        } else if (ratio >= 0.25) {
+          this.room.memory.upgraderRatio = 3;
+        } else if (ratio >= 0.1) {
+          this.room.memory.upgraderRatio = 2;
+        } else {
+          this.room.memory.upgraderRatio = 0;
+        }
       }
+
       this.room.memory.upgraderType = "mobile";
     }
   }

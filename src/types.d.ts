@@ -48,6 +48,8 @@ interface PlannedLocation {
 }
 
 interface RoomMemory {
+  walls: number[] | undefined;
+  restSpot: { x: number; y: number } | undefined;
   upgraderRatio: number;
   upgraderType: "mobile" | "static" | "undefined";
 

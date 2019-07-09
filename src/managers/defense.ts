@@ -35,29 +35,30 @@ export class DefenseManager {
         threatLevel: threatDifference,
         mode: "local"
       });
-      const underSiege = threatLevel > 40;
+      const underSiege = threatLevel > 60;
       if (!this.room.memory.isUnderSiege && underSiege) {
-        this.room.memory.isUnderSiege = true;
         this.setupSiegeMode();
       } else if (this.room.memory.isUnderSiege && !underSiege) {
-        this.room.memory.isUnderSiege = false;
+        this.removeSiegeMode();
+      }
+    } else {
+      if (this.room.memory.isUnderSiege) {
         this.removeSiegeMode();
       }
     }
   }
 
   setupSiegeMode() {
+    this.room.memory.isUnderSiege = true;
     console.log("Room", this.room.name, "is under siege!");
     this.room.memory.boostMode = [RANGED_ATTACK];
     new Chemist(this.room).setupBoostMode();
-    const defenseElement = this.room.memory.needsDefenders.find(i => i.room === this.room.name);
-    if (defenseElement) {
-      defenseElement.boosted = true;
-    }
   }
 
   removeSiegeMode() {
+    this.room.memory.isUnderSiege = false;
     console.log("Room", this.room.name, "is no longer under siege.");
+    this.room.memory.boostMode = undefined;
     new Chemist(this.room).stopBoostMode();
   }
 

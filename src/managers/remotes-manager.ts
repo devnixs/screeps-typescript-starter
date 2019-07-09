@@ -151,11 +151,14 @@ export class RemotesManager {
     );
 
     const remotes = _.sortBy(
-      this.getEnabledRemotes().filter(
-        i =>
+      this.getEnabledRemotes().filter(i => {
+        const maxTrucks = i.energy > 3000 ? 4 : 3;
+
+        return (
           i.container &&
-          trucks.filter(t => (t.memory as ILongDistanceTruckMemory).targetContainer === i.container).length < 3
-      ),
+          trucks.filter(t => (t.memory as ILongDistanceTruckMemory).targetContainer === i.container).length < maxTrucks
+        );
+      }),
       i => -1 * i.energy
     );
 

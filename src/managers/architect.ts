@@ -1,9 +1,10 @@
 import { findEmptySpotCloseTo } from "utils/finder";
 import { profiler } from "../utils/profiler";
-import { unwatchFile } from "fs";
+import "../utils/mincut-walls";
+import { mincutHelper } from "../utils/mincut-walls";
 
 const isSimulation = "sim" in Game.rooms;
-const delay = isSimulation ? 1 : 1000;
+const delay = isSimulation ? 1 : 20;
 
 export class Architect {
   emptySpot: Vector | undefined;
@@ -45,10 +46,14 @@ export class Architect {
     }
     this.room.memory.rnd = this.room.memory.rnd || Math.floor(Math.random() * 10) + 5;
 
-    if (Game.time % (delay * this.room.memory.rnd) === 0) {
+    if (Game.time % (delay * this.room.memory.rnd * 10) === 0) {
       console.log("Redoing constructions for room", this.room.name);
       // sometimes, redo constructions. They might have broke.
       this.room.memory.constructionsAreSetupAtLevel = 0;
+    }
+
+    if (this.room.memory.isUnderSiege) {
+      return;
     }
 
     if (this.room.controller && this.room.memory.constructionsAreSetupAtLevel === this.room.controller.level) {
@@ -62,6 +67,7 @@ export class Architect {
       this.createSourcesRoads,
       this.createControllerRoads,
       this.createColonyRoads,
+      this.createRoadsAroundStorage,
       this.createStorage,
       this.createTerminal,
       this.createCloseToSpawn(STRUCTURE_EXTENSION),
@@ -75,6 +81,7 @@ export class Architect {
       this.createCloseToSpawn(STRUCTURE_SPAWN),
       this.createCloseToSpawn(STRUCTURE_OBSERVER),
       this.setupSquareRoads,
+      this.buildWalls,
       this.createLinks
       //  this.createCloseToSpawn(STRUCTURE_POWER_SPAWN),
     ];
@@ -93,6 +100,50 @@ export class Architect {
         this.room.memory.constructionsAreSetupAtLevel = this.room.controller && this.room.controller.level;
       }
     }
+
+    this.findRestSpot();
+  }
+
+  findRestSpot() {
+    if (Game.time % 1000 > 0 && this.room.memory.restSpot) {
+      return;
+    }
+    const spawn = this.room.spawns[0];
+    const restSpot = findEmptySpotCloseTo(spawn.pos, this.room);
+    if (restSpot) {
+      this.room.memory.restSpot = restSpot;
+    }
+  }
+
+  buildWalls() {
+    if (!this.room.memory.walls && this.room.controller && this.room.controller.level <= 3) {
+      // We don't want to do this for existing room that already have wall
+      const defenseLocations = [];
+      const homeSpawn = this.room.spawns[0];
+      defenseLocations.push({
+        x1: homeSpawn.pos.x - 8,
+        y1: homeSpawn.pos.y - 8,
+        x2: homeSpawn.pos.x + 8,
+        y2: homeSpawn.pos.y + 8
+      });
+      const walls = mincutHelper.GetCutTiles(this.room.name, defenseLocations);
+      this.room.memory.walls = _.flatten(walls.map(i => [i.x, i.y]));
+    }
+
+    if (this.room.memory.walls && this.room.controller && this.room.controller.level >= 3) {
+      const walls = _.chunk(this.room.memory.walls, 2);
+      for (let i = 0; i < walls.length; i++) {
+        const wall = walls[i];
+        const rampartExists = this.room
+          .lookForAt(LOOK_STRUCTURES, new RoomPosition(wall[0], wall[1], this.room.name))
+          .find(i => i.structureType === "rampart");
+        if (!rampartExists) {
+          return this.room.createConstructionSite(wall[0], wall[1], STRUCTURE_RAMPART);
+        }
+      }
+    }
+
+    return -1;
   }
 
   createExtractor() {
@@ -370,6 +421,35 @@ export class Architect {
     return -1;
   }
 
+  createRoadsAroundStorage() {
+    if (!this.room.storage) {
+      return;
+    }
+
+    const positions = [
+      new RoomPosition(this.room.storage.pos.x - 1, this.room.storage.pos.y, this.room.name),
+      new RoomPosition(this.room.storage.pos.x + 1, this.room.storage.pos.y, this.room.name),
+      new RoomPosition(this.room.storage.pos.x, this.room.storage.pos.y - 1, this.room.name),
+      new RoomPosition(this.room.storage.pos.x, this.room.storage.pos.y + 1, this.room.name)
+    ];
+
+    for (let index = 0; index < positions.length; index++) {
+      const pos = positions[index];
+      const what = this.room.lookForAt(LOOK_STRUCTURES, pos);
+      const nonRoad = what.find(i => i.structureType !== "road");
+      const road = what.find(i => i.structureType === "road");
+
+      if (nonRoad) {
+        nonRoad.destroy();
+      }
+
+      if (!road) {
+        return this.room.createConstructionSite(pos.x, pos.y, STRUCTURE_ROAD);
+      }
+    }
+    return -1;
+  }
+
   createStorage() {
     if (!this.room.controller || this.room.controller.level < 4 || this.room.storage) {
       return -1;
@@ -394,7 +474,7 @@ export class Architect {
       delete this.room.memory.storagePlannedLocation;
     } else {
       position = PathFinder.search(spawn.pos, this.room.controller.pos).path.find(i =>
-        this.room.controller ? i.getRangeTo(this.room.controller.pos) === 3 : false
+        this.room.controller ? i.getRangeTo(spawn.pos) === 6 || i.getRangeTo(this.room.controller) <= 4 : false
       );
       if (!position) {
         return -1;
@@ -498,7 +578,6 @@ export class Architect {
   }
 
   setupSourcesLinks() {
-    console.log("Setting up sources link", this.room.name);
     const sources = this.room.find(FIND_SOURCES);
     if (!this.room.storage) {
       return -1;
@@ -507,7 +586,6 @@ export class Architect {
     for (let index in sources) {
       const source = sources[index];
 
-      console.log("Source", source.pos.x, source.pos.y);
       const existingLink = source.pos.findInRange(FIND_MY_STRUCTURES, 2, {
         filter: i => i.structureType === "link"
       })[0];

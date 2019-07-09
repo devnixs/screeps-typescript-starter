@@ -29,8 +29,9 @@ export function boostCreep(creep: Creep) {
     return -1;
   } else {
     const orderedBodyParts = _.sortBy(_.uniq(nonBoostedBodyPartsThatNeedBoosts), i => i !== MOVE);
+
     // Boost MOVE first.
-    for (let bodyPartIndex = 0; bodyPartIndex++; bodyPartIndex < orderedBodyParts.length) {
+    for (let bodyPartIndex = 0; bodyPartIndex < orderedBodyParts.length; bodyPartIndex++) {
       const bodyPart = orderedBodyParts[bodyPartIndex];
       const sameOfThisType = nonBoostedBodyPartsThatNeedBoosts.filter(i => i === bodyPart);
 

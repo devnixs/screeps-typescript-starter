@@ -110,8 +110,11 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
   const storageQuantity = spawn.room.storage ? _.sum(spawn.room.storage.store) : 0;
   const isStorageAlmostFull = storageQuantity > 900000;
 
+  const hasStorageOrContainers = !!spawn.room.storage || !!spawn.room.containers.length;
+
   // OPTIMIZATION POSSIBLE
-  var needsBuilder = !!RoleBuilder.findTargetStructure(spawn.room, false);
+  var needsBuilder = hasStorageOrContainers && !!RoleBuilder.findTargetStructure(spawn.room, false);
+
   /*   if (!spawn.room.memory.nextCheckNeedsBuilder || spawn.room.memory.nextCheckNeedsBuilder < Game.time) {
     var targetStructure = RoleBuilder.findTargetStructure(spawn.room, false);
     if (!targetStructure) {
@@ -124,14 +127,15 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
  */
 
   const upgraders: RoleRequirement[] = [];
-  if (spawn.room.memory.upgraderRatio > 0) {
-    if (spawn.room.memory.upgraderType === "static") {
+  if (spawn.room.memory.upgraderRatio > 0 && !spawn.room.memory.isUnderSiege) {
+    if (spawn.room.memory.upgraderType === "mobile") {
       upgraders.push({
         percentage: 1,
         role: "upgrader",
         bodyTemplate: [MOVE, WORK, CARRY],
         maxRepatAccrossAll: spawn.room.memory.upgraderRatio,
-        disableIfLowOnCpu: true
+        disableIfLowOnCpu: true,
+        maxCount: 7
       });
     } else {
       upgraders.push({
@@ -140,7 +144,8 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
         bodyTemplate: [WORK],
         bodyTemplatePrepend: [MOVE, MOVE, CARRY, CARRY],
         maxRepatAccrossAll: spawn.room.memory.upgraderRatio,
-        disableIfLowOnCpu: true
+        disableIfLowOnCpu: true,
+        maxCount: 7
       });
     }
   }
@@ -195,17 +200,17 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
           role: "harvester",
           subRole: source.id,
           maxRepatAccrossAll: 12,
-          bodyTemplate: [MOVE, WORK, CARRY]
+          bodyTemplate: [MOVE, WORK, CARRY],
+          maxCount: 3
         } as RoleRequirement;
       }
     })
     .filter(i => i)
     .map(i => i as RoleRequirement);
 
-  const dismantlerFlag = Game.flags["dismantler_attack"];
-
   const remoteHarvesters = spawn.room.memory.remotes
     .filter(i => !i.disabled)
+    .filter(i => !spawn.room.memory.isUnderSiege)
     .map(remote => {
       return {
         percentage: 4,
@@ -227,6 +232,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     });
 
   const remoteDefenders = (spawn.room.memory.needsDefenders || [])
+    .filter(i => !spawn.room.memory.isUnderSiege)
     .filter(i => i.mode === "remote" && spawn.room.energyCapacityAvailable > 620)
     .map(remote => {
       return {
@@ -256,12 +262,13 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
         additionalMemory: {
           homeSpawnPosition: spawn.pos,
           home: spawn.pos.roomName,
-          boostable: remote.boosted
+          boostable: !!spawn.room.memory.boostMode
         } as Partial<IRemoteDefenderMemory>
       } as RoleRequirement;
     });
 
   const reservers = spawn.room.memory.remotes
+    .filter(i => !spawn.room.memory.isUnderSiege)
     .filter(i => i.needsReservation && !i.disabled && spawn.room.energyCapacityAvailable >= 650)
     .map(remote => {
       return {
@@ -280,12 +287,26 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       } as RoleRequirement;
     });
 
+  const controllerLevel = spawn.room.controller ? spawn.room.controller.level : 0;
+
+  let trucksCount = 2;
+  if (controllerLevel === 2) {
+    trucksCount = 1;
+  }
+  if (controllerLevel === 1) {
+    trucksCount = 0;
+  }
+
+  const hasIdleLongDistanceTrucks = spawn.room
+    .find(FIND_MY_CREEPS)
+    .find(i => i.memory.role === "long-distance-truck" && !i.memory.subRole);
+
   return [
     ...harvesterDefinitions,
     {
       percentage: 100,
       role: "truck",
-      maxCount: spawn.room.memory.trucksCount || 2,
+      maxCount: trucksCount,
       bodyTemplate: [MOVE, CARRY, CARRY]
     },
     ...remoteDefenders,
@@ -316,6 +337,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       percentage: 2,
       role: "reparator",
       maxCount: 0, // handled by towers
+
       bodyTemplate: [MOVE, WORK, CARRY],
       capMaxEnergy: 1400,
       disableIfLowOnCpu: true
@@ -343,7 +365,13 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     {
       percentage: 1,
       role: "miner",
-      maxCount: extractors.length >= 1 && mineralWithReserve.length > 0 && amountOfMineralInTerminal < 100000 ? 1 : 0,
+      maxCount:
+        extractors.length >= 1 &&
+        mineralWithReserve.length > 0 &&
+        amountOfMineralInTerminal < 100000 &&
+        !spawn.room.memory.isUnderSiege
+          ? 1
+          : 0,
       bodyTemplate: [MOVE, WORK, WORK, WORK, WORK],
       bodyTemplatePrepend: [CARRY, MOVE],
       sortBody: [MOVE, WORK, CARRY],
@@ -353,14 +381,15 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     {
       percentage: 4,
       role: "long-distance-truck",
-      maxRepatAccrossAll: isStorageAlmostFull
-        ? 0
-        : Math.ceil(
-            spawn.room.memory.remotes
-              .filter(i => i.energy > 0 && !i.disabled)
-              .map(i => i.distance / 4) // 1 truck template repetition for every 4 distance
-              .reduce((acc, i) => acc + i, 0)
-          ),
+      maxRepatAccrossAll:
+        isStorageAlmostFull || hasIdleLongDistanceTrucks || spawn.room.memory.isUnderSiege
+          ? 0
+          : Math.ceil(
+              spawn.room.memory.remotes
+                .filter(i => i.energy > 0 && !i.disabled)
+                .map(i => i.distance / 4) // 1 truck template repetition for every 4 distance
+                .reduce((acc, i) => acc + i, 0)
+            ),
       bodyTemplate: [MOVE, CARRY, CARRY],
       disableIfLowOnCpu: true,
       bodyTemplatePrepend: [WORK, CARRY, MOVE],

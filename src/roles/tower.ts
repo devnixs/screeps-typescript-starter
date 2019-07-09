@@ -12,6 +12,11 @@ class RoleTower {
   }
 
   private runSingleTower = (tower: StructureTower) => {
+    if (tower.room.name === "W2N5") {
+      // temporarily disabled
+      return;
+    }
+
     if (tower.energy === 0) {
       return;
     }

@@ -104,40 +104,14 @@ interface IRestPosition {
 }
 
 let findRestSpot = function findRestSpot(creep: Creep, closeTo?: { x: number; y: number }) {
-  const memory = (creep.memory as any) as { rest: IRestPosition };
-
-  if (!memory.rest || memory.rest.roomName !== creep.room.name) {
-    const specificRestFlag = Object.keys(Game.flags)
-      .filter(i => i.indexOf(creep.memory.role + "_rest") === 0)
-      .map(i => Game.flags[i])
-      .filter(i => i && i.room && i.room.name === creep.room.name)[0];
-
-    const restFlag =
-      specificRestFlag ||
-      Object.keys(Game.flags)
-        .filter(i => i.indexOf("rest_") === 0)
-        .map(i => Game.flags[i])
-        .filter(i => i && i.room && i.room.name === creep.room.name)[0];
-
-    if (restFlag) {
-      memory.rest = { X: restFlag.pos.x, Y: restFlag.pos.y, roomName: creep.room.name };
-    } else {
-      const startPosition = closeTo || { x: _.random(5, 44), y: _.random(5, 44) };
-      const emptySpot = findEmptySpotCloseTo(startPosition, creep.room);
-      if (emptySpot) {
-        memory.rest = { X: emptySpot.x, Y: emptySpot.y, roomName: creep.room.name };
-      }
-    }
-  }
-
-  if (memory.rest) {
-    return new RoomPosition(memory.rest.X, memory.rest.Y, memory.rest.roomName);
+  if (creep.room.memory.restSpot) {
+    return new RoomPosition(creep.room.memory.restSpot.x, creep.room.memory.restSpot.y, creep.room.name);
   } else {
     return null;
   }
 };
 
-interface SimplePos {
+export interface SimplePos {
   x: number;
   y: number;
 }

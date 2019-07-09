@@ -83,6 +83,10 @@ export class RoleBuilder implements IRole {
       }
     }
 
+    if (memory.building === undefined) {
+      memory.building = false;
+    }
+
     if (memory.building && creep.carry.energy == 0) {
       memory.building = false;
       this.resetTarget(memory, creep.room);
