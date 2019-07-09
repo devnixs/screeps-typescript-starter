@@ -1,4 +1,5 @@
 import { getMyRooms } from "utils/misc-utils";
+import { Cartographer } from "utils/cartographer";
 
 export class DefenseManager {
   constructor(private room: Room) {}
@@ -17,6 +18,7 @@ export class DefenseManager {
     this.room.memory.needsDefenders = [];
     this.checkRemotes();
     this.runForOwnRoom();
+    this.reassignDefenders();
   }
 
   runForOwnRoom() {
@@ -47,7 +49,7 @@ export class DefenseManager {
   addDefenders(targetRoom: Room) {
     const threatLevel = this.getThreatLevel(targetRoom);
     if (threatLevel) {
-      console.log("Found thread in room", targetRoom.name);
+      // console.log("Found thread in room", targetRoom.name);
       this.room.memory.needsDefenders.push({
         room: targetRoom.name,
         threatLevel: threatLevel,
@@ -56,7 +58,52 @@ export class DefenseManager {
     }
   }
 
+  reassignDefenders() {
+    const defenders = Object.keys(Game.creeps)
+      .map(i => Game.creeps[i])
+      .filter(i => i.memory.homeRoom === this.room.name && i.memory.role === "remote-defender");
+    let idleDefenders = defenders.filter(i => !i.memory.subRole);
+    const threatenedRooms = this.room.memory.needsDefenders;
+
+    threatenedRooms.forEach(room => {
+      let currentDefense = _.sum(defenders.filter(d => d.memory.subRole === room.room).map(i => i.memory.r));
+
+      while (currentDefense < room.threatLevel && idleDefenders.length > 0) {
+        idleDefenders[0].memory.subRole = room.room;
+        currentDefense += idleDefenders[0].memory.r || 0;
+        idleDefenders[0].say("Reassigned to " + room.room);
+        console.log("Reassigned", idleDefenders[0].name, " to " + room.room);
+        idleDefenders = defenders.filter(i => !i.memory.subRole);
+      }
+    });
+
+    // unassign defenders in rooms with no threats
+
+    defenders.forEach(defender => {
+      const targetRoom = defender.memory.subRole;
+      if (targetRoom) {
+        const hasThreat = this.room.memory.needsDefenders.find(i => i.room === targetRoom && i.threatLevel > 0);
+        if (!hasThreat) {
+          defender.say("Unassigned");
+          console.log("Unassigned", defender.name, "from room", targetRoom);
+          defender.memory.subRole = undefined;
+        }
+      }
+    });
+
+    // if there are still
+  }
+
   getThreatLevel(targetRoom: Room) {
+    if (Cartographer.roomType(targetRoom.name) === "SK") {
+      const threatLevel = 16;
+      targetRoom.visual.text("DANGER " + threatLevel, 20, 20, {
+        color: "white",
+        backgroundColor: "black",
+        opacity: 0.5
+      });
+      return threatLevel;
+    }
     const enemies =
       targetRoom &&
       targetRoom.find(FIND_HOSTILE_CREEPS, {

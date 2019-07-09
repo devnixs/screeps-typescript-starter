@@ -16,6 +16,7 @@ import { roleClaimer } from "roles/claimer";
 
 import "./utils/navigator";
 import "./utils/stats";
+import "./utils/room-extender";
 import { roleMiner } from "roles/miner";
 import { roleHealer } from "roles/healer";
 import { Chemist } from "chemist";

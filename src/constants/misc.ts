@@ -33,7 +33,7 @@ export const boostsLimitations: { [key: string]: number } = {
   // [TOUGH]: 5
 };
 
-export const desiredEnergyInTerminal = 20000;
+export const desiredEnergyInTerminal = 22000;
 
 export const buyableElements = [
   RESOURCE_HYDROGEN,
@@ -88,8 +88,8 @@ export const desiredStocks: StoreDefinitionWithoutEnergy = {
   [RESOURCE_KEANIUM_ALKALIDE]: 1000,
   [RESOURCE_LEMERGIUM_ACID]: 0,
   [RESOURCE_LEMERGIUM_ALKALIDE]: 10000,
-  [RESOURCE_ZYNTHIUM_ACID]: 10000,
-  [RESOURCE_ZYNTHIUM_ALKALIDE]: 15000,
+  [RESOURCE_ZYNTHIUM_ACID]: 1000,
+  [RESOURCE_ZYNTHIUM_ALKALIDE]: 1000,
   [RESOURCE_GHODIUM_ACID]: 0,
   [RESOURCE_GHODIUM_ALKALIDE]: 1000
 

@@ -2,6 +2,7 @@ import { getMyRooms } from "utils/misc-utils";
 import { findEmptySpotCloseTo } from "utils/finder";
 import { ILongDistanceTruckMemory } from "roles/longdistancetruck";
 import { profiler } from "utils/profiler";
+import { Cartographer } from "utils/cartographer";
 
 export class RemotesManager {
   constructor(private room: Room) {}
@@ -40,21 +41,58 @@ export class RemotesManager {
     }
 
     const spawns = this.room.find(FIND_MY_SPAWNS).length;
-    let maxTravelAllowed = spawns * 300 + 100;
+    let maxTravelAllowed = spawns * 350;
+    const maxRemotesAllowed = Math.min(this.room.find(FIND_MY_SPAWNS).length * 4 + 2, 10);
 
     // enable all
     this.room.memory.remotes.forEach(i => (i.disabled = false));
 
+    // We need a lot of energy to fight them
+    const allowSourceKeeperRooms = false; // this.room.energyCapacityAvailable >= 5200;
+
     let remotes = this.getEnabledRemotes();
     let currentTravel = _.sum(remotes.map(i => i.distance));
 
-    while (currentTravel > maxTravelAllowed) {
+    while (currentTravel > maxTravelAllowed || remotes.length > maxRemotesAllowed) {
       // disable worst room
       remotes = this.getEnabledRemotes();
-      let remotesSorted = _.sortBy(remotes, i => -1 * i.distance);
+      const rooms = _.uniq(remotes.map(i => i.room));
+      const roomsSorted = _.sortBy(rooms, room => {
+        const points = this.getEnabledRemotes()
+          .filter(i => i.room === room)
+          .map(i => i.distance);
+        let average = _.sum(points) / points.length;
 
-      const worstRemote = remotesSorted[0];
-      remotes.filter(i => i.room === worstRemote.room).forEach(remote => (remote.disabled = true));
+        if (Cartographer.roomType(room) === "SK") {
+          if (!allowSourceKeeperRooms) {
+            return -1000;
+          } else {
+            average = average / 1.3;
+          }
+        }
+        if (Cartographer.roomType(room) === "CORE") {
+          if (!allowSourceKeeperRooms) {
+            return -1000;
+          } else {
+            average = average / 1.4;
+          }
+        }
+
+        if (points.length >= 2) {
+          // bonus when there are multiple sources in the same room
+          average = average / (1 + points.length / 20);
+        }
+
+        // console.log("Room ", room, "has average", average);
+        return -1 * average;
+      });
+
+      const worstRoom = roomsSorted[0];
+      remotes
+        .filter(i => i.room === worstRoom)
+        .forEach(remote => {
+          remote.disabled = true;
+        });
 
       remotes = this.getEnabledRemotes();
       currentTravel = _.sum(remotes.map(i => i.distance));
@@ -183,10 +221,12 @@ export class RemotesManager {
       const targetRoom = Game.rooms[remote.room];
       if (!targetRoom) {
         remote.energyGeneration = 0;
+        remote.wastedEnergy = false;
       } else {
         const source = targetRoom.lookForAt("source", remote.x, remote.y)[0];
         if (!source) {
           remote.energyGeneration = 0;
+          remote.wastedEnergy = false;
         } else {
           const generation = Math.ceil(source.energyCapacity / 300);
           remote.energyGeneration = generation;
@@ -197,11 +237,7 @@ export class RemotesManager {
                 .findInRange(FIND_DROPPED_RESOURCES, 2, { filter: i => i.resourceType === "energy" })
                 .map(i => i.amount)
             ) > 1500;
-          if (hasLotsOfWastedEnergy) {
-            // no need to spawn big harvesters if there's a lot of energy wasted.
-
-            remote.energyGeneration = remote.energyGeneration / 4;
-          }
+          remote.wastedEnergy = hasLotsOfWastedEnergy;
         }
       }
     });

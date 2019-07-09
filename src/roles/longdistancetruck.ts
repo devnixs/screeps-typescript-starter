@@ -1,6 +1,6 @@
 import { sourceManager } from "utils/source-manager";
 import { profiler } from "../utils/profiler";
-import { findHostile } from "utils/finder";
+import { findHostile, findNonEmptyResourceInStore, findNonEmptyResourcesInStore } from "utils/finder";
 
 export interface ILongDistanceTruckMemory extends CreepMemory {
   depositing?: boolean;
@@ -77,11 +77,9 @@ class RoleLongDistanceTruck implements IRole {
     }
     // if creep is supposed to harvest energy from source
     else {
-      const droppedEnergyInRange = creep.pos
-        .findInRange(FIND_DROPPED_RESOURCES, 1)
-        .filter(i => i.resourceType === "energy" && i.amount > 50)[0];
-      if (droppedEnergyInRange) {
-        creep.pickup(droppedEnergyInRange);
+      const droppedResource = creep.pos.findInRange(FIND_DROPPED_RESOURCES, 1).filter(i => i.amount > 50)[0];
+      if (droppedResource) {
+        creep.pickup(droppedResource);
         return;
       }
 
@@ -91,13 +89,20 @@ class RoleLongDistanceTruck implements IRole {
         return;
       }
       if (creep.room.name == container.room.name) {
-        const withdrawResult = creep.withdraw(container, "energy");
-        if (withdrawResult === ERR_NOT_IN_RANGE) {
-          creep.goTo(container);
-        }
-        if (withdrawResult === OK) {
+        const nonEmptyResources = findNonEmptyResourcesInStore(container.store);
+        if (nonEmptyResources.length) {
+          const withdrawResult = creep.withdraw(container, nonEmptyResources[0]);
+          if (withdrawResult === ERR_NOT_IN_RANGE) {
+            creep.goTo(container);
+          }
+          // if more than 1, wait one tick to get the other resource
+          if (withdrawResult === OK && nonEmptyResources.length === 1) {
+            memory.depositing = true;
+          }
+        } else {
           memory.depositing = true;
         }
+
         return;
       }
       // if not in target room

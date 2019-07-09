@@ -77,7 +77,8 @@ class SourceManager {
 
     if (creep.pos.isNearTo(source)) {
       const harvestResult = creep.harvest(source);
-      if (harvestResult !== OK) {
+      if (harvestResult !== OK && harvestResult !== ERR_NOT_ENOUGH_RESOURCES) {
+        console.log("Harvest result", creep.name, harvestResult);
       }
     } else {
       creep.goTo(source);
@@ -331,7 +332,7 @@ class SourceManager {
     }
 
     if (!targetStructure) {
-      targetStructure = creep.room.storage;
+      targetStructure = creep.room.terminal || creep.room.storage;
     }
 
     if (targetStructure) {

@@ -14,6 +14,15 @@ class RoleRemoteDefender implements IRole {
 
     if (creep.hits < creep.hitsMax) {
       creep.heal(creep);
+    } else {
+      const damagedCreepInRange = creep.pos.findInRange(FIND_MY_CREEPS, 3, { filter: i => i.hits < i.hitsMax })[0];
+      if (damagedCreepInRange) {
+        if (damagedCreepInRange.pos.isNearTo(creep)) {
+          creep.heal(damagedCreepInRange);
+        } else {
+          creep.rangedHeal(damagedCreepInRange);
+        }
+      }
     }
 
     // ATTACK MODE
@@ -37,10 +46,21 @@ class RoleRemoteDefender implements IRole {
 
       return;
     } else {
+      const keeperLair = creep.room.find(FIND_STRUCTURES, {
+        filter: s => s.structureType === "keeperLair" && s.ticksToSpawn && s.ticksToSpawn < 35
+      })[0];
+      if (keeperLair) {
+        creep.goTo(keeperLair);
+        return;
+      }
+
       // PEACEFUL MODE
       if (!memory.subRole) {
-        this.goHome(creep);
-        return;
+        const rest = findRestSpot(creep, { x: 25, y: 25 });
+        if (rest) {
+          creep.say("Zzz");
+          creep.goTo(rest);
+        }
       } else {
         if (memory.subRole != creep.room.name) {
           const room = Game.rooms[memory.subRole];
@@ -58,7 +78,6 @@ class RoleRemoteDefender implements IRole {
         } else {
           const canHeal = creep.getActiveBodyparts(HEAL);
           if (!canHeal || this.healFriends(creep) === -1) {
-            this.reassign(creep);
             const rest = findRestSpot(creep, { x: 25, y: 25 });
             if (rest) {
               creep.say("Zzz");
@@ -66,17 +85,6 @@ class RoleRemoteDefender implements IRole {
             }
           }
         }
-      }
-    }
-  }
-
-  reassign(creep: Creep) {
-    const homeRoom = Game.rooms[creep.memory.homeRoom];
-    if (homeRoom) {
-      const needsDefense = homeRoom.memory.needsDefenders[0];
-      if (needsDefense) {
-        const memory = creep.memory as IRemoteDefenderMemory;
-        memory.subRole = needsDefense.room;
       }
     }
   }

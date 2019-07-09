@@ -83,8 +83,7 @@ export class ExplorationManager {
 
       var roomType = Cartographer.roomType(source.room.name);
 
-      const maxDistance = this.room.memory.remotes.length < 6 ? 100 : 80;
-      const maxRemotes = Math.min(this.room.find(FIND_MY_SPAWNS).length * 4 + 2, 9);
+      const maxDistance = 150;
 
       const remoteExistInAnotherRoom = !!getMyRooms().find(
         i => !!i.memory.remotes.find(r => r.room === source.room.name && source.pos.x === r.x && source.pos.y === r.y)
@@ -93,12 +92,11 @@ export class ExplorationManager {
       if (existingRemote && !existingRemote.distance) {
         existingRemote.distance = searchResult.path.length;
       }
-      const allowSourceKeepRooms = this.room.controller && this.room.controller.level >= 8;
+      const allowSourceKeepRooms = this.room.controller && this.room.controller.level >= 7;
 
       if (
         (roomType !== "SK" || allowSourceKeepRooms) &&
         searchResult.path.length < maxDistance &&
-        this.room.memory.remotes.length < maxRemotes &&
         !existingRemote &&
         !remoteExistInAnotherRoom
       ) {
@@ -119,7 +117,7 @@ export class ExplorationManager {
           energy: 0,
           needsReservation: undefined,
           container: undefined,
-          disabled: false
+          disabled: true
         });
       }
     });

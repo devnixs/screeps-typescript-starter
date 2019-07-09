@@ -100,6 +100,7 @@ interface DefenseDefinition {
 }
 
 interface RemoteRoomDefinition {
+  wastedEnergy?: boolean;
   distance: number;
   energyGeneration: number;
   needsReservation: boolean | undefined;
@@ -230,6 +231,28 @@ interface TravelState {
 interface Creep {
   travelTo(destination: HasPos | RoomPosition, ops?: TravelToOptions): number;
   goTo(destination: HasPos | RoomPosition, ops?: MoveToOpts): number;
+}
+
+interface Room {
+  _checkRoomCache(): void;
+
+  spawns: StructureSpawn[];
+  extensions: StructureExtension[];
+  roads: StructureRoad[];
+  walls: StructureWall[];
+  ramparts: StructureRampart[];
+  keeperLairs: StructureKeeperLair[];
+  portals: StructurePortal[];
+  links: StructureLink[];
+  towers: StructureTower[];
+  labs: StructureLab[];
+  containers: StructureContainer[];
+  powerBanks: StructurePowerBank[];
+
+  observer: StructureObserver;
+  powerSpawn: StructurePowerSpawn;
+  extractor: StructureExtractor;
+  nuker: StructureNuker;
 }
 
 // type StoreDefinitionWithoutEnergy = Partial<Record<_ResourceConstantSansEnergy, number>>;
