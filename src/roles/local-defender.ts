@@ -10,6 +10,10 @@ class RoleLocalDefender implements IRole {
     // const rooms = Object.keys(Game.rooms).map(i => Game.rooms[i]);
     const memory: ILocalDefenderMemory = creep.memory as any;
 
+    if (boostCreep(creep) === 0) {
+      return;
+    }
+
     let hostile = findHostile(creep);
 
     if (creep.hits < creep.hitsMax) {

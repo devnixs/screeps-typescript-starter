@@ -4,6 +4,7 @@ import { profiler } from "../utils/profiler";
 export interface IStaticHarvesterMemory extends CreepMemory {
   targetContainerId: string;
   isSittingOnTargetContainer: boolean;
+  targetLinkId?: string;
 }
 
 class RoleStaticHarvester implements IRole {
@@ -13,6 +14,13 @@ class RoleStaticHarvester implements IRole {
     const source = Game.getObjectById(memory.subRole) as Source;
     if (memory.isSittingOnTargetContainer) {
       creep.harvest(source);
+
+      if (memory.targetLinkId && creep.carry.energy > 0) {
+        const link = Game.getObjectById(memory.targetLinkId) as StructureLink;
+        if (link) {
+          creep.transfer(link, "energy");
+        }
+      }
     } else {
       const targetContainer = Game.getObjectById(memory.targetContainerId) as StructureContainer;
       creep.goTo(targetContainer);
@@ -23,7 +31,7 @@ class RoleStaticHarvester implements IRole {
   }
 
   buildContainer(creep: Creep) {
-    const closeContainerToBuild: ConstructionSite[] = creep.pos.findInRange(FIND_CONSTRUCTION_SITES, 1);
+    let closeContainerToBuild: ConstructionSite[] = creep.pos.findInRange(FIND_CONSTRUCTION_SITES, 1);
     if (closeContainerToBuild.length) {
       return creep.build(closeContainerToBuild[0]);
     } else {

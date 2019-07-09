@@ -7,7 +7,7 @@ import { roleFighter } from "roles/fighter";
 import { spawner } from "./spawner";
 import { roleReparator } from "roles/reparator";
 import { roleExplorer } from "roles/explorer";
-import { Architect } from "architect";
+import { Architect } from "./managers/architect";
 import { roleLongDistanceHarvester } from "roles/longDistanceHarvester";
 import { profiler } from "./utils/profiler";
 import { roleTower } from "roles/tower";
@@ -19,11 +19,11 @@ import "./utils/stats";
 import "./utils/room-extender";
 import { roleMiner } from "roles/miner";
 import { roleHealer } from "roles/healer";
-import { Chemist } from "chemist";
+import { Chemist } from "./managers/chemist";
 import { roleTruck } from "roles/truck";
 import { roleDismantler } from "roles/dismantler";
 import { LinkManager } from "utils/link-manager";
-import { Merchant } from "merchant";
+import { Merchant } from "./managers/merchant";
 import { roleStaticHarvester } from "roles/static-harvester";
 import { roleVersatile } from "roles/versatile";
 import { roleAttacker } from "roles/attacker";
@@ -33,12 +33,13 @@ import { rolePestControl, RolePestControl } from "roles/pestcontrol";
 import { SafeModeActivator } from "utils/safemode-activator";
 import { roleReserver } from "roles/reserver";
 import { roleLongDistanceTruck } from "roles/longdistancetruck";
-import { RemotesManager } from "remotes-manager";
+import { RemotesManager } from "./managers/remotes-manager";
 import { roleRemoteDefender } from "roles/remote-defender";
-import { DefenseManager } from "defense";
-import { ExplorationManager } from "exploration";
+import { DefenseManager } from "./managers/defense";
+import { ExplorationManager } from "./managers/exploration";
 import { roleScout } from "roles/scout";
 import { roleLocalDefender } from "roles/local-defender";
+import { UpgradeManager } from "managers/upgrader";
 
 // profiler.enable();
 
@@ -155,6 +156,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
     ExplorationManager.runForAllRooms();
     RolePestControl.checkReconstruction();
     SafeModeActivator.activeSafeModeIfNecessary();
+    UpgradeManager.runForAllRooms();
 
     // Automatically delete memory of missing creeps
     for (const name in Memory.creeps) {

@@ -6,6 +6,7 @@ import { findRestSpot } from "utils/finder";
 
 interface IMinerMemory extends CreepMemory {
   isDepositing?: boolean;
+  isSittingOnTopOfContainer: boolean;
 }
 
 class RoleMiner implements IRole {

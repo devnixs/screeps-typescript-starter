@@ -1,5 +1,14 @@
 // Random utilities that don't belong anywhere else
 
+export function getFirstValueOfObject(obj: any) {
+  const keys = Object.keys(obj);
+  if (keys.length === 0) {
+    return undefined;
+  } else {
+    return obj[keys[0]];
+  }
+}
+
 export function printRoomName(roomName: string): string {
   return '<a href="#!/room/' + Game.shard.name + "/" + roomName + '">' + roomName + "</a>";
 }

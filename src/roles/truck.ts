@@ -106,11 +106,16 @@ class RoleTruck implements IRole {
               withdrawResult = OK;
             }
 
+            let availableAmount = 10000;
+            if (target && (target as any).store && (target as any).store[sourceJob.resource]) {
+              availableAmount = (target as any).store[sourceJob.resource];
+            }
+
             if (withdrawResult != OK) {
               withdrawResult = creep.withdraw(
                 target,
                 sourceJob.resource,
-                Math.min(needsToWithdraw, creep.carryCapacity - _.sum(creep.carry))
+                Math.min(needsToWithdraw, creep.carryCapacity - _.sum(creep.carry), availableAmount)
               );
             }
 

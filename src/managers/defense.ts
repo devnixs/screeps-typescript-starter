@@ -1,5 +1,6 @@
 import { getMyRooms } from "utils/misc-utils";
 import { Cartographer } from "utils/cartographer";
+import { Chemist } from "./chemist";
 
 export class DefenseManager {
   constructor(private room: Room) {}
@@ -34,7 +35,30 @@ export class DefenseManager {
         threatLevel: threatDifference,
         mode: "local"
       });
+      const underSiege = threatLevel > 40;
+      if (!this.room.memory.isUnderSiege && underSiege) {
+        this.room.memory.isUnderSiege = true;
+        this.setupSiegeMode();
+      } else if (this.room.memory.isUnderSiege && !underSiege) {
+        this.room.memory.isUnderSiege = false;
+        this.removeSiegeMode();
+      }
     }
+  }
+
+  setupSiegeMode() {
+    console.log("Room", this.room.name, "is under siege!");
+    this.room.memory.boostMode = [RANGED_ATTACK];
+    new Chemist(this.room).setupBoostMode();
+    const defenseElement = this.room.memory.needsDefenders.find(i => i.room === this.room.name);
+    if (defenseElement) {
+      defenseElement.boosted = true;
+    }
+  }
+
+  removeSiegeMode() {
+    console.log("Room", this.room.name, "is no longer under siege.");
+    new Chemist(this.room).stopBoostMode();
   }
 
   checkRemotes() {

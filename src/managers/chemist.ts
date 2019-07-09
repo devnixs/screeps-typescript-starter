@@ -1,37 +1,7 @@
 import { REAGENTS, RESOURCE_IMPORTANCE, boostResources } from "constants/resources";
-import { minMax } from "./utils/misc-utils";
+import { minMax, getFirstValueOfObject } from "../utils/misc-utils";
 import { desiredStocks, boostsLimitations } from "constants/misc";
-import { profiler } from "./utils/profiler";
-
-export const wantedBoosts: { [roomName: string]: { [body: string]: ResourceConstant[] } } = {
-  E27N47: {
-    [HEAL]: [RESOURCE_CATALYZED_LEMERGIUM_ALKALIDE, RESOURCE_LEMERGIUM_ALKALIDE],
-    [TOUGH]: [RESOURCE_GHODIUM_ALKALIDE, RESOURCE_GHODIUM_OXIDE]
-  },
-  E19N37: {
-    [HEAL]: [RESOURCE_CATALYZED_LEMERGIUM_ALKALIDE],
-    [TOUGH]: [RESOURCE_CATALYZED_GHODIUM_ALKALIDE],
-    [MOVE]: ["XZHO2", RESOURCE_ZYNTHIUM_ALKALIDE, "ZO"],
-    [WORK]: ["XZH2O", "ZH2O", "ZH"]
-  },
-  E22N36: {
-    [HEAL]: [RESOURCE_CATALYZED_LEMERGIUM_ALKALIDE],
-    [TOUGH]: [RESOURCE_CATALYZED_GHODIUM_ALKALIDE],
-    [MOVE]: ["XZHO2", RESOURCE_ZYNTHIUM_ALKALIDE, "ZO"],
-    [WORK]: ["XZH2O", "ZH2O", "ZH"]
-  },
-  E22N35: {
-    [HEAL]: [RESOURCE_CATALYZED_LEMERGIUM_ALKALIDE],
-    [TOUGH]: [RESOURCE_CATALYZED_GHODIUM_ALKALIDE],
-    [MOVE]: ["XZHO2", RESOURCE_ZYNTHIUM_ALKALIDE, "ZO"],
-    [WORK]: ["XZH2O", "ZH2O", "ZH"]
-  },
-  sim: {
-    [HEAL]: [RESOURCE_LEMERGIUM_OXIDE, RESOURCE_LEMERGIUM_ALKALIDE],
-    [TOUGH]: [RESOURCE_GHODIUM_OXIDE],
-    [MOVE]: [RESOURCE_ZYNTHIUM_ALKALIDE]
-  }
-};
+import { profiler } from "../utils/profiler";
 
 interface Reaction {
   target: ResourceConstant;
@@ -41,7 +11,6 @@ interface Reaction {
 }
 
 const labProduceByTick = 5;
-export const boostResourceNeeded = 30;
 
 export class Chemist {
   assets: { [key: string]: number } = {};
@@ -77,10 +46,6 @@ export class Chemist {
       this.setupLabGroups();
     }
 
-    if (Game.time % 20 === 0) {
-      this.checkBoostMode();
-    }
-
     if (this.isBoostMode()) {
       // boost mode
       if (Game.time % 10 === 0) {
@@ -99,29 +64,12 @@ export class Chemist {
     }
   }
 
-  checkBoostMode() {
-    const previousMode = this.room.memory.isBoostMode;
-    const newMode = !!Object.keys(Game.flags)
-      .filter(i => i.indexOf("boostmode_") === 0)
-      .map(i => Game.flags[i])
-      .filter(i => i && i.room && i.room.name === this.room.name)[0];
-
-    this.room.memory.isBoostMode = newMode;
-
-    if (previousMode && !newMode) {
-      this.stopBoostMode();
-    }
-    if (newMode && !previousMode) {
-      this.setupBoostMode();
-    }
-  }
-
   isBoostMode() {
-    return !!this.room.memory.isBoostMode;
+    return !!this.room.memory.boostMode;
   }
 
   setupBoostMode() {
-    console.log("Swithing to boost mode");
+    console.log("Swithing to boost mode", this.room);
     this.labGroups.forEach(group => this.returnLabToIdleState(group));
     this.assignBoosts();
   }
@@ -142,47 +90,31 @@ export class Chemist {
     } else {
       labMemory.state = "running";
     }
-
-    if (lab.mineralAmount >= boostResourceNeeded && lab.mineralType === labMemory.boostResource) {
-      const adjascentCreeps = lab.pos.findInRange(FIND_MY_CREEPS, 1);
-      const maxBoostedBodyParts = labMemory.boostBodyType && boostsLimitations[labMemory.boostBodyType];
-      const adjascentCreepsWithRightBody = adjascentCreeps.find(i => {
-        if (!i.memory.boostable) {
-          return false;
-        }
-        const hasBodyThatCanReceiveBoost = !!i.body.find(
-          bodyPart => bodyPart.type === labMemory.boostBodyType && !bodyPart.boost
-        );
-        const boostedBodyParts = i.body.filter(bodyPart => bodyPart.type === labMemory.boostBodyType && bodyPart.boost)
-          .length;
-        return (
-          hasBodyThatCanReceiveBoost && (maxBoostedBodyParts === undefined || boostedBodyParts < maxBoostedBodyParts)
-        );
-      });
-      if (adjascentCreepsWithRightBody) {
-        if (maxBoostedBodyParts) {
-          const boostedBodyParts = adjascentCreepsWithRightBody.body.filter(
-            bodyPart => bodyPart.type === labMemory.boostBodyType && bodyPart.boost
-          ).length;
-          lab.boostCreep(adjascentCreepsWithRightBody, maxBoostedBodyParts - boostedBodyParts);
-        } else {
-          lab.boostCreep(adjascentCreepsWithRightBody);
-        }
-      }
-    }
   }
 
   assignBoosts() {
-    debugger;
-    const boostsForThisRoom = wantedBoosts[this.room.name];
+    const boostedParts = this.room.memory.boostMode;
+    const spawn = this.room.spawns[0];
+    if (!boostedParts) {
+      return;
+    }
+    const boostsForThisRoom: { [part: string]: { [boost: string]: { [action: string]: number } } } = _.pick(
+      BOOSTS,
+      boostedParts
+    );
     if (boostsForThisRoom) {
       const boosts = Object.keys(boostsForThisRoom)
         .map(bodyPart => {
-          const resources = boostsForThisRoom[bodyPart];
-          const resource = resources.filter(i => this.assetsWithAllLabs[i] > boostResourceNeeded * 30)[0];
+          const boostsForThisBodyPart = boostsForThisRoom[bodyPart];
+          const resources = _.sortBy(
+            Object.keys(boostsForThisBodyPart),
+            i => -1 * getFirstValueOfObject(boostsForThisBodyPart[i])
+          );
+
+          const resource = resources.filter(i => this.assetsWithAllLabs[i] > LAB_BOOST_MINERAL * 30)[0];
           return {
             bodyPart: bodyPart as BodyPartConstant,
-            resource: resource
+            resource: resource as ResourceConstant
           };
         })
         .filter(i => i.resource);
@@ -191,14 +123,14 @@ export class Chemist {
         return;
       }
 
-      const labs = this.labs;
+      const labs = _.sortBy(this.labs, lab => (Game.getObjectById(lab.id) as StructureLab).pos.getRangeTo(spawn));
       for (let labIndex in labs) {
         const lab = labs[labIndex];
         const boost = boosts[labIndex];
         if (boost) {
           lab.boostResource = boost.resource;
           lab.needsResource = boost.resource;
-          lab.needsAmount = boostResourceNeeded * 60;
+          lab.needsAmount = LAB_MINERAL_CAPACITY;
           lab.boostBodyType = boost.bodyPart;
         } else {
           // this lab is not useful

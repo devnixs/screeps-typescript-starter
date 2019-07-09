@@ -1,5 +1,5 @@
 import { desiredStocks, buyableElements, desiredEnergyInTerminal, sellableElements } from "constants/misc";
-import { profiler } from "./utils/profiler";
+import { profiler } from "../utils/profiler";
 import { getMyRooms } from "utils/misc-utils";
 
 const minCredits = 10000;

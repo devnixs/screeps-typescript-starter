@@ -176,6 +176,12 @@ class SourceManager {
     }
 
     if (!targetStructure) {
+      targetStructure = creep.pos.findInRange(FIND_STRUCTURES, 4, {
+        filter: i => i.structureType === "container" && i.store.energy > i.storeCapacity / 4
+      })[0];
+    }
+
+    if (!targetStructure) {
       targetStructure = creep.room.storage && creep.room.storage.store.energy > 0 ? creep.room.storage : undefined;
     }
 

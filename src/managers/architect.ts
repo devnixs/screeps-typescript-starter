@@ -1,5 +1,6 @@
 import { findEmptySpotCloseTo } from "utils/finder";
-import { profiler } from "./utils/profiler";
+import { profiler } from "../utils/profiler";
+import { unwatchFile } from "fs";
 
 const isSimulation = "sim" in Game.rooms;
 const delay = isSimulation ? 1 : 1000;
@@ -67,14 +68,15 @@ export class Architect {
       this.createContainers,
       this.createMineralRoads,
       this.createExtractor,
+      this.setupSourcesLinks,
       this.addRampartToCriticalStructures,
       this.createCloseToSpawn(STRUCTURE_NUKER),
       this.createCloseToSpawn(STRUCTURE_TOWER),
       this.createCloseToSpawn(STRUCTURE_SPAWN),
       this.createCloseToSpawn(STRUCTURE_OBSERVER),
-      this.setupSquareRoads
+      this.setupSquareRoads,
+      this.createLinks
       //  this.createCloseToSpawn(STRUCTURE_POWER_SPAWN),
-      // this.createLinks
     ];
 
     if (constructionSites.length === 0) {
@@ -314,21 +316,34 @@ export class Architect {
   }
 
   createLinks() {
-    if (!this.room.memory.areControllerLinksSetup && this.room.controller && this.room.controller.level >= 5) {
+    if (this.room.controller && this.room.controller.level >= 5) {
       const storage = this.room.storage;
       if (!storage) {
         return -1;
       }
-      const spot1 = findEmptySpotCloseTo(storage.pos, this.room);
-      const spot2 = findEmptySpotCloseTo(this.room.controller.pos, this.room);
 
-      if (spot1 && spot2) {
-        this.room.createConstructionSite(spot1.x, spot1.y, STRUCTURE_LINK);
-        this.room.createConstructionSite(spot2.x, spot2.y, STRUCTURE_LINK);
-        this.room.memory.areControllerLinksSetup = true;
-        return OK;
-      } else {
-        return -1;
+      const existingStorageLink = storage.pos.findInRange(FIND_MY_STRUCTURES, 4, {
+        filter: i => i.structureType === "link"
+      });
+      if (!existingStorageLink) {
+        const spot1 = findEmptySpotCloseTo(storage.pos, this.room);
+        if (spot1) {
+          return this.room.createConstructionSite(spot1.x, spot1.y, STRUCTURE_LINK);
+        }
+      }
+
+      const isControllerFar = this.room.controller.pos.getRangeTo(storage) > 6;
+
+      if (isControllerFar) {
+        const existingControllerLink = this.room.controller.pos.findInRange(FIND_MY_STRUCTURES, 4, {
+          filter: i => i.structureType === "link"
+        });
+        if (!existingControllerLink) {
+          const spot1 = findEmptySpotCloseTo(storage.pos, this.room);
+          if (spot1) {
+            return this.room.createConstructionSite(spot1.x, spot1.y, STRUCTURE_LINK);
+          }
+        }
       }
     }
 
@@ -480,6 +495,41 @@ export class Architect {
         return -1;
       }
     }
+  }
+
+  setupSourcesLinks() {
+    console.log("Setting up sources link", this.room.name);
+    const sources = this.room.find(FIND_SOURCES);
+    if (!this.room.storage) {
+      return -1;
+    }
+
+    for (let index in sources) {
+      const source = sources[index];
+
+      console.log("Source", source.pos.x, source.pos.y);
+      const existingLink = source.pos.findInRange(FIND_MY_STRUCTURES, 2, {
+        filter: i => i.structureType === "link"
+      })[0];
+      const closeContainer: StructureContainer = source.pos.findInRange(FIND_STRUCTURES, 1, {
+        filter: i => i.structureType === "container"
+      })[0] as any;
+
+      if (source.pos.getRangeTo(this.room.storage) > 18 && !existingLink && closeContainer) {
+        // create link
+
+        const location = findEmptySpotCloseTo(closeContainer.pos, this.room);
+        const isNear = location && new RoomPosition(location.x, location.y, this.room.name).isNearTo(closeContainer);
+        if (location && !isNear) {
+          console.log("Found link location, but it is not near :(", location.x, location.y, this.room.name);
+        }
+        if (location && isNear) {
+          console.log("Creating", location.x, location.y);
+          return this.room.createConstructionSite(location.x, location.y, STRUCTURE_LINK);
+        }
+      }
+    }
+    return -1;
   }
 
   setupSquareRoads() {

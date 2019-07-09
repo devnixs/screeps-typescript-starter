@@ -48,6 +48,10 @@ interface PlannedLocation {
 }
 
 interface RoomMemory {
+  upgraderRatio: number;
+  upgraderType: "mobile" | "static" | "undefined";
+
+  isUnderSiege: boolean;
   squareRoadsAreSetup: boolean;
   storagePlannedLocation: PlannedLocation | undefined;
   terminalPlannedLocation: PlannedLocation | undefined;
@@ -57,8 +61,6 @@ interface RoomMemory {
   damagedCreepId: string | null;
   lastTowerRefreshTime: number | undefined;
   labGroups: LabGroup[];
-
-  isBoostMode: boolean;
 
   links: LinkMemory[];
 
@@ -83,6 +85,8 @@ interface RoomMemory {
 
   lastProgress: number | undefined;
   lastProgressChecktime: number;
+
+  boostMode: BodyPartConstant[] | undefined;
 }
 
 interface ExplorationDefinition {
@@ -94,6 +98,7 @@ interface ExplorationDefinition {
 }
 
 interface DefenseDefinition {
+  boosted?: boolean;
   threatLevel: number;
   room: string;
   mode: "local" | "remote";
