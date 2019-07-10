@@ -17,12 +17,8 @@ class RoleLocalDefender implements IRole {
     let hostile = findHostile(creep);
 
     if (creep.hits < creep.hitsMax) {
-      creep.rangedHeal(creep);
-    }
-    if (creep.hits < creep.hitsMax / 2) {
       creep.heal(creep);
     }
-
     // ATTACK MODE
     if (hostile) {
       creep.say("Yarr!", true);

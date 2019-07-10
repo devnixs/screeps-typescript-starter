@@ -23,6 +23,10 @@ export class DefenseManager {
   }
 
   runForOwnRoom() {
+    if (this.room.name === "W2N5") {
+      return;
+    }
+
     const threatLevel = this.getThreatLevel(this.room);
     const towerCount = this.room.find(FIND_MY_STRUCTURES, { filter: s => s.structureType === "tower" }).length;
     const towerThreatCompensation = towerCount * 5;

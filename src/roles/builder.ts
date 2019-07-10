@@ -26,13 +26,15 @@ export class RoleBuilder implements IRole {
       };
     }
 
-    var constructionSites = room.find(FIND_CONSTRUCTION_SITES);
+    if (!room.memory.isUnderSiege) {
+      var constructionSites = room.find(FIND_CONSTRUCTION_SITES);
 
-    if (constructionSites.length) {
-      return {
-        object: constructionSites[0],
-        isConstructionSite: true
-      };
+      if (constructionSites.length) {
+        return {
+          object: constructionSites[0],
+          isConstructionSite: true
+        };
+      }
     }
 
     const controllerLevel = room.controller ? room.controller.level : 0;

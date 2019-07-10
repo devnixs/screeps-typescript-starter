@@ -9,6 +9,7 @@ import { IReserverMemory } from "roles/reserver";
 import { ILongDistanceTruckMemory } from "roles/longdistancetruck";
 import { IRemoteDefenderMemory } from "roles/remote-defender";
 import { getMyRooms } from "utils/misc-utils";
+import { isInSafeArea } from "utils/safe-area";
 
 export interface RoleRequirement {
   role: roles;
@@ -165,6 +166,10 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
 
       const neededWorkParts = Math.ceil(energyRate / HARVEST_POWER);
 
+      if (spawn.room.memory.isUnderSiege && !isInSafeArea(source.pos, spawn.room)) {
+        return null;
+      }
+
       if (closeLink) {
         return {
           percentage: 20,
@@ -238,9 +243,10 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       return {
         percentage: 20,
         role: "remote-defender",
-        bodyTemplate: [MOVE, MOVE, MOVE, ATTACK, ATTACK, HEAL],
+        // bodyTemplate: [MOVE, MOVE, MOVE, ATTACK, ATTACK, HEAL],
+        bodyTemplate: [MOVE, MOVE, MOVE, RANGED_ATTACK, RANGED_ATTACK, HEAL],
         maxRepatAccrossAll: Math.ceil(remote.threatLevel * 0.7),
-        sortBody: [TOUGH, MOVE, ATTACK, HEAL],
+        sortBody: [TOUGH, MOVE, ATTACK, RANGED_ATTACK, HEAL],
         subRole: remote.room,
         additionalMemory: {
           homeSpawnPosition: spawn.pos,

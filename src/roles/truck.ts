@@ -3,6 +3,7 @@ import { roleHarvester } from "./harvester";
 import { wantsToSell, desiredStocks, desiredEnergyInTerminal } from "../constants/misc";
 import { findRestSpot, findNonEmptyResourceInStore, findNonEmptyResourcesInStore } from "utils/finder";
 import { profiler } from "../utils/profiler";
+import { isInSafeArea } from "utils/safe-area";
 
 interface ITruckDestination {}
 
@@ -341,7 +342,7 @@ class RoleTruck implements IRole {
       droppedResource &&
       droppedResource.amount > 100 &&
       droppedResource.amount > creep.pos.getRangeTo(droppedResource.pos.x, droppedResource.pos.y) * 10 &&
-      !creep.room.memory.isUnderSiege
+      (!creep.room.memory.isUnderSiege || isInSafeArea(droppedResource.pos, creep.room))
     ) {
       const job = this.createRetrievalJob({
         amount: droppedResource.amount,

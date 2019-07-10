@@ -1,5 +1,17 @@
 // Random utilities that don't belong anywhere else
 
+const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+export function base50encode(arr: number[]) {
+  if (!arr) {
+    return arr;
+  }
+  return arr.map(i => chars.charAt(i)).join();
+}
+export function base50decode(str: string) {
+  return str.split("").map(i => chars.indexOf(i));
+}
+
 export function getFirstValueOfObject(obj: any) {
   const keys = Object.keys(obj);
   if (keys.length === 0) {

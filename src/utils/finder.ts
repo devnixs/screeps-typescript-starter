@@ -136,7 +136,10 @@ let findEmptySpotCloseTo = function findEmptySpotCloseTo(pos: SimplePos, room: R
         const possibleX = current.x + i;
         const possibleY = current.y + j;
         if ((i !== 0 || j !== 0) && possibleX >= 1 && possibleY >= 1 && possibleX < 49 && possibleY < 49) {
-          if (!closedList.find(i => i.x === possibleX && i.y === possibleY)) {
+          if (
+            !closedList.find(i => i.x === possibleX && i.y === possibleY) &&
+            !openList.find(i => i.x === possibleX && i.y === possibleY)
+          ) {
             openList.push({ x: possibleX, y: possibleY });
           }
         }
@@ -146,11 +149,77 @@ let findEmptySpotCloseTo = function findEmptySpotCloseTo(pos: SimplePos, room: R
   return null;
 };
 
+let findSafeAreaAround = function findSafeAreaAround(pos: SimplePos, room: Room) {
+  const cpu = Game.cpu.getUsed();
+  const openList = [pos];
+  const closedList: SimplePos[] = [];
+  const terrain = Game.map.getRoomTerrain(room.name);
+
+  let current: SimplePos | undefined;
+  let counter: number = 0;
+  while ((current = openList.shift())) {
+    if (counter++ >= 50000) {
+      console.log("Stopped findSafeAreaAround execution");
+      return;
+    }
+    const structures = room.lookForAt(LOOK_STRUCTURES, current.x, current.y);
+    const constructedWallHere = structures.find(
+      i => i.structureType === "rampart" || i.structureType === "constructedWall"
+    );
+    const spawnHere = structures.find(i => i.structureType == "spawn");
+    const naturalWallHere = terrain.get(current.x, current.y) === TERRAIN_MASK_WALL;
+
+    if (constructedWallHere) {
+      closedList.push(current);
+      if (!spawnHere) {
+        // the first point usually is the spawn. we want to keep adding points
+        continue;
+      }
+    } else if (naturalWallHere) {
+      continue;
+    } else {
+      closedList.push(current);
+    }
+
+    if (current.x === 0 || current.x === 49 || current.y === 0 || current.y === 49) {
+      // walls are not closed
+      return null;
+    }
+
+    for (let i = -1; i <= 1; i++) {
+      for (let j = -1; j <= 1; j++) {
+        const possibleX = current.x + i;
+        const possibleY = current.y + j;
+        if (i !== 0 || j !== 0) {
+          if (
+            !closedList.find(i => i.x === possibleX && i.y === possibleY) &&
+            !openList.find(i => i.x === possibleX && i.y === possibleY)
+          ) {
+            openList.push({ x: possibleX, y: possibleY });
+          }
+        }
+      }
+    }
+  }
+  if (closedList.length > 0) {
+    let visual = new RoomVisual(room.name);
+    for (let i = closedList.length - 1; i >= 0; i--) {
+      visual.circle(closedList[i].x, closedList[i].y, { radius: 0.5, fill: "#ff7722", opacity: 0.9 });
+    }
+  }
+  const used = Game.cpu.getUsed() - cpu;
+  console.log("Used", used, "CPU");
+  return closedList;
+};
+
 findAndCache = profiler.registerFN(findAndCache, "findAndCache");
 findNonEmptyResourceInStore = profiler.registerFN(findNonEmptyResourceInStore, "findNonEmptyResourceInStore");
 findNonEmptyResourcesInStore = profiler.registerFN(findNonEmptyResourcesInStore, "findNonEmptyResourcesInStore");
 findRestSpot = profiler.registerFN(findRestSpot, "findRestSpot");
 findEmptySpotCloseTo = profiler.registerFN(findEmptySpotCloseTo, "findEmptySpotCloseTo");
+findSafeAreaAround = profiler.registerFN(findSafeAreaAround, "findSafeAreaAround");
+
+(global as any).findSafeAreaAround = findSafeAreaAround;
 
 export {
   findAndCache,
@@ -158,5 +227,6 @@ export {
   findNonEmptyResourcesInStore,
   findRestSpot,
   findEmptySpotCloseTo,
-  findClosestRoom
+  findClosestRoom,
+  findSafeAreaAround
 };

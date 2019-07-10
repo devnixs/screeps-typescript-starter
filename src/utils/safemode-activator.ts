@@ -1,4 +1,5 @@
 import { profiler } from "./profiler";
+import { isInSafeArea } from "./safe-area";
 
 export class SafeModeActivator {
   static activeSafeModeIfNecessary() {
@@ -32,8 +33,6 @@ export class SafeModeActivator {
       return;
     }
 
-    var lastSpawn = spawns[0];
-
     enemies.forEach(enemy => {
       //if a big enemy can freely access the last spawn, trigger safe mode
       // var isBoosted = enemy.body.filter(i => i.boost).length > 5;
@@ -41,16 +40,11 @@ export class SafeModeActivator {
       var isBig = enemy.body.length > 10;
 
       if (isBig && isPlayer) {
-        // test if can access spawn
-        var canAccessLastSpawn = enemy.pos.inRangeTo(lastSpawn, 8);
-        if (canAccessLastSpawn) {
-          // has at least 100K rampart
-          const rampart = lastSpawn.pos.lookFor("structure").find(a => a.structureType === "rampart");
-          if (!rampart || rampart.hits < 100000) {
-            const result = room.controller && room.controller.activateSafeMode();
-            if (result === OK) {
-              Game.notify("Activated safe mode on room " + room.name);
-            }
+        const inSafeArea = isInSafeArea(enemy.pos, enemy.room);
+        if (inSafeArea) {
+          const result = room.controller && room.controller.activateSafeMode();
+          if (result === OK) {
+            Game.notify("Activated safe mode on room " + room.name);
           }
         }
       }

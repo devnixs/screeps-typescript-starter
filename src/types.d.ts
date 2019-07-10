@@ -48,6 +48,7 @@ interface PlannedLocation {
 }
 
 interface RoomMemory {
+  safeArea: string | undefined;
   walls: number[] | undefined;
   restSpot: { x: number; y: number } | undefined;
   upgraderRatio: number;

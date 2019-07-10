@@ -29,6 +29,7 @@ class RoleRemoteDefender implements IRole {
     if (hostile) {
       creep.say("Yarr!", true);
       creep.attack(hostile);
+      creep.rangedAttack(hostile);
 
       // find closest empty rempart
       const closestEmptyRempart = creep.pos.findClosestByRange(FIND_MY_STRUCTURES, {
