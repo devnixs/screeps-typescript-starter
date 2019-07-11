@@ -112,11 +112,19 @@ class Spawner {
       const currentCount = counts[roleSlug] || 0;
       const currentPercentage = creepsInThisRoom.length > 0 ? currentCount / creepsInThisRoom.length : 0;
       const desiredPercentage = role.percentage / totalPercentage;
+      const templateRepeats = _.sum(
+        creepsInThisRoom
+          .filter(i => this.getRoleSlug(i.memory.role, i.memory.subRole) === roleSlug)
+          .map(i => i.memory.r)
+      );
       if (debugMode) {
         console.log(
           `${this.getRoleSlug(role.role, role.subRole)}(${currentCount}): has ${(currentPercentage * 100).toFixed(
             2
           )}% needs ${(desiredPercentage * 100).toFixed(2)}%`
+        );
+        console.log(
+          `${this.getRoleSlug(role.role, role.subRole)}: has ${templateRepeats}R max ${role.maxRepatAccrossAll}`
         );
       }
       return {
@@ -124,11 +132,7 @@ class Spawner {
         desiredPercentage,
         currentCount: currentCount,
         requirement: role,
-        templateRepeats: _.sum(
-          creepsInThisRoom
-            .filter(i => this.getRoleSlug(i.memory.role, i.memory.subRole) === roleSlug)
-            .map(i => i.memory.r)
-        )
+        templateRepeats: templateRepeats
       };
     });
 
@@ -273,6 +277,11 @@ class Spawner {
         r: repeats
       } as CreepMemory
     });
+
+    if (result === OK && role.onSpawn) {
+      const totalCost = _.sum(body.map(i => costs[i]));
+      role.onSpawn(totalCost, body);
+    }
 
     if (debug) {
       console.log("Spawning result ", result);

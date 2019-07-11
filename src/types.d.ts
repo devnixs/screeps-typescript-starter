@@ -48,7 +48,6 @@ interface PlannedLocation {
 }
 
 interface RoomMemory {
-  safeArea: string | undefined;
   walls: number[] | undefined;
   restSpot: { x: number; y: number } | undefined;
   upgraderRatio: number;
@@ -90,6 +89,7 @@ interface RoomMemory {
   lastProgressChecktime: number;
 
   boostMode: BodyPartConstant[] | undefined;
+  lastRemoteCheckCtrlLevel: number | undefined;
 }
 
 interface ExplorationDefinition {
@@ -108,6 +108,10 @@ interface DefenseDefinition {
 }
 
 interface RemoteRoomDefinition {
+  // stats
+  retrievedEnergy?: number | undefined;
+  spentEnergy?: number | undefined;
+
   wastedEnergy?: boolean;
   distance: number;
   energyGeneration: number;

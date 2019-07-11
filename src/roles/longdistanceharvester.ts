@@ -25,7 +25,7 @@ class RoleLongDistanceHarvester implements IRole {
       return;
     }
 
-    if (totalCargoContent >= creep.carryCapacity / 2) {
+    if (totalCargoContent >= creep.carryCapacity / 2 && creep.getActiveBodyparts(CARRY)) {
       const constructionSite = creep.pos.findClosestByRange(FIND_CONSTRUCTION_SITES, {
         filter: i => i.structureType === "container"
       });
@@ -60,7 +60,6 @@ class RoleLongDistanceHarvester implements IRole {
           creep.goTo(container);
           return;
         }
-
         sourceManager.harvestEnergyFromSpecificSource(creep, source);
       }
     }

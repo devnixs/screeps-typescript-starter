@@ -4,16 +4,24 @@ export const requiredHealersForAnAttack = 0;
 export const requiredFightersForAnAttack = 1;
 export const requiredDismantlersForAnAttack = 2;
 
+/*
+var calc = (roomLevel, power)=>Math.pow(roomLevel, power) * (25000000 / Math.pow(8, power));
+[1,2,3,4,5,6,7,8].map(i=>calc(i, 9)).map(i=>Math.round(i/1000000*100)/100)
+
+result:
+[0, 0, 0, 0.05, 0.36, 1.88, 7.52, 25]
+*/
+
 export const wallsMinHp = (roomLevel: number) => {
   // level 8 = 15M
-  const power = 7;
+  const power = 9;
   return Math.pow(roomLevel, power) * (25000000 / Math.pow(8, power));
 };
 
 export const rampartMinHp = (roomLevel: number) => {
   // level 8 = 15M
-  const power = 5;
-  return Math.pow(roomLevel, power) * (15000000 / Math.pow(8, power));
+  const power = 9;
+  return Math.pow(roomLevel, power) * (25000000 / Math.pow(8, power));
 };
 
 // How much we should store in the terminal
@@ -64,8 +72,8 @@ export const desiredStocks: StoreDefinitionWithoutEnergy = {
   [RESOURCE_LEMERGIUM]: 5000,
   [RESOURCE_KEANIUM]: 5000,
   [RESOURCE_ZYNTHIUM]: 5000,
-  // [RESOURCE_CATALYST]: 5000,
-  [RESOURCE_GHODIUM]: 500,
+  [RESOURCE_CATALYST]: 1000,
+  [RESOURCE_GHODIUM]: 5000,
 
   [RESOURCE_HYDROXIDE]: 1000,
   [RESOURCE_ZYNTHIUM_KEANITE]: 1000,
@@ -80,28 +88,27 @@ export const desiredStocks: StoreDefinitionWithoutEnergy = {
   [RESOURCE_ZYNTHIUM_HYDRIDE]: 1000,
   [RESOURCE_ZYNTHIUM_OXIDE]: 1000,
   [RESOURCE_GHODIUM_HYDRIDE]: 0,
-  [RESOURCE_GHODIUM_OXIDE]: 1000,
+  [RESOURCE_GHODIUM_OXIDE]: 5000,
 
   [RESOURCE_UTRIUM_ACID]: 1000,
   [RESOURCE_UTRIUM_ALKALIDE]: 0,
   [RESOURCE_KEANIUM_ACID]: 0,
-  [RESOURCE_KEANIUM_ALKALIDE]: 10000,
+  [RESOURCE_KEANIUM_ALKALIDE]: 20000,
   [RESOURCE_LEMERGIUM_ACID]: 0,
-  [RESOURCE_LEMERGIUM_ALKALIDE]: 1000,
+  [RESOURCE_LEMERGIUM_ALKALIDE]: 10000,
   [RESOURCE_ZYNTHIUM_ACID]: 1000,
-  [RESOURCE_ZYNTHIUM_ALKALIDE]: 1000,
+  [RESOURCE_ZYNTHIUM_ALKALIDE]: 2000,
   [RESOURCE_GHODIUM_ACID]: 0,
-  [RESOURCE_GHODIUM_ALKALIDE]: 1000
+  [RESOURCE_GHODIUM_ALKALIDE]: 5000,
 
-  /*   [RESOURCE_CATALYZED_UTRIUM_ACID]: 0,
+  [RESOURCE_CATALYZED_UTRIUM_ACID]: 0,
   [RESOURCE_CATALYZED_UTRIUM_ALKALIDE]: 0,
   [RESOURCE_CATALYZED_KEANIUM_ACID]: 0,
-  [RESOURCE_CATALYZED_KEANIUM_ALKALIDE]: 0,
+  [RESOURCE_CATALYZED_KEANIUM_ALKALIDE]: 20000,
   [RESOURCE_CATALYZED_LEMERGIUM_ACID]: 0,
-  [RESOURCE_CATALYZED_LEMERGIUM_ALKALIDE]: 60000,
+  [RESOURCE_CATALYZED_LEMERGIUM_ALKALIDE]: 10000,
   [RESOURCE_CATALYZED_ZYNTHIUM_ACID]: 1000,
-  [RESOURCE_CATALYZED_ZYNTHIUM_ALKALIDE]: 0,
+  [RESOURCE_CATALYZED_ZYNTHIUM_ALKALIDE]: 2000,
   [RESOURCE_CATALYZED_GHODIUM_ACID]: 0,
-  [RESOURCE_CATALYZED_GHODIUM_ALKALIDE]: 30000 */
-  // }
+  [RESOURCE_CATALYZED_GHODIUM_ALKALIDE]: 5000
 };

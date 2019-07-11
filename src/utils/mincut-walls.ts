@@ -381,8 +381,13 @@ var util_mincut = {
   // Function for user: calculate min cut tiles from room, rect[]
   GetCutTiles: function(roomname: string, rect: Rect[], bounds = { x1: 0, y1: 0, x2: 49, y2: 49 }, verbose = false) {
     let graph = util_mincut.create_graph(roomname, rect, bounds);
+    if (!graph) {
+      console.log("Failed to compute min cuts");
+      return null;
+    }
     let source = 2 * 50 * 50; // Position Source / Sink in Room-Graph
     let sink = 2 * 50 * 50 + 1;
+
     let count = graph.Calcmincut(source, sink);
     if (verbose) console.log("NUmber of Tiles in Cut:", count);
     let positions = [];
@@ -426,7 +431,7 @@ var util_mincut = {
     // Get Min cut
     let positions = util_mincut.GetCutTiles(roomname, rect_array, bounds); // Positions is an array where to build walls/ramparts
     // Test output
-    console.log("Positions returned", positions.length);
+    console.log("Positions returned", positions && positions.length);
     cpu = Game.cpu.getUsed() - cpu;
     console.log("Needed", cpu, " cpu time");
     return "Finished";

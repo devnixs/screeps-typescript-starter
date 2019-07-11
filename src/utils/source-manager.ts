@@ -2,6 +2,7 @@ import { findAndCache, findRestSpot } from "./finder";
 import { LinkManager } from "./link-manager";
 import { profiler } from "../utils/profiler";
 import { desiredEnergyInTerminal } from "constants/misc";
+import { isInSafeArea } from "./safe-area";
 
 class SourceManager {
   harvestEnergyFromSource(creep: Creep) {
@@ -90,7 +91,7 @@ class SourceManager {
       filter: i =>
         i.resourceType === RESOURCE_ENERGY && i.pos.getRangeTo(creep.pos.x, creep.pos.y) <= 5 && i.amount >= 300
     });
-    if (droppedEnergy) {
+    if (droppedEnergy && (!creep.room.memory.isUnderSiege || isInSafeArea(droppedEnergy.pos, creep.room))) {
       if (creep.pickup(droppedEnergy) === ERR_NOT_IN_RANGE) {
         creep.goTo(droppedEnergy);
         creep.pickup(droppedEnergy);
@@ -102,7 +103,7 @@ class SourceManager {
       filter: tomb => tomb.store && tomb.store.energy > 0 && tomb.pos.getRangeTo(creep.pos.x, creep.pos.y) <= 8
     });
 
-    if (tombstone) {
+    if (tombstone && (!creep.room.memory.isUnderSiege || isInSafeArea(tombstone.pos, creep.room))) {
       if (creep.withdraw(tombstone, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
         creep.goTo(tombstone);
         creep.withdraw(tombstone, RESOURCE_ENERGY);

@@ -3,6 +3,7 @@ import { findEmptySpotCloseTo } from "utils/finder";
 import { ILongDistanceTruckMemory } from "roles/longdistancetruck";
 import { profiler } from "utils/profiler";
 import { Cartographer } from "utils/cartographer";
+import { Traveler } from "utils/Traveler";
 
 export class RemotesManager {
   constructor(private room: Room) {}
@@ -33,6 +34,70 @@ export class RemotesManager {
     // this.checkHasTooMuchEnergy();
     this.checkEnergyGeneration();
     this.disableNotRentableRooms();
+    this.checkRoomLevel();
+  }
+
+  checkRoomLevel() {
+    if (Game.time % 1001 > 0) {
+      return;
+    }
+    if (!this.room.memory.lastRemoteCheckCtrlLevel) {
+      this.room.memory.lastRemoteCheckCtrlLevel = this.room.controller && this.room.controller.level;
+    }
+
+    if (
+      this.room.controller &&
+      this.room.memory.lastRemoteCheckCtrlLevel &&
+      this.room.controller.level > this.room.memory.lastRemoteCheckCtrlLevel
+    ) {
+      this.room.memory.lastRemoteCheckCtrlLevel = this.room.controller.level;
+      this.levelUp(this.room.controller.level);
+    }
+  }
+
+  levelUp(newLevel: number) {
+    if (newLevel === 8 || newLevel === 7) {
+      this.resetRemoteStats();
+    }
+  }
+
+  resetRemoteStats() {
+    this.room.memory.remotes
+      .filter(i => i)
+      .forEach(i => {
+        delete i.retrievedEnergy;
+        delete i.spentEnergy;
+      });
+  }
+
+  static paddingLeft(paddingValue: string, str: string | number) {
+    str = str.toString();
+    return String(paddingValue + str).slice(-paddingValue.length);
+  }
+
+  static outputStats() {
+    getMyRooms().forEach(room => {
+      if (!room.memory || !room.memory.remotes || !room.memory.remotes.length) {
+        return;
+      }
+      console.log("### " + room.name + " ###");
+      const text = _.sortBy(room.memory.remotes.filter(i => i.spentEnergy && i.spentEnergy > 0), i =>
+        i.retrievedEnergy && i.spentEnergy ? i.retrievedEnergy / i.spentEnergy : 0
+      )
+        .map(
+          i =>
+            this.paddingLeft("      ", i.room) +
+            this.paddingLeft("       ", ":" + i.x + "," + i.y) +
+            this.paddingLeft("         ", Math.round((i.retrievedEnergy || 0) / 1000)) +
+            "K" +
+            this.paddingLeft("         ", Math.round((i.spentEnergy || 0) / 1000)) +
+            "K" +
+            this.paddingLeft("         ", Math.round(((i.retrievedEnergy || 0) / (i.spentEnergy || 0)) * 100) / 100) +
+            (i.disabled ? "Disabled" : "Enabled")
+        )
+        .join("\n");
+      console.log(text);
+    });
   }
 
   disableNotRentableRooms() {
@@ -41,14 +106,14 @@ export class RemotesManager {
     }
 
     const spawns = this.room.find(FIND_MY_SPAWNS).length;
-    let maxTravelAllowed = spawns * 350;
-    const maxRemotesAllowed = Math.min(this.room.find(FIND_MY_SPAWNS).length * 4 + 2, 10);
+    let maxTravelAllowed = spawns * 400 + 100;
+    const maxRemotesAllowed = this.room.find(FIND_MY_SPAWNS).length * 4 + 2;
 
     // enable all
     this.room.memory.remotes.forEach(i => (i.disabled = false));
 
-    // We need a lot of energy to fight them
-    const allowSourceKeeperRooms = false; // this.room.energyCapacityAvailable >= 5200;
+    // disable non possible rooms
+    this.room.memory.remotes.filter(i => !this.canEnableRoom(i.room)).forEach(i => (i.disabled = true));
 
     let remotes = this.getEnabledRemotes();
     let currentTravel = _.sum(remotes.map(i => i.distance));
@@ -58,25 +123,9 @@ export class RemotesManager {
       remotes = this.getEnabledRemotes();
       const rooms = _.uniq(remotes.map(i => i.room));
       const roomsSorted = _.sortBy(rooms, room => {
-        const points = this.getEnabledRemotes()
-          .filter(i => i.room === room)
-          .map(i => i.distance);
+        const remotesInThisRoom = this.getEnabledRemotes().filter(i => i.room === room);
+        const points = remotesInThisRoom.map(i => i.distance);
         let average = _.sum(points) / points.length;
-
-        if (Cartographer.roomType(room) === "SK") {
-          if (!allowSourceKeeperRooms) {
-            return -1000;
-          } else {
-            average = average / 1.3;
-          }
-        }
-        if (Cartographer.roomType(room) === "CORE") {
-          if (!allowSourceKeeperRooms) {
-            return -1000;
-          } else {
-            average = average / 1.4;
-          }
-        }
 
         if (points.length >= 2) {
           // bonus when there are multiple sources in the same room
@@ -97,6 +146,33 @@ export class RemotesManager {
       remotes = this.getEnabledRemotes();
       currentTravel = _.sum(remotes.map(i => i.distance));
     }
+  }
+
+  canEnableRoom(room: string) {
+    const remotesInThisRoom = this.room.memory.remotes.filter(i => i.room === room);
+    if (Cartographer.roomType(room) === "SK") {
+      return false;
+    }
+    if (Cartographer.roomType(room) === "CORE") {
+      return false;
+    }
+
+    const totalSpent = _.sum(remotesInThisRoom.map(i => i.spentEnergy));
+    const totalRetrieved = _.sum(remotesInThisRoom.map(i => i.retrievedEnergy));
+
+    if (totalSpent > 0) {
+      const ratio = totalRetrieved / totalSpent;
+      if (totalSpent > 50000 && ratio < 1.5) {
+        // disable this room;
+        return false;
+      }
+      if (totalSpent > 30000 && ratio < 0.5) {
+        // disable this room;
+        return false;
+      }
+    }
+
+    return true;
   }
 
   getEnabledRemotes() {
@@ -132,7 +208,7 @@ export class RemotesManager {
     pos2: RoomPosition,
     callback: (pos: RoomPosition, index: number, isLast: boolean) => void
   ) {
-    const result = PathFinder.search(pos1, [{ pos: pos2, range: 1 }]);
+    const result = Traveler.findTravelPath(pos1, pos2, { range: 1 });
 
     if (result && result.path) {
       for (let stepIndex in result.path) {
@@ -156,7 +232,11 @@ export class RemotesManager {
 
         return (
           i.container &&
-          trucks.filter(t => (t.memory as ILongDistanceTruckMemory).targetContainer === i.container).length < maxTrucks
+          trucks.filter(
+            t =>
+              (t.memory as ILongDistanceTruckMemory).targetContainer === i.container &&
+              !(t.memory as ILongDistanceTruckMemory).depositing
+          ).length < maxTrucks
         );
       }),
       i => -1 * i.energy
@@ -311,3 +391,20 @@ export class RemotesManager {
 }
 
 profiler.registerClass(RemotesManager, "RemotesManager");
+
+(global as any).resetRemoteStats = function() {
+  _.flatten(
+    Object.keys(Game.rooms)
+      .map(i => Game.rooms[i])
+      .map(room => room.memory.remotes)
+  )
+    .filter(i => i)
+    .forEach(i => {
+      delete i.retrievedEnergy;
+      delete i.spentEnergy;
+    });
+
+  console.log("Resetted Stats");
+};
+
+(global as any).outputRemoteStats = RemotesManager.outputStats;

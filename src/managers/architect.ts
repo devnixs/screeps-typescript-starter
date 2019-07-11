@@ -2,6 +2,7 @@ import { findEmptySpotCloseTo } from "utils/finder";
 import { profiler } from "../utils/profiler";
 import "../utils/mincut-walls";
 import { mincutHelper } from "../utils/mincut-walls";
+import { Traveler } from "utils/Traveler";
 
 const isSimulation = "sim" in Game.rooms;
 const delay = isSimulation ? 1 : 20;
@@ -69,8 +70,8 @@ export class Architect {
       this.createColonyRoads,
       this.createRoadsAroundStorage,
       this.createStorage,
-      this.createTerminal,
       this.createCloseToSpawn(STRUCTURE_EXTENSION),
+      this.createTerminal,
       this.createContainers,
       this.createMineralRoads,
       this.createExtractor,
@@ -121,13 +122,15 @@ export class Architect {
       const defenseLocations = [];
       const homeSpawn = this.room.spawns[0];
       defenseLocations.push({
-        x1: homeSpawn.pos.x - 8,
-        y1: homeSpawn.pos.y - 8,
-        x2: homeSpawn.pos.x + 8,
-        y2: homeSpawn.pos.y + 8
+        x1: Math.max(homeSpawn.pos.x - 9, 2),
+        y1: Math.max(homeSpawn.pos.y - 9, 2),
+        x2: Math.min(homeSpawn.pos.x + 9, 48),
+        y2: Math.min(homeSpawn.pos.y + 9, 48)
       });
       const walls = mincutHelper.GetCutTiles(this.room.name, defenseLocations);
-      this.room.memory.walls = _.flatten(walls.map(i => [i.x, i.y]));
+      if (walls) {
+        this.room.memory.walls = _.flatten(walls.map(i => [i.x, i.y]));
+      }
     }
 
     if (this.room.memory.walls && this.room.controller && this.room.controller.level >= 3) {
@@ -436,6 +439,7 @@ export class Architect {
     for (let index = 0; index < positions.length; index++) {
       const pos = positions[index];
       const what = this.room.lookForAt(LOOK_STRUCTURES, pos);
+      const terrain = this.room.lookForAt(LOOK_TERRAIN, pos);
       const nonRoad = what.find(i => i.structureType !== "road");
       const road = what.find(i => i.structureType === "road");
 
@@ -443,7 +447,7 @@ export class Architect {
         nonRoad.destroy();
       }
 
-      if (!road) {
+      if (!road && !terrain.find(i => i === "wall")) {
         return this.room.createConstructionSite(pos.x, pos.y, STRUCTURE_ROAD);
       }
     }
@@ -473,7 +477,7 @@ export class Architect {
       );
       delete this.room.memory.storagePlannedLocation;
     } else {
-      position = PathFinder.search(spawn.pos, this.room.controller.pos).path.find(i =>
+      position = Traveler.findTravelPath(spawn.pos, this.room.controller.pos).path.find(i =>
         this.room.controller ? i.getRangeTo(spawn.pos) === 6 || i.getRangeTo(this.room.controller) <= 4 : false
       );
       if (!position) {

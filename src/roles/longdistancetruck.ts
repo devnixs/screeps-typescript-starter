@@ -1,12 +1,14 @@
 import { sourceManager } from "utils/source-manager";
 import { profiler } from "../utils/profiler";
 import { findHostile, findNonEmptyResourceInStore, findNonEmptyResourcesInStore } from "utils/finder";
+import { IRemoteDefenderMemory } from "./remote-defender";
 
 export interface ILongDistanceTruckMemory extends CreepMemory {
   depositing?: boolean;
   home: string;
   homeSpawnPosition: { x: number; y: number };
   targetContainer: string | undefined;
+  energyRetrieved: number | undefined;
 }
 
 class RoleLongDistanceTruck implements IRole {
@@ -19,22 +21,32 @@ class RoleLongDistanceTruck implements IRole {
     if (enemy && enemy.pos.getRangeTo(creep.pos.x, creep.pos.y) < 10) {
       // flee
       creep.say("RUN!");
-      const homeRoom = Game.rooms[memory.homeRoom].find(FIND_MY_SPAWNS)[0];
-      creep.goTo(homeRoom);
+      const homeRoom = Game.rooms[memory.homeRoom].controller;
+      if (homeRoom) {
+        creep.goTo(homeRoom);
+      }
       return;
     }
 
+    this.addRemoteCostStats(creep, memory);
+
     // if creep is bringing energy to a structure but has no energy left
     if (memory.depositing == true && totalCargoContent == 0) {
+      creep.say("R" + memory.energyRetrieved);
+      this.addRemoteRetrievedEnergyStats(creep, memory);
       // switch state
       memory.depositing = false;
+      delete memory.energyRetrieved;
       delete memory.targetContainer;
     }
     // if creep is harvesting energy but is full
     else if (!memory.depositing && totalCargoContent == creep.carryCapacity) {
       // switch state
       memory.depositing = true;
-      delete memory.targetContainer;
+    }
+
+    if (memory.depositing && !memory.energyRetrieved && creep.carry.energy) {
+      memory.energyRetrieved = creep.carry.energy;
     }
 
     // if creep is supposed to transfer energy to a structure
@@ -79,6 +91,14 @@ class RoleLongDistanceTruck implements IRole {
     else {
       const droppedResource = creep.pos.findInRange(FIND_DROPPED_RESOURCES, 1).filter(i => i.amount > 50)[0];
       if (droppedResource) {
+        if (droppedResource.amount >= creep.carryCapacity - totalCargoContent) {
+          // stats: if the resource is on top of a container, switch to that container
+          const container = droppedResource.pos.lookFor(LOOK_STRUCTURES).find(i => i.structureType === "container");
+          if (container) {
+            memory.targetContainer = container.id;
+          }
+        }
+
         creep.pickup(droppedResource);
         return;
       }
@@ -86,6 +106,10 @@ class RoleLongDistanceTruck implements IRole {
       // if in target room
       const container = Game.getObjectById(memory.targetContainer) as StructureContainer;
       if (!container) {
+        const ctrl = Game.rooms[memory.homeRoom].controller;
+        if (ctrl) {
+          creep.goTo(ctrl);
+        }
         return;
       }
       if (creep.room.name == container.room.name) {
@@ -109,6 +133,34 @@ class RoleLongDistanceTruck implements IRole {
       else {
         creep.goTo(container.pos);
       }
+    }
+  }
+
+  addRemoteCostStats(creep: Creep, memory: ILongDistanceTruckMemory) {
+    const skipTicks = 9;
+    if (Game.time % skipTicks === 0) {
+      const cost = _.sum(creep.body.map(i => BODYPART_COST[i.type]));
+      const currentCost = (cost / CREEP_LIFE_TIME) * skipTicks;
+
+      const homeRoom = Game.rooms[memory.homeRoom];
+      const remote = homeRoom.memory.remotes.find(i => i.container === memory.targetContainer);
+
+      // save stats
+      if (remote) {
+        remote.spentEnergy = remote.spentEnergy || 0;
+        remote.spentEnergy += currentCost;
+      }
+    }
+  }
+
+  addRemoteRetrievedEnergyStats(creep: Creep, memory: ILongDistanceTruckMemory) {
+    const homeRoom = Game.rooms[memory.homeRoom];
+    const remote = homeRoom.memory.remotes.find(i => i.container === memory.targetContainer);
+
+    // save stats
+    if (remote && memory.targetContainer) {
+      remote.retrievedEnergy = remote.retrievedEnergy || 0;
+      remote.retrievedEnergy += memory.energyRetrieved || 0;
     }
   }
 }

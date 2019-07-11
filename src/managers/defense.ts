@@ -57,6 +57,7 @@ export class DefenseManager {
     console.log("Room", this.room.name, "is under siege!");
     this.room.memory.boostMode = [RANGED_ATTACK];
     new Chemist(this.room).setupBoostMode();
+    Game.notify("Room " + this.room.name + " is under siege! Tick=" + Game.time);
   }
 
   removeSiegeMode() {
@@ -139,8 +140,10 @@ export class DefenseManager {
         filter: i =>
           i.body.find(
             bodyPart =>
-              bodyPart.hits > 0 &&
-              (bodyPart.type === "attack" || bodyPart.type === "ranged_attack" || bodyPart.type === "heal")
+              bodyPart.type === "attack" ||
+              bodyPart.type === "ranged_attack" ||
+              bodyPart.type === "heal" ||
+              bodyPart.type === "work"
           )
       });
 
@@ -149,7 +152,7 @@ export class DefenseManager {
         enemies.map(enemy =>
           enemy.body.map(i => {
             if (i.hits === 0) {
-              return 0;
+              return 0.1;
             }
             let threat = 0;
             if (i.type === "attack") {
@@ -163,6 +166,9 @@ export class DefenseManager {
             }
             if (i.type === "tough") {
               threat = 1;
+            }
+            if (i.type === "work") {
+              threat = 0.1;
             }
             if (i.boost) {
               threat = threat * 2;

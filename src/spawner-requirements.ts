@@ -30,6 +30,8 @@ export interface RoleRequirement {
   subRole?: string;
   onlyRooms?: string[];
   disableIfLowOnCpu?: boolean;
+
+  onSpawn?: (totalCost: number, body: BodyPartConstant[]) => void;
 }
 
 // MOVE	            50	Moves the creep. Reduces creep fatigue by 2/tick. See movement.
@@ -226,6 +228,10 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
         subRole: remote.room + "-" + remote.x + "-" + remote.y,
         bodyTemplatePrepend: [CARRY, MOVE, MOVE, MOVE],
         disableIfLowOnCpu: true,
+        onSpawn: (totalCost, bodyTemplate) => {
+          remote.spentEnergy = remote.spentEnergy || 0;
+          remote.spentEnergy += totalCost;
+        },
         additionalMemory: {
           homeSpawnPosition: spawn.pos,
           home: spawn.pos.roomName,
@@ -239,15 +245,22 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
   const remoteDefenders = (spawn.room.memory.needsDefenders || [])
     .filter(i => !spawn.room.memory.isUnderSiege)
     .filter(i => i.mode === "remote" && spawn.room.energyCapacityAvailable > 620)
-    .map(remote => {
+    .map(defense => {
       return {
         percentage: 20,
         role: "remote-defender",
         // bodyTemplate: [MOVE, MOVE, MOVE, ATTACK, ATTACK, HEAL],
         bodyTemplate: [MOVE, MOVE, MOVE, RANGED_ATTACK, RANGED_ATTACK, HEAL],
-        maxRepatAccrossAll: Math.ceil(remote.threatLevel * 0.7),
+        maxRepatAccrossAll: Math.ceil(defense.threatLevel * 0.5),
         sortBody: [TOUGH, MOVE, ATTACK, RANGED_ATTACK, HEAL],
-        subRole: remote.room,
+        subRole: defense.room,
+        onSpawn: (totalCost, bodyTemplate) => {
+          const remotes = spawn.room.memory.remotes.filter(i => i.room === defense.room);
+          remotes.forEach(remote => {
+            remote.spentEnergy = remote.spentEnergy || 0;
+            remote.spentEnergy += totalCost / remotes.length;
+          });
+        },
         additionalMemory: {
           homeSpawnPosition: spawn.pos,
           home: spawn.pos.roomName
@@ -264,6 +277,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
         bodyTemplate: [MOVE, RANGED_ATTACK, RANGED_ATTACK],
         maxRepatAccrossAll: Math.ceil(remote.threatLevel * 2),
         bodyTemplatePrepend: [HEAL, HEAL, MOVE],
+        maxCount: 2,
         sortBody: [TOUGH, MOVE, ATTACK, HEAL],
         additionalMemory: {
           homeSpawnPosition: spawn.pos,
@@ -285,6 +299,13 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
         maxRepeat: 2,
         subRole: remote.room,
         disableIfLowOnCpu: true,
+        onSpawn: (totalCost, bodyTemplate) => {
+          const remotes = spawn.room.memory.remotes.filter(i => i.room === remote.room);
+          remotes.forEach(remote => {
+            remote.spentEnergy = remote.spentEnergy || 0;
+            remote.spentEnergy += totalCost / remotes.length;
+          });
+        },
         additionalMemory: {
           homeSpawnPosition: spawn.pos,
           home: spawn.pos.roomName,
@@ -305,7 +326,15 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
 
   const hasIdleLongDistanceTrucks = spawn.room
     .find(FIND_MY_CREEPS)
-    .find(i => i.memory.role === "long-distance-truck" && !i.memory.subRole);
+    .find(i => i.memory.role === "long-distance-truck" && !(i.memory as ILongDistanceTruckMemory).targetContainer);
+
+  const totalTruckRepetitions = Math.ceil(
+    _.sum(spawn.room.memory.remotes.filter(i => i.energy > 0 && !i.disabled).map(i => i.distance / 4.5)) // 1 truck template repetition for every 4 distance
+  );
+
+  if (spawn.room.name === "E13S15") {
+    console.log(spawn.room, "totalTruckRepetitions", totalTruckRepetitions);
+  }
 
   return [
     ...harvesterDefinitions,
@@ -320,7 +349,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     {
       percentage: 2,
       role: "builder",
-      maxCount: needsBuilder ? 1 : 0,
+      maxCount: needsBuilder ? (controllerLevel <= 3 ? 2 : 1) : 0,
       bodyTemplate: [MOVE, WORK, CARRY]
     },
     {
@@ -388,14 +417,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       percentage: 4,
       role: "long-distance-truck",
       maxRepatAccrossAll:
-        isStorageAlmostFull || hasIdleLongDistanceTrucks || spawn.room.memory.isUnderSiege
-          ? 0
-          : Math.ceil(
-              spawn.room.memory.remotes
-                .filter(i => i.energy > 0 && !i.disabled)
-                .map(i => i.distance / 4) // 1 truck template repetition for every 4 distance
-                .reduce((acc, i) => acc + i, 0)
-            ),
+        isStorageAlmostFull || hasIdleLongDistanceTrucks || spawn.room.memory.isUnderSiege ? 0 : totalTruckRepetitions,
       bodyTemplate: [MOVE, CARRY, CARRY],
       disableIfLowOnCpu: true,
       bodyTemplatePrepend: [WORK, CARRY, MOVE],
@@ -410,7 +432,8 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       exactBody: [MOVE],
       percentage: 1,
       role: "scout",
-      maxCount: (spawn.room.memory.explorations || []).find(i => i.needsExploration) ? 1 : 0,
+      maxCount:
+        (spawn.room.memory.explorations || []).find(i => i.needsExploration) && !spawn.room.memory.isUnderSiege ? 1 : 0,
       countAllRooms: false
     }
   ];

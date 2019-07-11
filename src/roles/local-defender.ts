@@ -29,6 +29,15 @@ class RoleLocalDefender implements IRole {
       }
     }
 
+    let doNotMove = false;
+    if (creep.hits < creep.hitsMax * 0.75) {
+      // don't move if we're safe but damaged
+      const rempartOnTopOfUs = creep.pos.lookFor(LOOK_STRUCTURES).find(i => i.structureType === "rampart");
+      if (rempartOnTopOfUs) {
+        doNotMove = true;
+      }
+    }
+
     const rampartTarget = hostile || creep;
 
     // find closest empty rempart
@@ -37,7 +46,7 @@ class RoleLocalDefender implements IRole {
         r.structureType === "rampart" &&
         (r.pos.lookFor(LOOK_CREEPS).length === 0 || (r.pos.x === creep.pos.x && r.pos.y === creep.pos.y))
     });
-    if (closestEmptyRempart) {
+    if (closestEmptyRempart && !doNotMove) {
       if (closestEmptyRempart.pos.x !== creep.pos.x || closestEmptyRempart.pos.y !== creep.pos.y) {
         creep.goTo(closestEmptyRempart);
       }

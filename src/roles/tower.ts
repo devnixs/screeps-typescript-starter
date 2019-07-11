@@ -19,20 +19,20 @@ class RoleTower {
       this.refreshDamagedStructures(tower);
     }
 
-    if (Game.time % 2 === 0) {
+    if (Game.time % 3 === 0) {
       this.refreshEnemy(tower);
       this.refreshDamagedCreep(tower);
-    }
-
-    if (this.hasEnemies(tower)) {
-      this.attackEnemies(tower);
-      this.refreshEnemy(tower);
-      return;
     }
 
     if (this.hasDamagedCreeps(tower)) {
       this.healDamageedCreeps(tower);
       this.refreshDamagedCreep(tower);
+      return;
+    }
+
+    if (this.hasEnemies(tower)) {
+      this.attackEnemies(tower);
+      this.refreshEnemy(tower);
       return;
     }
 

@@ -1,4 +1,5 @@
 import { profiler, profileMethod } from "../utils/profiler";
+import { close } from "inspector";
 
 let findClosestRoom = function(targetRoom: string) {
   Memory.closestRooms = Memory.closestRooms || {};
@@ -88,11 +89,11 @@ let findNonEmptyResourcesInStore = function findNonEmptyResourcesInStore(store: 
 
 export function findHostile(creep: Creep) {
   const hostile = creep.pos.findClosestByRange(FIND_HOSTILE_CREEPS, {
-    filter: creep =>
-      creep.getActiveBodyparts(ATTACK) ||
-      creep.getActiveBodyparts(RANGED_ATTACK) ||
-      creep.getActiveBodyparts(WORK) ||
-      creep.getActiveBodyparts(HEAL)
+    filter: creep => {
+      return !!creep.body.find(
+        i => i.type === ATTACK || i.type === RANGED_ATTACK || i.type === WORK || i.type === HEAL
+      );
+    }
   });
   return hostile;
 }
@@ -107,6 +108,9 @@ let findRestSpot = function findRestSpot(creep: Creep, closeTo?: { x: number; y:
   if (creep.room.memory.restSpot) {
     return new RoomPosition(creep.room.memory.restSpot.x, creep.room.memory.restSpot.y, creep.room.name);
   } else {
+    if (closeTo) {
+      return new RoomPosition(closeTo.x, closeTo.y, creep.room.name);
+    }
     return null;
   }
 };

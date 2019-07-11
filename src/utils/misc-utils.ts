@@ -6,7 +6,7 @@ export function base50encode(arr: number[]) {
   if (!arr) {
     return arr;
   }
-  return arr.map(i => chars.charAt(i)).join();
+  return arr.map(i => chars.charAt(i)).join("");
 }
 export function base50decode(str: string) {
   return str.split("").map(i => chars.indexOf(i));

@@ -3,7 +3,7 @@ export function boostCreep(creep: Creep) {
     return -1;
   }
 
-  if (!creep.ticksToLive || creep.ticksToLive <= 1350) {
+  if (!creep.ticksToLive || creep.ticksToLive <= 1000) {
     // let's not waste time.
     return -1;
   }

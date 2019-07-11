@@ -41,10 +41,16 @@ export class SafeModeActivator {
 
       if (isBig && isPlayer) {
         const inSafeArea = isInSafeArea(enemy.pos, enemy.room);
-        if (inSafeArea) {
+        if (inSafeArea === true) {
           const result = room.controller && room.controller.activateSafeMode();
           if (result === OK) {
-            Game.notify("Activated safe mode on room " + room.name);
+            Game.notify("Enemy in safe area, activating safe mode on room " + room.name);
+          }
+        }
+        if (inSafeArea === undefined) {
+          const result = room.controller && room.controller.activateSafeMode();
+          if (result === OK) {
+            Game.notify("Enemy present, but no safe area defined. Activating safe mode on room " + room.name);
           }
         }
       }

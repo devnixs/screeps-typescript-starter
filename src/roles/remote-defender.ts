@@ -57,10 +57,14 @@ class RoleRemoteDefender implements IRole {
 
       // PEACEFUL MODE
       if (!memory.subRole) {
-        const rest = findRestSpot(creep, { x: 25, y: 25 });
-        if (rest) {
-          creep.say("Zzz");
-          creep.goTo(rest);
+        if (memory.homeRoom != creep.room.name) {
+          creep.goTo(new RoomPosition(25, 25, memory.homeRoom));
+        } else {
+          const rest = findRestSpot(creep, { x: 25, y: 25 });
+          if (rest) {
+            creep.say("Zzz");
+            creep.goTo(rest);
+          }
         }
       } else {
         if (memory.subRole != creep.room.name) {

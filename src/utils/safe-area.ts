@@ -16,40 +16,29 @@ let getSafeArea = function getSafeArea(room: Room) {
     return safeAreas[room.name];
   }
 
-  if (room.memory.safeArea) {
-    // deserialize
-    safeAreas[room.name] = _.chunk(base50decode(room.memory.safeArea), 2).map(([x, y]) => ({ x, y }));
-    return safeAreas[room.name];
-  } else {
-    if (!safeAreasLastCheckTime[room.name] || safeAreasLastCheckTime[room.name] < Game.time - 10000) {
-      console.log("Computing safe area...", room.name);
-      const safeArea = findSafeAreaAround(spawn.pos, room);
-      safeAreasLastCheckTime[room.name] = Game.time;
-      if (safeArea) {
-        console.log("Computation successful", room.name);
-        safeAreas[room.name] = safeArea;
-        room.memory.safeArea = base50encode(_.flatten(safeArea.map(i => [i.x, i.y])));
-        return safeArea;
-      }
-    } else {
-      console.log("Last check time is too soon", safeAreasLastCheckTime[room.name]);
+  if (!safeAreasLastCheckTime[room.name] || safeAreasLastCheckTime[room.name] < Game.time - 10000) {
+    console.log("Computing safe area...", room.name);
+    const safeArea = findSafeAreaAround(spawn.pos, room);
+    safeAreasLastCheckTime[room.name] = Game.time;
+    if (safeArea) {
+      console.log("Computation successful", room.name);
+      safeAreas[room.name] = safeArea;
+      return safeArea;
     }
+  } else {
+    console.log("Last check time is too soon", safeAreasLastCheckTime[room.name]);
   }
   return null;
 };
 
 let isInSafeArea = function isInSafeArea(pos: SimplePos, room: Room) {
-  const cpu = Game.cpu.getUsed();
   const safeArea = getSafeArea(room);
   if (!safeArea) {
-    return false;
+    return undefined;
   }
 
   const result = safeArea.find(i => i.x === pos.x && i.y === pos.y);
-
-  const used = Game.cpu.getUsed() - cpu;
-  console.log("Is in safe area, used", used, "CPU");
-  return result;
+  return !!result;
 };
 
 getSafeArea = profiler.registerFN(getSafeArea, "getSafeArea");

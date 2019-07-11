@@ -1,6 +1,7 @@
 import { getMyRooms, getUsername } from "utils/misc-utils";
 import { Cartographer } from "utils/cartographer";
 import { profiler } from "utils/profiler";
+import { Traveler } from "utils/Traveler";
 
 const exploreTimeout = 10000;
 
@@ -76,14 +77,15 @@ export class ExplorationManager {
       return;
     }
     sources.forEach(source => {
-      const searchResult = PathFinder.search(spawn.pos, source.pos);
+      const maxDistance = 150;
+      const searchResult = Traveler.findTravelPath(spawn.pos, source.pos, {
+        restrictDistance: maxDistance
+      });
       const existingRemote = this.room.memory.remotes.find(
         i => i.room === source.room.name && i.x === source.pos.x && i.y === source.pos.y
       );
 
       var roomType = Cartographer.roomType(source.room.name);
-
-      const maxDistance = 150;
 
       const remoteExistInAnotherRoom = !!getMyRooms().find(
         i => !!i.memory.remotes.find(r => r.room === source.room.name && source.pos.x === r.x && source.pos.y === r.y)

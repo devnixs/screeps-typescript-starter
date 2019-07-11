@@ -341,7 +341,7 @@ class RoleTruck implements IRole {
     if (
       droppedResource &&
       droppedResource.amount > 100 &&
-      droppedResource.amount > creep.pos.getRangeTo(droppedResource.pos.x, droppedResource.pos.y) * 10 &&
+      droppedResource.amount > creep.pos.getRangeTo(droppedResource.pos.x, droppedResource.pos.y) * 5 &&
       (!creep.room.memory.isUnderSiege || isInSafeArea(droppedResource.pos, creep.room))
     ) {
       const job = this.createRetrievalJob({
