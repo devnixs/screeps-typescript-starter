@@ -12,6 +12,13 @@ class RoleRemoteDefender implements IRole {
 
     let hostile = findHostile(creep);
 
+    if (creep.hits < creep.hitsMax / 2) {
+      creep.heal(creep);
+      hostile && creep.rangedAttack(hostile);
+      this.goHome(creep);
+      return;
+    }
+
     if (creep.hits < creep.hitsMax) {
       creep.heal(creep);
     } else {
@@ -42,7 +49,12 @@ class RoleRemoteDefender implements IRole {
           creep.goTo(closestEmptyRempart);
         }
       } else {
-        creep.goTo(hostile);
+        // kitting
+        if (hostile.pos.getRangeTo(creep) < 3) {
+          this.goHome(creep);
+        } else if (hostile.pos.getRangeTo(creep) > 3) {
+          creep.goTo(hostile);
+        }
       }
 
       return;

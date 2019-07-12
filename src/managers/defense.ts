@@ -78,8 +78,8 @@ export class DefenseManager {
 
   addDefenders(targetRoom: Room) {
     const threatLevel = this.getThreatLevel(targetRoom);
-    if (threatLevel) {
-      // console.log("Found thread in room", targetRoom.name);
+    if (threatLevel > 0) {
+      // console.log("Found threat in room", targetRoom.name);
       this.room.memory.needsDefenders.push({
         room: targetRoom.name,
         threatLevel: threatLevel,

@@ -52,7 +52,7 @@ class RoleLocalDefender implements IRole {
       }
     } else {
       const rest = findRestSpot(creep, { x: 25, y: 25 });
-      if (rest) {
+      if (rest && !doNotMove) {
         creep.say("Zzz");
         creep.goTo(rest);
       }

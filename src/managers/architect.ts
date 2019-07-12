@@ -597,7 +597,7 @@ export class Architect {
         filter: i => i.structureType === "container"
       })[0] as any;
 
-      if (source.pos.getRangeTo(this.room.storage) > 18 && !existingLink && closeContainer) {
+      if (source.pos.getRangeTo(this.room.storage) > 14 && !existingLink && closeContainer) {
         // create link
 
         const location = findEmptySpotCloseTo(closeContainer.pos, this.room);

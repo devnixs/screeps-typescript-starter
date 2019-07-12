@@ -1,5 +1,6 @@
 import { getUsername } from "utils/misc-utils";
 import { findHostile } from "utils/finder";
+import { signature } from "constants/misc";
 
 export interface IReserverMemory extends CreepMemory {
   targetRoomName: string;
@@ -31,7 +32,7 @@ class RoleReserver implements IRole {
         if (Game.time % 1000 === 0) {
           // We're in range
           if (reserveResult === OK) {
-            creep.signController(ctrl, "(V) (°,,,,°) (V)");
+            creep.signController(ctrl, signature);
           }
         }
       }

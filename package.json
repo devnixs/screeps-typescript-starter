@@ -12,6 +12,7 @@
     "push-pserver": "rollup -c --environment DEST:pserver",
     "push-screepsplus": "rollup -c --environment DEST:screepsplus",
     "push-sim": "rollup -c --environment DEST:sim",
+    "push-titan": "rollup -c --environment DEST:titan",
     "push-local": "rollup -c --environment DEST:local",
     "test": "npm run test-unit && npm run test-integration",
     "test-unit": "rollup -c rollup.test-unit-config.js && mocha dist/test-unit.bundle.js",

@@ -83,21 +83,11 @@ interface RoomMemory {
 
   needsDefenders: DefenseDefinition[];
 
-  explorations: ExplorationDefinition[];
-
   lastProgress: number | undefined;
   lastProgressChecktime: number;
 
   boostMode: BodyPartConstant[] | undefined;
   lastRemoteCheckCtrlLevel: number | undefined;
-}
-
-interface ExplorationDefinition {
-  roomName: string;
-  lastExplorationDate: number;
-
-  isEnemyRoom: boolean | undefined;
-  needsExploration: boolean;
 }
 
 interface DefenseDefinition {
@@ -174,7 +164,37 @@ interface Memory {
 
   closestRooms: { [roomName: string]: string };
 
-  observersIds?: string[];
+  roomExplorations: RoomExplorationReport[];
+}
+
+interface RoomExplorationReport {
+  tick: number;
+  enemyBase: boolean;
+  enemyRemote: boolean;
+  name: string;
+  closestRoom: string;
+
+  colonizable?: ColonizationEvaluation | undefined | null;
+}
+
+interface ColonizationEvaluation {
+  c: number; //sourceCount
+  d: number | undefined; // distance between sources
+  d1: number | undefined; // distance between source1 and ctrl
+  d2: number | undefined; // distance between source2 and ctrl
+
+  x: number | undefined; // ideal spawn location
+  y: number | undefined; // ideal spawn location
+  w: number; // walls count at spawn location
+
+  s1: number | undefined; // distance between source1 and spawn
+  s2: number | undefined; // distance between source2 and spawn
+  s3: number | undefined; // distance between ctrl and spawn
+
+  dd: number; // distance to closest room
+  dds: number; // distance to closest room score
+
+  s: number; // score
 }
 
 // `global` extension samples

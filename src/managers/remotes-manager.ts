@@ -1,4 +1,4 @@
-import { getMyRooms } from "utils/misc-utils";
+import { getMyRooms, paddingLeft } from "utils/misc-utils";
 import { findEmptySpotCloseTo } from "utils/finder";
 import { ILongDistanceTruckMemory } from "roles/longdistancetruck";
 import { profiler } from "utils/profiler";
@@ -70,11 +70,6 @@ export class RemotesManager {
       });
   }
 
-  static paddingLeft(paddingValue: string, str: string | number) {
-    str = str.toString();
-    return String(paddingValue + str).slice(-paddingValue.length);
-  }
-
   static outputStats() {
     getMyRooms().forEach(room => {
       if (!room.memory || !room.memory.remotes || !room.memory.remotes.length) {
@@ -86,14 +81,14 @@ export class RemotesManager {
       )
         .map(
           i =>
-            this.paddingLeft("      ", i.room) +
-            this.paddingLeft("       ", ":" + i.x + "," + i.y) +
-            this.paddingLeft("         ", Math.round((i.retrievedEnergy || 0) / 1000)) +
+            paddingLeft("      ", i.room) +
+            paddingLeft("       ", ":" + i.x + "," + i.y) +
+            paddingLeft("         ", Math.round((i.retrievedEnergy || 0) / 1000)) +
             "K" +
-            this.paddingLeft("         ", Math.round((i.spentEnergy || 0) / 1000)) +
+            paddingLeft("         ", Math.round((i.spentEnergy || 0) / 1000)) +
             "K" +
-            this.paddingLeft("         ", Math.round(((i.retrievedEnergy || 0) / (i.spentEnergy || 0)) * 100) / 100) +
-            (i.disabled ? "Disabled" : "Enabled")
+            paddingLeft("         ", Math.round(((i.retrievedEnergy || 0) / (i.spentEnergy || 0)) * 100) / 100) +
+            (i.disabled ? " Disabled" : " Enabled")
         )
         .join("\n");
       console.log(text);
@@ -101,7 +96,7 @@ export class RemotesManager {
   }
 
   disableNotRentableRooms() {
-    if (Game.time % 1000 > 0) {
+    if (Game.time % 100 > 0) {
       return;
     }
 
@@ -149,7 +144,14 @@ export class RemotesManager {
   }
 
   canEnableRoom(room: string) {
+    if (this.room.controller && this.room.controller.level < 3) {
+      return false;
+    }
+
     const remotesInThisRoom = this.room.memory.remotes.filter(i => i.room === room);
+    if (remotesInThisRoom.length === 0) {
+      return false;
+    }
     if (Cartographer.roomType(room) === "SK") {
       return false;
     }
@@ -157,21 +159,29 @@ export class RemotesManager {
       return false;
     }
 
-    const totalSpent = _.sum(remotesInThisRoom.map(i => i.spentEnergy));
-    const totalRetrieved = _.sum(remotesInThisRoom.map(i => i.retrievedEnergy));
+    const totalSpent = _.sum(remotesInThisRoom.map(i => i.spentEnergy)) / remotesInThisRoom.length;
+    const totalRetrieved = _.sum(remotesInThisRoom.map(i => i.retrievedEnergy)) / remotesInThisRoom.length;
 
     if (totalSpent > 0) {
       const ratio = totalRetrieved / totalSpent;
-      if (totalSpent > 50000 && ratio < 1.5) {
+      if (totalSpent > 50000 && ratio < 1.2) {
         // disable this room;
         return false;
       }
-      if (totalSpent > 30000 && ratio < 0.5) {
+      if (totalSpent > 25000 && ratio < 0.5) {
         // disable this room;
         return false;
       }
     }
-
+    /*
+    const isHeavilyHarassed = !!remotesInThisRoom.find(i =>
+      i.heavilyArrassedTick ? i.heavilyArrassedTick > Game.time - 1500 : false
+    );
+    if (isHeavilyHarassed) {
+      // wait for a while before going there again
+      return false;
+    }
+ */
     return true;
   }
 
@@ -181,7 +191,7 @@ export class RemotesManager {
 
   createRoads() {
     const remotes = this.getEnabledRemotes();
-    if (Game.time % 1000 === 0 && remotes.length) {
+    if (Game.time % 300 === 0 && remotes.length) {
       const homeSpawn = this.room.find(FIND_MY_SPAWNS)[0];
 
       const rnd = Math.floor(Math.random() * remotes.length);
@@ -331,6 +341,11 @@ export class RemotesManager {
     if (!targetRoom) {
       return;
     }
+
+    if (remote.disabled) {
+      return;
+    }
+
     const source = targetRoom.lookForAt("source", remote.x, remote.y)[0];
 
     if (!source) {
@@ -392,13 +407,13 @@ export class RemotesManager {
 
 profiler.registerClass(RemotesManager, "RemotesManager");
 
-(global as any).resetRemoteStats = function() {
+(global as any).resetRemoteStats = function(roomName?: string) {
   _.flatten(
     Object.keys(Game.rooms)
       .map(i => Game.rooms[i])
       .map(room => room.memory.remotes)
   )
-    .filter(i => i)
+    .filter(i => i && (!roomName || i.room === roomName))
     .forEach(i => {
       delete i.retrievedEnergy;
       delete i.spentEnergy;

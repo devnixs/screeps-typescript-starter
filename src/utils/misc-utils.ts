@@ -205,3 +205,8 @@ export function getMyRooms() {
     .filter(i => i.controller && i.controller.my)
     .map(i => Game.rooms[i.name]);
 }
+
+export function paddingLeft(paddingValue: string, str: string | number) {
+  str = str.toString();
+  return String(paddingValue + str).slice(-paddingValue.length);
+}

@@ -215,7 +215,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     .filter(i => i)
     .map(i => i as RoleRequirement);
 
-  const remoteHarvesters = spawn.room.memory.remotes
+  const remoteHarvesters = (spawn.room.memory.remotes || [])
     .filter(i => !i.disabled)
     .filter(i => !spawn.room.memory.isUnderSiege)
     .map(remote => {
@@ -329,12 +329,8 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     .find(i => i.memory.role === "long-distance-truck" && !(i.memory as ILongDistanceTruckMemory).targetContainer);
 
   const totalTruckRepetitions = Math.ceil(
-    _.sum(spawn.room.memory.remotes.filter(i => i.energy > 0 && !i.disabled).map(i => i.distance / 4.5)) // 1 truck template repetition for every 4 distance
+    _.sum(spawn.room.memory.remotes.filter(i => i.energy > 0 && !i.disabled).map(i => i.distance / 4)) // 1 truck template repetition for every 4 distance
   );
-
-  if (spawn.room.name === "E13S15") {
-    console.log(spawn.room, "totalTruckRepetitions", totalTruckRepetitions);
-  }
 
   return [
     ...harvesterDefinitions,
@@ -432,8 +428,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       exactBody: [MOVE],
       percentage: 1,
       role: "scout",
-      maxCount:
-        (spawn.room.memory.explorations || []).find(i => i.needsExploration) && !spawn.room.memory.isUnderSiege ? 1 : 0,
+      maxCount: !spawn.room.memory.isUnderSiege ? 1 : 0,
       countAllRooms: false
     }
   ];
