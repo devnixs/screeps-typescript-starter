@@ -10,7 +10,6 @@ export interface IScoutMemory extends CreepMemory {
   targetRoom: string | undefined;
   targetExitDir: FindConstant | undefined;
   targetExit?: { x: number; y: number };
-  alreadyExploredRooms: string[];
   lastPos: { x: number; y: number };
 }
 
@@ -32,12 +31,6 @@ class RoleScout implements IRole {
       memory.lastPos = { x: creep.pos.x, y: creep.pos.y };
     }
 
-    memory.alreadyExploredRooms = memory.alreadyExploredRooms || [];
-
-    if (memory.alreadyExploredRooms.indexOf(creep.room.name) === -1) {
-      memory.alreadyExploredRooms.push(creep.room.name);
-    }
-
     const homeRoom = Game.rooms[creep.memory.homeRoom];
     if (!homeRoom) {
       return;
@@ -47,40 +40,60 @@ class RoleScout implements IRole {
       const myRooms = getMyRooms();
       if (!myRooms.find(i => i === creep.room)) {
         ExplorationManager.analyzeRoom(creep.room);
+        const roomMemory = Memory.explorations.find(i => i.r === creep.room.name);
+        if (roomMemory) {
+          roomMemory.l = Game.time;
+        }
       }
       // console.log("Looking for new room", creep.room.name);
       const neighboorRooms = _.shuffle(_.pairs(Game.map.describeExits(creep.room.name)) as [[FindConstant, string]]);
 
-      // console.log(JSON.stringify(neighboorRooms));
-      const newTarget = _.sortBy(neighboorRooms, pair => {
-        // avoid enemies
+      const removedEnemyRooms = neighboorRooms.filter(pair => {
         const room = pair[1];
-        let score = 0;
-
-        const roomMemory = Memory.roomExplorations.find(i => i.name === room);
-        const isOneOfMyRooms = myRooms.find(i => i.name === room);
-        const alreadyExplored = memory.alreadyExploredRooms.indexOf(room) >= 0;
-
-        if (roomMemory && (roomMemory.enemyBase || roomMemory.enemyRemote)) {
-          score = Infinity;
-        }
-
+        const roomMemory = Memory.explorations.find(i => i.r === room);
         const type = Cartographer.roomType(room);
 
-        if (isOneOfMyRooms || alreadyExplored || type == "SK") {
-          // avoid my rooms
-          score = 200000;
-        } else {
-          score = Game.map.getRoomLinearDistance(homeRoom.name, room);
+        const isEnemy = (roomMemory && roomMemory.eb) || type == "SK";
+        return !isEnemy;
+      });
+
+      // some time we want to ignore trying to find closer rooms. This helps scouting further.
+      const closestFirst =
+        Game.time % 4 === 0
+          ? _.sortBy(removedEnemyRooms, pair => {
+              return Cartographer.findRoomDistanceSum(homeRoom.name, pair[1]);
+            })
+          : removedEnemyRooms;
+
+      const avoidMyRooms = _.sortBy(closestFirst, pair => {
+        const room = pair[1];
+        return myRooms.find(i => i.name === room) ? 1 : 0;
+      });
+
+      const lastCheckedFirst = _.sortBy(avoidMyRooms, pair => {
+        const room = pair[1];
+
+        const roomMemory = Memory.explorations.find(i => i.r === room);
+
+        if (myRooms.find(i => i.name === room)) {
+          return Infinity;
         }
 
-        // console.log("Room", room, "has score", score);
-        return score;
+        if (!roomMemory) {
+          return 0;
+        } else {
+          return roomMemory.l;
+        }
       });
-      console.log(JSON.stringify(newTarget[0]));
 
-      memory.targetExitDir = Number(newTarget[0][0]) as FindConstant;
-      memory.targetRoom = newTarget[0][1];
+      const bestExit = lastCheckedFirst[0];
+      if (!bestExit) {
+        this.goHome(creep);
+        return;
+      }
+
+      memory.targetExitDir = Number(bestExit[0]) as FindConstant;
+      memory.targetRoom = bestExit[1];
       const closest = creep.pos.findClosestByRange(memory.targetExitDir) as RoomPosition;
       if (closest) {
         memory.targetExit = { x: closest.x, y: closest.y };
@@ -89,14 +102,17 @@ class RoleScout implements IRole {
       }
     }
 
+    const currentSign = creep.room.controller && creep.room.controller.sign && creep.room.controller.sign.text;
+    const currentSignUser = creep.room.controller && creep.room.controller.sign && creep.room.controller.sign.username;
+
     if (
       creep.room.controller &&
-      (!creep.room.controller.sign || creep.room.controller.sign.username != getUsername())
+      (currentSignUser !== getUsername() || (currentSign && !currentSign.endsWith(signature)))
     ) {
       creep.goTo(creep.room.controller);
-      const hasExplorationMemory = Memory.roomExplorations.find(i => i.name === creep.room.name);
-      if (hasExplorationMemory && hasExplorationMemory.colonizable) {
-        creep.signController(creep.room.controller, hasExplorationMemory.colonizable.s + " " + signature);
+      const hasExplorationMemory = Memory.explorations.find(i => i.r === creep.room.name);
+      if (hasExplorationMemory && hasExplorationMemory.c) {
+        creep.signController(creep.room.controller, hasExplorationMemory.c.s + " " + signature);
       } else {
         creep.signController(creep.room.controller, signature);
       }
@@ -123,6 +139,13 @@ class RoleScout implements IRole {
       creep.goTo(new RoomPosition(memory.targetExit.x, memory.targetExit.y, creep.room.name), moveOptions);
     } else {
       creep.goTo(new RoomPosition(25, 25, memory.targetRoom), moveOptions);
+    }
+  }
+  goHome(creep: Creep) {
+    if (creep.room.name !== creep.memory.homeRoom) {
+      // go back home
+      creep.goTo(new RoomPosition(25, 25, creep.memory.homeRoom || ""));
+      return;
     }
   }
 }

@@ -113,4 +113,4 @@ export const desiredStocks: StoreDefinitionWithoutEnergy = {
   [RESOURCE_CATALYZED_GHODIUM_ALKALIDE]: 5000
 };
 
-export const signature = "(V) (°,,,,°) (V)";
+export const signature = "(V)  (°,,,,°)  (V)";

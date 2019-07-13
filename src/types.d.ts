@@ -164,31 +164,59 @@ interface Memory {
 
   closestRooms: { [roomName: string]: string };
 
-  roomExplorations: RoomExplorationReport[];
+  // roomExplorations: RoomExplorationReport[];
+  explorations: RoomExplorationReport[];
+
+  lastConquestTime: number | undefined;
 }
 
-interface RoomExplorationReport {
-  tick: number;
-  enemyBase: boolean;
-  enemyRemote: boolean;
-  name: string;
-  closestRoom: string;
+type MEMORY_TICK = "t";
 
-  colonizable?: ColonizationEvaluation | undefined | null;
+interface RoomExplorationReport {
+  /**
+   * Last Analyzed
+   */
+  t: number;
+  /**
+   * Last Scouted
+   */
+  l: number;
+  /**
+   * enemy base
+   */
+  eb: boolean;
+  /**
+   * enemy room controller level
+   */
+  el?: number;
+  /**
+   * enemy remote
+   */
+  er: boolean;
+  /**
+   * room
+   */
+  r: string;
+  /**
+   * closestRoom
+   */
+  cr: string;
+
+  /**
+   * Colonizable
+   */
+  c?: ColonizationEvaluation | undefined | null;
 }
 
 interface ColonizationEvaluation {
   c: number; //sourceCount
-  d: number | undefined; // distance between sources
-  d1: number | undefined; // distance between source1 and ctrl
-  d2: number | undefined; // distance between source2 and ctrl
 
-  x: number | undefined; // ideal spawn location
-  y: number | undefined; // ideal spawn location
+  x: number; // ideal spawn location
+  y: number; // ideal spawn location
   w: number; // walls count at spawn location
 
   s1: number | undefined; // distance between source1 and spawn
-  s2: number | undefined; // distance between source2 and spawn
+  s2: number; // distance between source2 and spawn
   s3: number | undefined; // distance between ctrl and spawn
 
   dd: number; // distance to closest room

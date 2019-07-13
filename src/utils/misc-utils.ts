@@ -52,11 +52,15 @@ export function hasMinerals(store: { [resourceType: string]: number }): boolean 
 }
 
 export function getUsername(): string {
-  for (let i in Game.rooms) {
-    let room = Game.rooms[i];
-    if (room.controller && room.controller.my) {
-      return room.controller.owner.username;
+  try {
+    for (let i in Game.rooms) {
+      let room = Game.rooms[i];
+      if (room.controller && room.controller.my) {
+        return room.controller.owner.username;
+      }
     }
+  } catch (e) {
+    console.error(e);
   }
   console.log("ERROR: Could not determine username. You can set this manually in src/settings/settings_user");
   return "ERROR: Could not determine username.";

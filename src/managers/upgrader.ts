@@ -20,6 +20,8 @@ export class UpgradeManager {
       return;
     }
 
+    const rcl = this.room.controller.level;
+
     if ("sim" in Game.rooms) {
       this.room.memory.upgraderType = "static";
       this.room.memory.upgraderRatio = 0;
@@ -45,7 +47,13 @@ export class UpgradeManager {
         this.room.memory.upgraderType = "static";
       }
 
-      this.room.memory.upgraderRatio = Math.ceil(Math.pow(storage.store.energy / 100000, 2) * 2);
+      if (rcl === 8) {
+        this.room.memory.upgraderRatio = Math.ceil(
+          Math.pow(Math.max(storage.store.energy - 400000, 0) / 100000, 2) * 2
+        );
+      } else {
+        this.room.memory.upgraderRatio = Math.ceil(Math.pow(storage.store.energy / 100000, 2) * 2);
+      }
     } else {
       const containers = this.room.containers;
       if (containers.length === 0) {

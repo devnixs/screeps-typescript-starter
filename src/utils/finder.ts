@@ -216,6 +216,16 @@ let findSafeAreaAround = function findSafeAreaAround(pos: SimplePos, room: Room)
   return closedList;
 };
 
+export function findEmptyRempart(target: _HasRoomPosition, creep: Creep) {
+  // find closest empty rempart
+  return target.pos.findClosestByRange(FIND_MY_STRUCTURES, {
+    filter: r =>
+      r.structureType === "rampart" &&
+      r.pos.lookFor(LOOK_STRUCTURES).length === 1 &&
+      (r.pos.lookFor(LOOK_CREEPS).length === 0 || (r.pos.x === creep.pos.x && r.pos.y === creep.pos.y))
+  });
+}
+
 findAndCache = profiler.registerFN(findAndCache, "findAndCache");
 findNonEmptyResourceInStore = profiler.registerFN(findNonEmptyResourceInStore, "findNonEmptyResourceInStore");
 findNonEmptyResourcesInStore = profiler.registerFN(findNonEmptyResourcesInStore, "findNonEmptyResourcesInStore");

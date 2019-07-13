@@ -17,6 +17,10 @@ class RoleClaimer implements IRole {
       }
 
       if (ctrl.my) {
+        // mission is a success.
+        // this room is no longer an exploration
+        Memory.explorations = Memory.explorations.filter(i => i.r != creep.room.name);
+
         // no need to do anything more
         creep.suicide();
         return;

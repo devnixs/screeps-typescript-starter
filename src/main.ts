@@ -40,6 +40,7 @@ import { ExplorationManager } from "./managers/exploration";
 import { roleScout } from "roles/scout";
 import { roleLocalDefender } from "roles/local-defender";
 import { UpgradeManager } from "managers/upgrader";
+import { ConquestManager } from "managers/conquest";
 
 // profiler.enable();
 
@@ -157,6 +158,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
     RolePestControl.checkReconstruction();
     SafeModeActivator.activeSafeModeIfNecessary();
     UpgradeManager.runForAllRooms();
+    ConquestManager.run();
 
     // Automatically delete memory of missing creeps
     for (const name in Memory.creeps) {

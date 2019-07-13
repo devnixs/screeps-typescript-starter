@@ -1,5 +1,5 @@
 import { requiredHealersForAnAttack } from "../constants/misc";
-import { findRestSpot, findHostile } from "utils/finder";
+import { findRestSpot, findHostile, findEmptyRempart } from "utils/finder";
 import { boostCreep } from "utils/boost-manager";
 import { profiler } from "utils/profiler";
 
@@ -32,23 +32,21 @@ class RoleRemoteDefender implements IRole {
       }
     }
 
+    const rampartTarget = hostile || creep;
+
     // ATTACK MODE
     if (hostile) {
       creep.say("Yarr!", true);
-      creep.attack(hostile);
       creep.rangedAttack(hostile);
 
       // find closest empty rempart
-      const closestEmptyRempart = creep.pos.findClosestByRange(FIND_MY_STRUCTURES, {
-        filter: r =>
-          r.structureType === "rampart" &&
-          (r.pos.lookFor(LOOK_CREEPS).length === 0 || (r.pos.x === creep.pos.x && r.pos.y === creep.pos.y))
-      });
+      const closestEmptyRempart = findEmptyRempart(rampartTarget, creep);
       if (closestEmptyRempart) {
         if (closestEmptyRempart.pos.x !== creep.pos.x || closestEmptyRempart.pos.y !== creep.pos.y) {
           creep.goTo(closestEmptyRempart);
         }
       } else {
+        console.log("No empty rempart ", creep.name);
         // kitting
         if (hostile.pos.getRangeTo(creep) < 3) {
           this.goHome(creep);

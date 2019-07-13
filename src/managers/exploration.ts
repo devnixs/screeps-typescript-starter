@@ -3,6 +3,7 @@ import { Cartographer } from "utils/cartographer";
 import { profiler } from "utils/profiler";
 import { Traveler } from "utils/Traveler";
 import { findClosestRoom } from "utils/finder";
+import { explorationConstants } from "constants/memory-constants";
 
 const exploreTimeout = 10000;
 
@@ -16,7 +17,9 @@ export class ExplorationManager {
   }
 
   run() {
-    Memory.roomExplorations = Memory.roomExplorations || [];
+    delete (Memory as any).roomExplorations;
+    Memory.explorations = Memory.explorations || [];
+
     if (Game.time % 4 > 0) {
       return;
     }
@@ -62,9 +65,9 @@ export class ExplorationManager {
   }
 
   static analyzeRoom(room: Room) {
-    let memory = Memory.roomExplorations.find(i => i.name == room.name);
+    let memory = Memory.explorations.find(i => i.r == room.name);
 
-    if (memory && memory.tick >= Game.time - 1000) {
+    if (memory && memory.t >= Game.time - 1000) {
       return;
     }
 
@@ -85,31 +88,32 @@ export class ExplorationManager {
     if (!memory) {
       // This happens only once
       memory = {
-        name: room.name,
-        tick: Game.time,
-        enemyBase: false,
-        enemyRemote: false,
-        closestRoom: closestRoomName,
-        colonizable: this.analyzeFutureColony(room)
+        r: room.name,
+        t: Game.time,
+        eb: false,
+        er: false,
+        cr: closestRoomName,
+        c: this.analyzeFutureColony(room),
+        l: Game.time
       };
-      Memory.roomExplorations.push(memory);
+      Memory.explorations.push(memory);
     }
 
-    memory.closestRoom = closestRoomName;
+    memory.cr = closestRoomName;
 
     // register if enemy
-    memory.enemyBase = room.controller
-      ? room.controller.owner && room.controller.owner.username !== getUsername()
-      : false;
+    memory.eb = room.controller ? room.controller.owner && room.controller.owner.username !== getUsername() : false;
+
+    memory.el = memory.eb ? room && room.controller && room.controller.level : undefined;
 
     // register if enemy
-    memory.enemyRemote =
-      (!memory.enemyBase &&
+    memory.er =
+      (!memory.eb &&
         (room.controller && room.controller.reservation && room.controller.reservation.username !== getUsername())) ||
       false;
 
     const sources = room.find(FIND_SOURCES);
-    if (memory.enemyBase || memory.enemyRemote) {
+    if (memory.eb || memory.er) {
       // delete existing remotes in this room
       closestRoom.memory.remotes = closestRoom.memory.remotes.filter(i => i.room === room.name);
       return;
@@ -177,16 +181,11 @@ export class ExplorationManager {
       return null;
     }
 
-    console.log("Analyzing room ", room, "for future possible colonization...");
+    console.log("Analyzing room ", room.name, "for future possible colonization...");
 
     const sources = room.find(FIND_SOURCES);
     const sourcesCount = sources.length;
-    const distanceBetweenSources =
-      sourcesCount >= 2 ? Traveler.findTravelPath(sources[0], sources[1]).path.length : 1000;
-    const d1 = Traveler.findTravelPath(sources[0], ctrl).path.length;
-    const d2 = sourcesCount >= 2 ? Traveler.findTravelPath(sources[1], ctrl).path.length : 10000;
-
-    const topPlaces = this.findTopPlacesWithoutWalls(5, 7, room.name);
+    const topPlaces = this.findTopPlacesWithoutWalls(20, 7, room.name);
     const topPlacesMapped = topPlaces.map(i => {
       const distanceWithSource1 = Traveler.findTravelPath(sources[0], new RoomPosition(i.x, i.y, room.name)).path
         .length;
@@ -217,14 +216,10 @@ export class ExplorationManager {
 
     const distanceScore = distanceWithClosestRoom < 300 ? 0 : Math.pow(distanceWithClosestRoom - 500, 2) / 100;
 
-    const finalScore = distanceBetweenSources + d1 + d2 + topPlace.total + topPlace.wallsCount * 4 + distanceScore;
+    const finalScore = topPlace.total + topPlace.wallsCount * 4 + distanceScore;
 
     return {
       c: sourcesCount, //sourceCount
-      d: distanceBetweenSources, // distance between sources
-      d1: d1, // distance between source1 and ctrl
-      d2: d2, // distance between source2 and ctrl
-
       x: topPlace.x, // ideal spawn location
       y: topPlace.y, // ideal spawn location
       w: topPlace.wallsCount, // walls count at spawn location
@@ -241,8 +236,7 @@ export class ExplorationManager {
   }
 
   /* Generates a matrix which gives us the amount of walls around a position*/
-  static getWallsAroundMatrix(range: number, room: string) {
-    const terrain = Game.map.getRoomTerrain(room);
+  static getWallsAroundMatrix(range: number, room: string, terrain: RoomTerrain) {
     const matrix: number[][] = [];
 
     for (let i = 1; i < 48; i++) {
@@ -270,13 +264,14 @@ export class ExplorationManager {
   }
 
   static findTopPlacesWithoutWalls(top: number, range: number, room: string) {
-    const wallsMatrix = this.getWallsAroundMatrix(range, room);
+    const terrain = Game.map.getRoomTerrain(room);
+    const wallsMatrix = this.getWallsAroundMatrix(range, room, terrain);
 
     const tops: { x: number; y: number; walls: number }[] = [];
 
     for (let i = 1 + range; i < 48 - range; i++) {
       for (let j = 1 + range; j < 48 - range; j++) {
-        if (i % 2 === 0 && j % 2 === 0) {
+        if (i % 2 === 0 && j % 2 === 0 && terrain.get(i, j) !== TERRAIN_MASK_WALL) {
           const walls = wallsMatrix[i][j];
           tops.push({ x: i, y: j, walls });
         }

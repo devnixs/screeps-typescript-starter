@@ -70,8 +70,8 @@ export class Architect {
       this.createColonyRoads,
       this.createRoadsAroundStorage,
       this.createStorage,
-      this.createCloseToSpawn(STRUCTURE_EXTENSION),
       this.createTerminal,
+      this.createCloseToSpawn(STRUCTURE_EXTENSION),
       this.createContainers,
       this.createMineralRoads,
       this.createExtractor,
@@ -379,6 +379,7 @@ export class Architect {
       const existingStorageLink = storage.pos.findInRange(FIND_MY_STRUCTURES, 4, {
         filter: i => i.structureType === "link"
       });
+      console.log(existingStorageLink, !!existingStorageLink);
       if (!existingStorageLink) {
         const spot1 = findEmptySpotCloseTo(storage.pos, this.room);
         if (spot1) {

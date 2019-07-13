@@ -410,6 +410,13 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
     },
     ...remoteHarvesters,
     {
+      exactBody: [MOVE],
+      percentage: 1,
+      role: "scout",
+      maxCount: !spawn.room.memory.isUnderSiege ? 1 : 0,
+      countAllRooms: false
+    },
+    {
       percentage: 4,
       role: "long-distance-truck",
       maxRepatAccrossAll:
@@ -423,13 +430,6 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       } as Partial<ILongDistanceTruckMemory>
     },
     ...reservers,
-    ...upgraders,
-    {
-      exactBody: [MOVE],
-      percentage: 1,
-      role: "scout",
-      maxCount: !spawn.room.memory.isUnderSiege ? 1 : 0,
-      countAllRooms: false
-    }
+    ...upgraders
   ];
 }

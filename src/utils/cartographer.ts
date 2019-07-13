@@ -117,6 +117,11 @@ export class Cartographer {
     return xDir + x + yDir + y;
   }
 
+  static findRoomDistanceSum(origin: string, otherRoom: string): number {
+    const delta = Cartographer.findRoomCoordDeltas(origin, otherRoom);
+    return Math.abs(delta.x) + Math.abs(delta.y);
+  }
+
   /**
    * Find the relative x and y offsets of two rooms
    */
@@ -225,3 +230,5 @@ export class Cartographer {
 }
 
 profiler.registerClass(Cartographer, "Cartographer");
+
+(global as any).Cartographer = Cartographer;

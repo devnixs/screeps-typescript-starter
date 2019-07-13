@@ -1,5 +1,5 @@
 import { requiredHealersForAnAttack } from "../constants/misc";
-import { findRestSpot, findHostile } from "utils/finder";
+import { findRestSpot, findHostile, findEmptyRempart } from "utils/finder";
 import { boostCreep } from "utils/boost-manager";
 import { profiler } from "utils/profiler";
 
@@ -40,12 +40,7 @@ class RoleLocalDefender implements IRole {
 
     const rampartTarget = hostile || creep;
 
-    // find closest empty rempart
-    const closestEmptyRempart = rampartTarget.pos.findClosestByRange(FIND_MY_STRUCTURES, {
-      filter: r =>
-        r.structureType === "rampart" &&
-        (r.pos.lookFor(LOOK_CREEPS).length === 0 || (r.pos.x === creep.pos.x && r.pos.y === creep.pos.y))
-    });
+    const closestEmptyRempart = findEmptyRempart(rampartTarget, creep);
     if (closestEmptyRempart && !doNotMove) {
       if (closestEmptyRempart.pos.x !== creep.pos.x || closestEmptyRempart.pos.y !== creep.pos.y) {
         creep.goTo(closestEmptyRempart);
