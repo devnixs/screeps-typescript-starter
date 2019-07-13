@@ -16,8 +16,14 @@ export class ConquestManager {
     const gcl = Game.gcl.level;
     const rooms = getMyRooms().length;
     const flag = Game.flags["claimer_target"];
+    Memory.roomsCount = Memory.roomsCount || rooms;
 
-    if (rooms > gcl && !flag) {
+    if (Memory.roomsCount > rooms) {
+      ConquestManager.onRoomLost();
+      Memory.roomsCount = rooms;
+    }
+
+    if (rooms < gcl && !flag) {
       console.log("Colonizing new room");
 
       const bestRoom = _.sortBy(Memory.explorations.filter(i => i.c), i => i.c && i.c.s);
@@ -41,6 +47,18 @@ export class ConquestManager {
         flag.remove();
       }
     }
+  }
+
+  static onNewRoom(room: Room) {
+    console.log("Successfuly claimed room", room.name);
+    // recompute all explorations, as they might be closer to this room
+    Memory.explorations = [];
+  }
+
+  static onRoomLost() {
+    console.log("Lost a room");
+    // recompute all explorations, as they might be further to this room
+    Memory.explorations = [];
   }
 }
 

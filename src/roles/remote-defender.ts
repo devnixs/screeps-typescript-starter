@@ -46,7 +46,6 @@ class RoleRemoteDefender implements IRole {
           creep.goTo(closestEmptyRempart);
         }
       } else {
-        console.log("No empty rempart ", creep.name);
         // kitting
         if (hostile.pos.getRangeTo(creep) < 3) {
           this.goHome(creep);

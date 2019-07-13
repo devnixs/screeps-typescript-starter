@@ -87,13 +87,19 @@ export class ExplorationManager {
     }
     if (!memory) {
       // This happens only once
+
+      let report: ColonizationEvaluation | null = null;
+      if (Game.map.isRoomAvailable(room.name)) {
+        report = this.analyzeFutureColony(room);
+      }
+
       memory = {
         r: room.name,
         t: Game.time,
         eb: false,
         er: false,
         cr: closestRoomName,
-        c: this.analyzeFutureColony(room),
+        c: report,
         l: Game.time
       };
       Memory.explorations.push(memory);
@@ -112,13 +118,21 @@ export class ExplorationManager {
         (room.controller && room.controller.reservation && room.controller.reservation.username !== getUsername())) ||
       false;
 
-    const sources = room.find(FIND_SOURCES);
     if (memory.eb || memory.er) {
       // delete existing remotes in this room
       closestRoom.memory.remotes = closestRoom.memory.remotes.filter(i => i.room === room.name);
       return;
     }
 
+    const distanceToClosestRoom = Cartographer.findRoomDistanceSum(closestRoom.name, room.name);
+    if (distanceToClosestRoom <= 3) {
+      // no need to add remotes if it's too far
+      ExplorationManager.analyzeRemotes(room, closestRoom, closestSpawn);
+    }
+  }
+
+  static analyzeRemotes(room: Room, closestRoom: Room, closestSpawn: StructureSpawn) {
+    const sources = room.find(FIND_SOURCES);
     sources.forEach(source => {
       const maxDistance = 150;
       const searchResult = Traveler.findTravelPath(closestSpawn.pos, source.pos, {
@@ -171,7 +185,7 @@ export class ExplorationManager {
     });
   }
 
-  static analyzeFutureColony(room: Room) {
+  static analyzeFutureColony(room: Room): ColonizationEvaluation | null {
     const ctrl = room.controller;
     if (!ctrl) {
       return null;
@@ -219,19 +233,20 @@ export class ExplorationManager {
     const finalScore = topPlace.total + topPlace.wallsCount * 4 + distanceScore;
 
     return {
-      c: sourcesCount, //sourceCount
       x: topPlace.x, // ideal spawn location
       y: topPlace.y, // ideal spawn location
-      w: topPlace.wallsCount, // walls count at spawn location
+      s: Math.round(finalScore) // score
 
+      /*
+      w: topPlace.wallsCount, // walls count at spawn location
+      c: sourcesCount, //sourceCount
       s1: topPlace.distanceWithSource1, // distance between source1 and spawn
       s2: topPlace.distanceWithSource2, // distance between source2 and spawn
       s3: topPlace.distanceWithController, // distance between ctrl and spawn
 
       dd: distanceWithClosestRoom, // distance to closest room
       dds: distanceScore, // distance to closest room score
-
-      s: Math.round(finalScore) // score
+      */
     };
   }
 

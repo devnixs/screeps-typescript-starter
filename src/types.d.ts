@@ -209,20 +209,19 @@ interface RoomExplorationReport {
 }
 
 interface ColonizationEvaluation {
-  c: number; //sourceCount
-
   x: number; // ideal spawn location
   y: number; // ideal spawn location
-  w: number; // walls count at spawn location
-
-  s1: number | undefined; // distance between source1 and spawn
-  s2: number; // distance between source2 and spawn
-  s3: number | undefined; // distance between ctrl and spawn
-
-  dd: number; // distance to closest room
-  dds: number; // distance to closest room score
-
   s: number; // score
+
+  c?: number; //sourceCount
+  w?: number; // walls count at spawn location
+
+  s1?: number | undefined; // distance between source1 and spawn
+  s2?: number; // distance between source2 and spawn
+  s3?: number | undefined; // distance between ctrl and spawn
+
+  dd?: number; // distance to closest room
+  dds?: number; // distance to closest room score
 }
 
 // `global` extension samples
