@@ -218,7 +218,18 @@ export class RemotesManager {
     pos2: RoomPosition,
     callback: (pos: RoomPosition, index: number, isLast: boolean) => void
   ) {
-    const result = Traveler.findTravelPath(pos1, pos2, { range: 1 });
+    const result = Traveler.findTravelPath(pos1, pos2, {
+      range: 1,
+      roomCallback: roomName => {
+        const matrix = new PathFinder.CostMatrix();
+        if (roomName === this.room.name && this.room.memory.roomPlanner && this.room.memory.roomPlanner.structures) {
+          // add planned buildings
+
+          this.room.memory.roomPlanner.structures.forEach(structure => matrix.set(structure.x, structure.y, 0xff));
+        }
+        return matrix;
+      }
+    });
 
     if (result && result.path) {
       for (let stepIndex in result.path) {

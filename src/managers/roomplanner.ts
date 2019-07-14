@@ -57,10 +57,11 @@ export class RoomPlanner {
       return;
     }
 
-    if (this.room.memory.roomPlanner) {
+    const showVisuals = false;
+    if (this.room.memory.roomPlanner && showVisuals) {
       this.room.memory.roomPlanner.structures
-        .filter(i => i.type !== "road")
-        .forEach(structure => {
+        // .filter(i => i.type !== "road")
+        .forEach((structure, index) => {
           this.room.visual.circle(structure.x, structure.y, {
             radius: 0.2,
             opacity: 0.4,
@@ -69,6 +70,11 @@ export class RoomPlanner {
             stroke: structureColors[structure.type] || "black",
             strokeWidth: 0.1
           });
+          /*           this.room.visual.text(index.toString(), structure.x, structure.y, {
+            opacity: 0.4,
+            color: "white",
+            font: 0.3
+          }); */
         });
     }
 
@@ -134,6 +140,10 @@ export class RoomPlanner {
     RoomPlanner.reserveSpot(storageSector.x, storageSector.y + 1, STRUCTURE_ROAD, planner);
     RoomPlanner.reserveSpot(storageSector.x, storageSector.y - 1, STRUCTURE_ROAD, planner);
 
+    RoomPlanner.buildRoadsToSources(planner, room, sectors);
+
+    RoomPlanner.buildRoadsAroundStructures(planner, room, sectors, null, true);
+
     for (let level = 2; level <= 8; level++) {
       const buildable = RoomPlanner.getNewlyAvailableStructuresAtLevel(level);
 
@@ -144,28 +154,18 @@ export class RoomPlanner {
           planner.spIndex = finalPos.finalIndex;
         }
       });
+
+      RoomPlanner.buildRoadsAroundStructures(planner, room, sectors, level, level <= 3);
     }
+    RoomPlanner.buildContainersAroundSources(planner, room);
+    RoomPlanner.buildRoadsToMineral(planner, room, sectors);
 
     RoomPlanner.reserveLabs(planner, sectors);
+    RoomPlanner.buildWalls(planner, room, sectors);
+
+    RoomPlanner.buildRoadsAroundStructures(planner, room, sectors);
 
     // do walls
-
-    const defenseLocations: { x1: number; y1: number; x2: number; y2: number }[] = [];
-    _.take(sectors, planner.spIndex / 5).forEach(sector => {
-      defenseLocations.push({
-        x1: sector.x - 4,
-        y1: sector.y - 4,
-        x2: sector.x + 4,
-        y2: sector.y + 4
-      });
-    });
-
-    const walls = mincutHelper.GetCutTiles(room.name, defenseLocations);
-    if (walls) {
-      walls.forEach(wall => {
-        RoomPlanner.reserveSpot(wall.x, wall.y, STRUCTURE_RAMPART, planner);
-      });
-    }
 
     if (ctrl.pos.getRangeTo(new RoomPosition(storageSector.x, storageSector.y, room.name)) > 4) {
       const linkLocation = findEmptySpotCloseTo(ctrl.pos, room);
@@ -174,9 +174,7 @@ export class RoomPlanner {
       }
     }
 
-    RoomPlanner.buildContainersAroundSources(planner, room);
-    RoomPlanner.buildRoadsAroundStructures(planner, room);
-    RoomPlanner.buildRoadsToPlaces(planner, room, sectors);
+    RoomPlanner.buildRoadsAroundStructures(planner, room, sectors);
     RoomPlanner.buildExtractor(planner, room);
 
     for (let i = 0; i < sectors.length / 5; i++) {
@@ -190,7 +188,32 @@ export class RoomPlanner {
     return planner;
   }
 
-  static buildRoadsAroundStructures(planner: RoomPlannerData, room: Room) {
+  static buildWalls(planner: RoomPlannerData, room: Room, sectors: SimplePos[]) {
+    const defenseLocations: { x1: number; y1: number; x2: number; y2: number }[] = [];
+    _.take(sectors, planner.spIndex / 5).forEach(sector => {
+      defenseLocations.push({
+        x1: sector.x - 4,
+        y1: sector.y - 4,
+        x2: sector.x + 4,
+        y2: sector.y + 4
+      });
+    });
+
+    const walls = mincutHelper.GetCutTiles(room.name, defenseLocations);
+    if (walls) {
+      walls.forEach(wall => {
+        RoomPlanner.reserveSpot(wall.x, wall.y, STRUCTURE_RAMPART, planner, 3);
+      });
+    }
+  }
+
+  static buildRoadsAroundStructures(
+    planner: RoomPlannerData,
+    room: Room,
+    sectors: SimplePos[],
+    level: number | null = null,
+    debug: boolean = false
+  ) {
     const terrain = Game.map.getRoomTerrain(room.name);
     const buildings = planner.structures.filter(
       i => i.type !== STRUCTURE_ROAD && i.type !== STRUCTURE_WALL && i.type !== STRUCTURE_RAMPART
@@ -199,15 +222,25 @@ export class RoomPlanner {
       const building = buildings[index];
       for (let i = -1; i <= 1; i++) {
         for (let j = -1; j <= 1; j++) {
+          if (Math.abs(i) + Math.abs(j) > 1) {
+            continue;
+          }
           const position = { x: i + building.x, y: j + building.y };
-          const spotType = RoomPlanner.isRoadOrSector(position, { x: planner.centerX, y: planner.centerY });
+          const spotType = RoomPlanner.isRoadOrSector(position, planner, sectors);
           const structureExistsHere = planner.structures.find(i => i.x === position.x && i.y === position.y);
+          if (debug && position.x === 29 && position.y === 14) {
+            console.log("building = ", JSON.stringify(building));
+            console.log("level = ", level);
+            console.log("position = ", position.x, position.y);
+            console.log("spotType = ", spotType);
+            console.log("structureExistsHere = ", JSON.stringify(structureExistsHere));
+          }
           if (
             spotType === "road" &&
             terrain.get(position.x, position.y) !== TERRAIN_MASK_WALL &&
             !structureExistsHere
           ) {
-            RoomPlanner.reserveSpot(position.x, position.y, STRUCTURE_ROAD, planner);
+            RoomPlanner.reserveSpot(position.x, position.y, STRUCTURE_ROAD, planner, level);
           }
         }
       }
@@ -230,7 +263,6 @@ export class RoomPlanner {
     room.find(FIND_SOURCES).forEach(source => {
       const containerLocation = PathFinder.search(source.pos, new RoomPosition(storagePos.x, storagePos.y, room.name))
         .path[0];
-      console.log("containerLocation", JSON.stringify(containerLocation));
       if (containerLocation) {
         RoomPlanner.reserveSpot(containerLocation.x, containerLocation.y, STRUCTURE_CONTAINER, planner);
         if (source.pos.getRangeTo(new RoomPosition(storagePos.x, storagePos.y, room.name)) > 14) {
@@ -243,10 +275,28 @@ export class RoomPlanner {
     });
   }
 
-  static buildRoadsToPlaces(planner: RoomPlannerData, room: Room, sectors: SimplePos[]) {
+  static buildRoadsToMineral(planner: RoomPlannerData, room: Room, sectors: SimplePos[]) {
     const costMatrix = new PathFinder.CostMatrix();
 
-    _.take(sectors, planner.spIndex / 5).forEach(sector => {
+    sectors.forEach(sector => {
+      costMatrix.set(sector.x, sector.y, 0xff);
+      costMatrix.set(sector.x + 1, sector.y, 0xff);
+      costMatrix.set(sector.x - 1, sector.y, 0xff);
+      costMatrix.set(sector.x, sector.y + 1, 0xff);
+      costMatrix.set(sector.x, sector.y - 1, 0xff);
+    });
+
+    const storagePos = planner.structures.find(i => i.type === "storage") as StructurePlanning;
+
+    const mineral = room.find(FIND_MINERALS)[0];
+    if (mineral) {
+      RoomPlanner.buildRoad(mineral.pos, storagePos, room, costMatrix, planner, 6);
+    }
+  }
+  static buildRoadsToSources(planner: RoomPlannerData, room: Room, sectors: SimplePos[]) {
+    const costMatrix = new PathFinder.CostMatrix();
+
+    sectors.forEach(sector => {
       costMatrix.set(sector.x, sector.y, 0xff);
       costMatrix.set(sector.x + 1, sector.y, 0xff);
       costMatrix.set(sector.x - 1, sector.y, 0xff);
@@ -258,16 +308,11 @@ export class RoomPlanner {
 
     // road to sources
     room.find(FIND_SOURCES).forEach(source => {
-      RoomPlanner.buildRoad(source.pos, storagePos, room, costMatrix, planner);
+      RoomPlanner.buildRoad(source.pos, storagePos, room, costMatrix, planner, 2);
     });
 
     if (room.controller) {
-      RoomPlanner.buildRoad(room.controller.pos, storagePos, room, costMatrix, planner);
-    }
-
-    const mineral = room.find(FIND_MINERALS)[0];
-    if (mineral) {
-      RoomPlanner.buildRoad(mineral.pos, storagePos, room, costMatrix, planner, 6);
+      RoomPlanner.buildRoad(room.controller.pos, storagePos, room, costMatrix, planner, 2);
     }
   }
 
@@ -296,17 +341,18 @@ export class RoomPlanner {
     });
   }
 
-  static isRoadOrSector(pos: SimplePos, center: SimplePos): "road" | "sector" {
-    const delta = { x: center.x - pos.x, y: center.y - pos.y };
-    const sum = delta.x + delta.y;
-
-    if (Math.abs(sum) % 2 !== 0) {
-      return "sector";
-    }
-
-    const c = (Math.abs(delta.x / 2) + Math.abs(delta.y / 2)) * 2;
-    if (c % 2 !== 0) {
-      return "sector";
+  static isRoadOrSector(pos: SimplePos, planner: RoomPlannerData, sectors: SimplePos[]): "road" | "sector" {
+    for (let index = 0; index < sectors.length; index++) {
+      const sector = sectors[index];
+      for (let i = -1; i <= 1; i++)
+        for (let j = -1; j <= 1; j++) {
+          if (Math.abs(i) + Math.abs(j) <= 1) {
+            const targetPos = { x: sector.x + i, y: sector.y + j };
+            if (targetPos.x === pos.x && targetPos.y === pos.y) {
+              return "sector";
+            }
+          }
+        }
     }
     return "road";
   }
