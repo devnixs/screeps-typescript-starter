@@ -41,6 +41,7 @@ import { roleScout } from "roles/scout";
 import { roleLocalDefender } from "roles/local-defender";
 import { UpgradeManager } from "managers/upgrader";
 import { ConquestManager } from "managers/conquest";
+import { RoomPlanner } from "managers/roomplanner";
 
 // profiler.enable();
 
@@ -48,6 +49,10 @@ import { ConquestManager } from "managers/conquest";
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
 export const loop = ErrorMapper.wrapLoop(() => {
   profiler.wrap(function() {
+    if ("sim" in Game.rooms) {
+      return;
+    }
+
     /*     console.log("Bucket :" + Game.cpu.bucket);
     console.log("Used :" + Game.cpu.getUsed());
     console.log("Limit :" + Game.cpu.limit);
@@ -58,7 +63,6 @@ export const loop = ErrorMapper.wrapLoop(() => {
       console.log("Bucket almost empty. Skipping tick.");
       return;
     }
-    spawner.run();
     Chemist.runForAllRooms();
     LinkManager.runForAllRooms();
     Merchant.runForAllRooms();
@@ -159,6 +163,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
     SafeModeActivator.activeSafeModeIfNecessary();
     UpgradeManager.runForAllRooms();
     ConquestManager.run();
+    RoomPlanner.runForAllRooms();
 
     // Automatically delete memory of missing creeps
     for (const name in Memory.creeps) {

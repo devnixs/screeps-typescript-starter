@@ -48,6 +48,7 @@ interface PlannedLocation {
 }
 
 interface RoomMemory {
+  useNewRoomPlanner: any;
   walls: number[] | undefined;
   restSpot: { x: number; y: number } | undefined;
   upgraderRatio: number;
@@ -88,6 +89,21 @@ interface RoomMemory {
 
   boostMode: BodyPartConstant[] | undefined;
   lastRemoteCheckCtrlLevel: number | undefined;
+  roomPlanner: RoomPlannerData;
+}
+
+interface RoomPlannerData {
+  centerX: number;
+  centerY: number;
+
+  structures: StructurePlanning[];
+  spIndex: number; // Sector Position Index
+}
+
+interface StructurePlanning {
+  x: number;
+  y: number;
+  type: BuildableStructureConstant;
 }
 
 interface DefenseDefinition {

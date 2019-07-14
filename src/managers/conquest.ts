@@ -53,12 +53,14 @@ export class ConquestManager {
     console.log("Successfuly claimed room", room.name);
     // recompute all explorations, as they might be closer to this room
     Memory.explorations = [];
+    Memory.closestRooms = {};
   }
 
   static onRoomLost() {
     console.log("Lost a room");
     // recompute all explorations, as they might be further to this room
     Memory.explorations = [];
+    Memory.closestRooms = {};
   }
 }
 

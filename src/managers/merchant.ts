@@ -194,7 +194,7 @@ export class Merchant {
   }
 
   static runForAllRooms() {
-    if (Game.time % 20 > 0) {
+    if (Game.time % (TERMINAL_COOLDOWN * 2) > 0) {
       return;
     }
 

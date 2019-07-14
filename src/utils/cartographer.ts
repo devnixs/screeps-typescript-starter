@@ -77,6 +77,9 @@ export class Cartographer {
    * Get the type of the room
    */
   static roomType(roomName: string): "SK" | "CORE" | "CTRL" | "ALLEY" {
+    if ("sim" in Game.rooms) {
+      return "CTRL";
+    }
     const coords = this.getRoomCoordinates(roomName);
     if (coords.x % 10 === 0 || coords.y % 10 === 0) {
       return ROOMTYPE_ALLEY;

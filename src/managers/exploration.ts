@@ -4,6 +4,7 @@ import { profiler } from "utils/profiler";
 import { Traveler } from "utils/Traveler";
 import { findClosestRoom } from "utils/finder";
 import { explorationConstants } from "constants/memory-constants";
+import { buildRangeFromRoomLimit } from "constants/misc";
 
 const exploreTimeout = 10000;
 
@@ -67,12 +68,22 @@ export class ExplorationManager {
   static analyzeRoom(room: Room) {
     let memory = Memory.explorations.find(i => i.r == room.name);
 
+    if (room.name === "E7S9") {
+      console.log("Analyzing room", room.name);
+    }
+
     if (memory && memory.t >= Game.time - 5000) {
       return;
+    }
+    if (room.name === "E7S9") {
+      console.log("1");
     }
 
     if (getMyRooms().find(i => i.name === room.name)) {
       return;
+    }
+    if (room.name === "E7S9") {
+      console.log("2");
     }
 
     // console.log("Analyzing room ", room.name);
@@ -104,6 +115,9 @@ export class ExplorationManager {
       };
       Memory.explorations.push(memory);
     }
+
+    memory.t = Game.time;
+    memory.l = Game.time;
 
     memory.cr = closestRoomName;
 
@@ -199,7 +213,7 @@ export class ExplorationManager {
 
     const sources = room.find(FIND_SOURCES);
     const sourcesCount = sources.length;
-    const topPlaces = this.findTopPlacesWithoutWalls(20, 7, room.name);
+    const topPlaces = this.findTopPlacesWithoutWalls(20, buildRangeFromRoomLimit, room.name);
     const topPlacesMapped = topPlaces.map(i => {
       const distanceWithSource1 = Traveler.findTravelPath(sources[0], new RoomPosition(i.x, i.y, room.name)).path
         .length;

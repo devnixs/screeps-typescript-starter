@@ -39,12 +39,28 @@ export class Architect {
       .forEach(ConstructionSite => ConstructionSite.remove());
   }
 
+  cleanupStaleConstructionSites() {
+    if (Game.time % 20000 > 0) {
+      return;
+    }
+    Object.keys(Game.constructionSites)
+      .map(i => Game.constructionSites[i])
+      .filter(i => i.progress === 0)
+      .forEach(ConstructionSite => ConstructionSite.remove());
+  }
+
   run() {
     this.cleanupNonVisibleConstructionSites();
+    this.cleanupStaleConstructionSites();
 
     if (Object.keys(Game.constructionSites).length > MAX_CONSTRUCTION_SITES * 0.9) {
       return;
     }
+
+    if(this.room.memory.useNewRoomPlanner){
+      return;
+    }
+
     this.room.memory.rnd = this.room.memory.rnd || Math.floor(Math.random() * 10) + 5;
 
     if (Game.time % (delay * this.room.memory.rnd * 10) === 0) {

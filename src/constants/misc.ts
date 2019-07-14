@@ -41,7 +41,7 @@ export const boostsLimitations: { [key: string]: number } = {
   // [TOUGH]: 5
 };
 
-export const desiredEnergyInTerminal = 22000;
+export const desiredEnergyInTerminal = 26000;
 
 export const buyableElements = [
   RESOURCE_HYDROGEN,
@@ -114,3 +114,5 @@ export const desiredStocks: StoreDefinitionWithoutEnergy = {
 };
 
 export const signature = "(V)  (°,,,,°)  (V)";
+
+export const buildRangeFromRoomLimit = 7;
