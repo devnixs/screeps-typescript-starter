@@ -120,7 +120,7 @@ export interface SimplePos {
   y: number;
 }
 
-let findEmptySpotCloseTo = function findEmptySpotCloseTo(pos: SimplePos, room: Room) {
+let findEmptySpotCloseTo = function findEmptySpotCloseTo(pos: SimplePos, room: Room, ignoreFirst: boolean = false) {
   const openList = [pos];
   const closedList = [];
 
@@ -131,7 +131,7 @@ let findEmptySpotCloseTo = function findEmptySpotCloseTo(pos: SimplePos, room: R
       .lookAt(current.x, current.y)
       .find(i => i.type === LOOK_STRUCTURES || (i.type === LOOK_TERRAIN && i.terrain === "wall"));
 
-    if (!structureHere) {
+    if (!structureHere && (!ignoreFirst || current.x != pos.x || current.y != pos.y)) {
       return current;
     }
 

@@ -50,6 +50,8 @@ import { RoomPlanner } from "managers/roomplanner";
 export const loop = ErrorMapper.wrapLoop(() => {
   profiler.wrap(function() {
     if ("sim" in Game.rooms) {
+      const flag = Game.flags["t"];
+      RoomPlanner.initPlanner(flag.pos.x, flag.pos.y, Game.rooms.sim);
       return;
     }
 

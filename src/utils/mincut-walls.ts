@@ -257,7 +257,7 @@ var util_mincut = {
       }
     }
     // ********************** Visualisierung
-    if (true) {
+    /*     if (true) {
       let visual = new RoomVisual(roomname);
       let x = 0;
       let y = 0;
@@ -271,7 +271,7 @@ var util_mincut = {
           else if (room_array[x][y] === TO_EXIT) visual.circle(x, y, { radius: 0.5, fill: "#b063e8", opacity: 0.3 });
         }
       }
-    }
+    } */
 
     // initialise graph
     // possible 2*50*50 +2 (st) Vertices (Walls etc set to unused later)
@@ -409,12 +409,12 @@ var util_mincut = {
     let whole_room = bounds.x1 == 0 && bounds.y1 == 0 && bounds.x2 == 49 && bounds.y2 == 49;
     if (positions.length > 0 && !whole_room) util_mincut.delete_tiles_to_dead_ends(roomname, positions);
     // Visualise Result
-    if (true && positions.length > 0) {
+    /*     if (true && positions.length > 0) {
       let visual = new RoomVisual(roomname);
       for (let i = positions.length - 1; i >= 0; i--) {
         visual.circle(positions[i].x, positions[i].y, { radius: 0.5, fill: "#ff7722", opacity: 0.9 });
       }
-    }
+    } */
     return positions;
   },
   // Example function: demonstrates how to get a min cut with 2 rectangles, which define a "to protect" area
