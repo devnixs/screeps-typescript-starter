@@ -413,7 +413,7 @@ export function getSpawnerRequirements(spawn: StructureSpawn): RoleRequirement[]
       exactBody: [MOVE],
       percentage: 1,
       role: "scout",
-      maxCount: !spawn.room.memory.isUnderSiege ? 1 : 0,
+      maxCount: !spawn.room.memory.isUnderSiege && controllerLevel >= 3 ? 1 : 0,
       countAllRooms: false
     },
     {

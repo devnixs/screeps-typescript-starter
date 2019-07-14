@@ -103,6 +103,7 @@ interface RoomPlannerData {
 interface StructurePlanning {
   x: number;
   y: number;
+  l: number | null; // minimum level
   type: BuildableStructureConstant;
 }
 

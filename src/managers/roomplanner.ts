@@ -22,7 +22,8 @@ const structureColors: any = {
   [STRUCTURE_LAB]: "purple",
   [STRUCTURE_NUKER]: "red",
   [STRUCTURE_RAMPART]: "cyan",
-  [STRUCTURE_ROAD]: "lawngreen"
+  [STRUCTURE_ROAD]: "lawngreen",
+  [STRUCTURE_EXTRACTOR]: "purple"
 };
 
 export class RoomPlanner {
@@ -35,24 +36,71 @@ export class RoomPlanner {
   }
 
   run() {
+    const ctrl = this.room.controller as StructureController;
+    if (ctrl.level <= 2) {
+      this.room.memory.useNewRoomPlanner = true;
+    }
+
     if (!this.room.memory.useNewRoomPlanner) {
       return;
     }
 
     const flag = this.room.find(FIND_FLAGS).find(i => i.name === "claimer_target");
     if (flag && !this.room.memory.roomPlanner) {
-      this.init(flag);
+      this.initWithFlag(flag);
+    }
+    if (this.room.spawns[0] && !this.room.memory.roomPlanner) {
+      this.initWithSpawn(this.room.spawns[0]);
     }
 
     if (Object.keys(Game.constructionSites).length > MAX_CONSTRUCTION_SITES * 0.9) {
       return;
     }
+
+    if (this.room.memory.roomPlanner) {
+      this.room.memory.roomPlanner.structures
+        .filter(i => i.type !== "road")
+        .forEach(structure => {
+          this.room.visual.circle(structure.x, structure.y, {
+            radius: 0.2,
+            opacity: 0.4,
+            fill: "transparent",
+            lineStyle: "solid",
+            stroke: structureColors[structure.type] || "black",
+            strokeWidth: 0.1
+          });
+        });
+    }
+
+    if (this.room.find(FIND_CONSTRUCTION_SITES).length) {
+      return;
+    }
+
+    for (let i = 0; i < this.room.memory.roomPlanner.structures.length; i++) {
+      const structure = this.room.memory.roomPlanner.structures[i];
+      if (structure.l && structure.l > ctrl.level) {
+        continue;
+      }
+      const result = this.room.createConstructionSite(structure.x, structure.y, structure.type);
+      if (result === OK) {
+        break;
+      } else {
+        continue;
+      }
+    }
   }
 
-  init(flag: Flag) {
+  initWithFlag(flag: Flag) {
+    console.log("Initializing room planner with flag");
     const planner = RoomPlanner.initPlanner(flag.pos.x, flag.pos.y, this.room);
     this.room.memory.roomPlanner = planner;
     flag.remove();
+  }
+
+  initWithSpawn(spawn: StructureSpawn) {
+    console.log("Initializing room planner with spawn");
+    const planner = RoomPlanner.initPlanner(spawn.pos.x - 1, spawn.pos.y, this.room);
+    this.room.memory.roomPlanner = planner;
   }
 
   static initPlanner(x: number, y: number, room: Room) {
@@ -66,6 +114,14 @@ export class RoomPlanner {
 
     const sectors = RoomPlanner.getPossibleSectors({ x, y }, room);
 
+    const spawn = room.spawns[0];
+    if (!spawn) {
+      RoomPlanner.reserveSpot(sectors[0].x, sectors[0].y, STRUCTURE_SPAWN, planner);
+      planner.spIndex++;
+    } else {
+      RoomPlanner.reserveSpot(spawn.pos.x, spawn.pos.y, STRUCTURE_SPAWN, planner);
+    }
+
     // find the closest sector to the ctrl to build the storage between the first 14 sectors
     const storageSector = _(sectors)
       .take(14)
@@ -78,7 +134,7 @@ export class RoomPlanner {
     RoomPlanner.reserveSpot(storageSector.x, storageSector.y + 1, STRUCTURE_ROAD, planner);
     RoomPlanner.reserveSpot(storageSector.x, storageSector.y - 1, STRUCTURE_ROAD, planner);
 
-    for (let level = 1; level <= 8; level++) {
+    for (let level = 2; level <= 8; level++) {
       const buildable = RoomPlanner.getNewlyAvailableStructuresAtLevel(level);
 
       buildable.forEach(build => {
@@ -121,18 +177,9 @@ export class RoomPlanner {
     RoomPlanner.buildContainersAroundSources(planner, room);
     RoomPlanner.buildRoadsAroundStructures(planner, room);
     RoomPlanner.buildRoadsToPlaces(planner, room, sectors);
+    RoomPlanner.buildExtractor(planner, room);
 
-    planner.structures
-      // .filter(i => (Game.time % 2 === 0 ? i.type === "road" : i.type !== "road"))
-      .forEach(structure => {
-        room.visual.circle(structure.x, structure.y, {
-          radius: 0.5,
-          fill: structureColors[structure.type] || "black",
-          opacity: 0.7
-        });
-      });
-
-    for (let i = 0; i < 200; i++) {
+    for (let i = 0; i < sectors.length / 5; i++) {
       const coords = RoomPlanner.getPositionFromTotalIndex(i, sectors);
       room.visual.text(i.toString(), coords.x, coords.y, {
         opacity: 1,
@@ -164,6 +211,17 @@ export class RoomPlanner {
           }
         }
       }
+    }
+  }
+
+  static buildExtractor(planner: RoomPlannerData, room: Room) {
+    const mineral = room.find(FIND_MINERALS)[0];
+    const storagePos = planner.structures.find(i => i.type === "storage") as StructurePlanning;
+    if (mineral && storagePos) {
+      RoomPlanner.reserveSpot(mineral.pos.x, mineral.pos.y, STRUCTURE_EXTRACTOR, planner, 6);
+      const containerLocation = PathFinder.search(mineral.pos, new RoomPosition(storagePos.x, storagePos.y, room.name))
+        .path[0];
+      RoomPlanner.reserveSpot(containerLocation.x, containerLocation.y, STRUCTURE_CONTAINER, planner, 6);
     }
   }
 
@@ -209,11 +267,18 @@ export class RoomPlanner {
 
     const mineral = room.find(FIND_MINERALS)[0];
     if (mineral) {
-      RoomPlanner.buildRoad(mineral.pos, storagePos, room, costMatrix, planner);
+      RoomPlanner.buildRoad(mineral.pos, storagePos, room, costMatrix, planner, 6);
     }
   }
 
-  static buildRoad(a: SimplePos, b: SimplePos, room: Room, matrix: CostMatrix, planner: RoomPlannerData) {
+  static buildRoad(
+    a: SimplePos,
+    b: SimplePos,
+    room: Room,
+    matrix: CostMatrix,
+    planner: RoomPlannerData,
+    level: number | null = null
+  ) {
     const result = PathFinder.search(new RoomPosition(a.x, a.y, room.name), new RoomPosition(b.x, b.y, room.name), {
       roomCallback: roomName => {
         if (roomName === room.name) {
@@ -226,7 +291,7 @@ export class RoomPlanner {
     result.path.forEach(pos => {
       const structureExistsHere = planner.structures.find(i => i.x === pos.x && i.y === pos.y);
       if (!structureExistsHere) {
-        RoomPlanner.reserveSpot(pos.x, pos.y, STRUCTURE_ROAD, planner);
+        RoomPlanner.reserveSpot(pos.x, pos.y, STRUCTURE_ROAD, planner, level);
       }
     });
   }
@@ -317,11 +382,18 @@ export class RoomPlanner {
     return RoomPlanner.getPositionsFromSector(sectors[sectorIndex])[sectorPositionIndex];
   }
 
-  static reserveSpot(x: number, y: number, type: BuildableStructureConstant, planner: RoomPlannerData) {
+  static reserveSpot(
+    x: number,
+    y: number,
+    type: BuildableStructureConstant,
+    planner: RoomPlannerData,
+    level: number | null = null
+  ) {
     planner.structures.push({
       type,
       x,
-      y
+      y,
+      l: level
     });
   }
 
@@ -329,13 +401,15 @@ export class RoomPlanner {
     index: number,
     sectors: SimplePos[],
     type: BuildableStructureConstant,
-    planner: RoomPlannerData
+    planner: RoomPlannerData,
+    level: number | null = null
   ) {
     const pos = RoomPlanner.getPositionFromTotalIndex(index, sectors);
     planner.structures.push({
       type,
       x: pos.x,
-      y: pos.y
+      y: pos.y,
+      l: level
     });
   }
 
@@ -388,8 +462,8 @@ export class RoomPlanner {
         return false;
       }
 
-      for (let i = sector.x - 2; i <= sector.x + 2; i++) {
-        for (let j = sector.y - 2; j <= sector.y + 2; j++) {
+      for (let i = sector.x - 1; i <= sector.x + 1; i++) {
+        for (let j = sector.y - 1; j <= sector.y + 1; j++) {
           if (terrain.get(i, j) === TERRAIN_MASK_WALL) {
             return false;
           }

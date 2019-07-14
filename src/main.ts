@@ -49,11 +49,11 @@ import { RoomPlanner } from "managers/roomplanner";
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
 export const loop = ErrorMapper.wrapLoop(() => {
   profiler.wrap(function() {
-    if ("sim" in Game.rooms) {
+    /*     if ("sim" in Game.rooms) {
       const flag = Game.flags["t"];
       RoomPlanner.initPlanner(flag.pos.x, flag.pos.y, Game.rooms.sim);
       return;
-    }
+    } */
 
     /*     console.log("Bucket :" + Game.cpu.bucket);
     console.log("Used :" + Game.cpu.getUsed());
@@ -65,6 +65,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
       console.log("Bucket almost empty. Skipping tick.");
       return;
     }
+    spawner.run();
     Chemist.runForAllRooms();
     LinkManager.runForAllRooms();
     Merchant.runForAllRooms();
