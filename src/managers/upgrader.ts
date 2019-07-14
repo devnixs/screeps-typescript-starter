@@ -48,11 +48,11 @@ export class UpgradeManager {
       }
 
       if (rcl === 8) {
-        this.room.memory.upgraderRatio = Math.ceil(
-          Math.pow(Math.max(storage.store.energy - 400000, 0) / 100000, 2) * 2
-        );
+        const points = Math.max(storage.store.energy - 500000, 0) / 100000;
+        this.room.memory.upgraderRatio = Math.ceil(Math.pow(points, 2) * 2);
       } else {
-        this.room.memory.upgraderRatio = Math.ceil(Math.pow(storage.store.energy / 100000, 2) * 2);
+        const points = storage.store.energy / 100000;
+        this.room.memory.upgraderRatio = Math.ceil(Math.pow(points, 2) * 2);
       }
     } else {
       const containers = this.room.containers;

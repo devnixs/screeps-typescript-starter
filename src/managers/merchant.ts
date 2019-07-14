@@ -24,7 +24,7 @@ export class Merchant {
       i =>
         i !== "energy" &&
         sellableElements.indexOf(i) >= 0 &&
-        this.getResource(terminal.store, i) > this.getResource(desiredStocks, i) * 10 &&
+        this.getResource(terminal.store, i) > this.getResource(desiredStocks, i) * 20 &&
         this.getResource(terminal.store, i) > 300
     ) as ResourceConstant | undefined;
 

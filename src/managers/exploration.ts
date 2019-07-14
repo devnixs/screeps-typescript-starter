@@ -67,7 +67,7 @@ export class ExplorationManager {
   static analyzeRoom(room: Room) {
     let memory = Memory.explorations.find(i => i.r == room.name);
 
-    if (memory && memory.t >= Game.time - 1000) {
+    if (memory && memory.t >= Game.time - 5000) {
       return;
     }
 
@@ -75,7 +75,7 @@ export class ExplorationManager {
       return;
     }
 
-    console.log("Analyzing room ", room.name);
+    // console.log("Analyzing room ", room.name);
 
     const closestRoomName = findClosestRoom(room.name);
     const closestRoom = closestRoomName && Game.rooms[closestRoomName];
@@ -120,7 +120,7 @@ export class ExplorationManager {
 
     if (memory.eb || memory.er) {
       // delete existing remotes in this room
-      closestRoom.memory.remotes = closestRoom.memory.remotes.filter(i => i.room === room.name);
+      closestRoom.memory.remotes = closestRoom.memory.remotes.filter(i => i.room !== room.name);
       return;
     }
 

@@ -378,8 +378,7 @@ export class Architect {
 
       const existingStorageLink = storage.pos.findInRange(FIND_MY_STRUCTURES, 4, {
         filter: i => i.structureType === "link"
-      });
-      console.log(existingStorageLink, !!existingStorageLink);
+      })[0];
       if (!existingStorageLink) {
         const spot1 = findEmptySpotCloseTo(storage.pos, this.room);
         if (spot1) {
