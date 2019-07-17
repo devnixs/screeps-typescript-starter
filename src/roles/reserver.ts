@@ -1,4 +1,4 @@
-import { getUsername } from "utils/misc-utils";
+import { getUsername, flee } from "utils/misc-utils";
 import { findHostile } from "utils/finder";
 import { signature } from "constants/misc";
 
@@ -10,19 +10,19 @@ class RoleReserver implements IRole {
   run(creep: Creep) {
     const memory: IReserverMemory = creep.memory as any;
 
+    if (flee(creep) === OK) {
+      return;
+    }
+
     if (creep.room.name !== memory.targetRoomName) {
-      creep.goTo(new RoomPosition(20, 20, memory.targetRoomName));
+      const targetRoom = Game.rooms[memory.targetRoomName];
+      if (targetRoom && targetRoom.controller) {
+        creep.goTo(targetRoom.controller);
+      } else {
+        creep.goTo(new RoomPosition(20, 20, memory.targetRoomName));
+      }
     } else {
       var ctrl = creep.room.controller;
-
-      const enemy = findHostile(creep);
-      if (enemy && enemy.pos.getRangeTo(creep.pos.x, creep.pos.y) < 10) {
-        // flee
-        creep.say("RUN!");
-        const homeRoom = Game.rooms[memory.homeRoom].find(FIND_MY_SPAWNS)[0];
-        creep.goTo(homeRoom);
-        return;
-      }
 
       if (ctrl) {
         const reserveResult = creep.reserveController(ctrl);

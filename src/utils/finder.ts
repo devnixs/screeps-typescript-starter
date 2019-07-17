@@ -1,27 +1,40 @@
 import { profiler, profileMethod } from "../utils/profiler";
-import { close } from "inspector";
+import { Traveler } from "./Traveler";
+
+interface RoomAndExpiration {
+  expiration: number;
+  room: string;
+}
+const closestRooms: { [target: string]: RoomAndExpiration } = {};
 
 let findClosestRoom = function(targetRoom: string) {
-  Memory.closestRooms = Memory.closestRooms || {};
-  if (Memory.closestRooms[targetRoom]) {
-    return Memory.closestRooms[targetRoom];
+  if (closestRooms[targetRoom] && closestRooms[targetRoom].expiration <= Game.time) {
+    delete closestRooms[targetRoom];
+  }
+
+  if (closestRooms[targetRoom]) {
+    return closestRooms[targetRoom].room;
   }
 
   var myRooms = _.uniq(Object.keys(Game.spawns).map(spwnName => Game.spawns[spwnName].room.name)).filter(
     i => i != targetRoom
   );
+  const targetSpawn = Game.rooms[targetRoom].spawns[0]
+    ? Game.rooms[targetRoom].spawns[0].pos
+    : new RoomPosition(25, 25, targetRoom);
 
   var roomsAndDistances = myRooms.map(sourceRoom => {
-    var distance = Game.map.findRoute(sourceRoom, targetRoom);
-    if (distance === -2) {
+    const sourceSpawn = Game.rooms[sourceRoom].spawns[0].pos;
+    var distance = Traveler.findTravelPath(sourceSpawn, targetSpawn);
+    if (distance.incomplete) {
       return {
         roomName: sourceRoom,
-        distance: 100000
+        distance: 1000000
       };
     } else {
       return {
         roomName: sourceRoom,
-        distance: distance.length
+        distance: distance.path.length
       };
     }
   });
@@ -31,10 +44,20 @@ let findClosestRoom = function(targetRoom: string) {
     return undefined;
   }
 
-  Memory.closestRooms[targetRoom] = closest[0].roomName;
+  closestRooms[targetRoom] = {
+    expiration: Game.time + 1000,
+    room: closest[0].roomName
+  };
 
   return closest[0].roomName;
 };
+
+const caches: { [key: string]: CacheEntry } = {};
+
+interface CacheEntry {
+  expiration: number;
+  id: string | null;
+}
 
 let findAndCache = function findAndCache<K extends FindConstant>(
   creep: Creep,
@@ -44,37 +67,38 @@ let findAndCache = function findAndCache<K extends FindConstant>(
   filter: FindPathOpts & FilterOptions<K> & { algorithm?: string },
   duration: number = 50
 ): FindTypes[K] | null {
-  const memory = creep.memory as any;
+  const key = creep.id + cacheKey;
 
-  const expirationTimeout = duration; // ticks
-
-  let cachedElementKey: string | null = memory[cacheKey];
-  let cachedElement: FindTypes[K] | null = cachedElementKey ? Game.getObjectById(cachedElementKey) : null;
-
-  const expiration = memory[cacheKey + "_expiration"];
-
-  const hasExpired = cachedElement && expiration && Game.time > expiration;
-
-  if (cachedElement && (hasExpired || !keepAliveCheck(cachedElement))) {
-    memory[cacheKey] = null;
-    cachedElement = null;
-    cachedElementKey = null;
+  let entry = caches[key];
+  if (!entry || Game.time > entry.expiration) {
+    const value = creep.pos.findClosestByRange(findConstant as any, filter) as AnyStructure;
+    entry = {
+      id: value ? value.id : null,
+      expiration: Game.time + duration
+    };
+    caches[key] = entry;
   }
 
-  const searchForElementAfterKey = "searchForElementAfter" + cacheKey;
+  if (!entry.id) {
+    return null;
+  }
+  let obj = Game.getObjectById(entry.id) as any;
 
-  if (!cachedElement && (!memory[searchForElementAfterKey] || memory[searchForElementAfterKey] <= Game.time)) {
-    const foundElement: any = creep.pos.findClosestByPath(findConstant, filter);
-    if (foundElement) {
-      memory[cacheKey] = foundElement.id;
-      memory[cacheKey + "_expiration"] = Game.time + expirationTimeout;
-      cachedElement = foundElement;
-    } else {
-      memory[searchForElementAfterKey] = Game.time + 10;
+  if (!obj) {
+    return null;
+  }
+
+  const keepAlive = keepAliveCheck(obj);
+  if (!keepAlive) {
+    obj = creep.pos.findClosestByRange(findConstant as any, filter) as any;
+    if (!obj) {
+      return null;
     }
+    entry.expiration = Game.time + duration;
+    entry.id = obj.id;
   }
 
-  return cachedElement;
+  return obj;
 };
 
 let findNonEmptyResourceInStore = function findNonEmptyResourceInStore(
@@ -96,6 +120,17 @@ export function findHostile(creep: Creep) {
     }
   });
   return hostile;
+}
+
+export function findHostiles(creep: Creep) {
+  const hostiles = creep.room.find(FIND_HOSTILE_CREEPS, {
+    filter: creep => {
+      return !!creep.body.find(
+        i => i.type === ATTACK || i.type === RANGED_ATTACK || i.type === WORK || i.type === HEAL
+      );
+    }
+  });
+  return hostiles;
 }
 
 interface IRestPosition {
@@ -151,6 +186,69 @@ let findEmptySpotCloseTo = function findEmptySpotCloseTo(pos: SimplePos, room: R
     }
   }
   return null;
+};
+
+let findUnsafeArea = function findUnsafeArea(room: Room) {
+  const cpu = Game.cpu.getUsed();
+  const openList = [];
+  const closedList: SimplePos[] = [];
+  const terrain = Game.map.getRoomTerrain(room.name);
+
+  for (let i = 0; i <= 49; i++) {
+    openList.push({ x: i, y: 0 });
+    openList.push({ x: 0, y: i });
+    openList.push({ x: 49, y: i });
+    openList.push({ x: i, y: 49 });
+  }
+
+  let current: SimplePos | undefined;
+  let counter: number = 0;
+  while ((current = openList.shift())) {
+    if (counter++ >= 50000) {
+      console.log("Stopped findUnsafeAreaAround execution");
+      return;
+    }
+    const structures = room.lookForAt(LOOK_STRUCTURES, current.x, current.y);
+    const constructedWallHere = structures.find(
+      i => i.structureType === "rampart" || i.structureType === "constructedWall"
+    );
+    const naturalWallHere = terrain.get(current.x, current.y) === TERRAIN_MASK_WALL;
+
+    if (constructedWallHere) {
+      continue;
+    } else if (naturalWallHere) {
+      continue;
+    } else {
+      closedList.push(current);
+    }
+    for (let i = -1; i <= 1; i++) {
+      for (let j = -1; j <= 1; j++) {
+        const possibleX: any = (current.x + i) as number;
+        const possibleY: any = (current.y + j) as number;
+        if (i !== 0 || j !== 0) {
+          if (
+            possibleX > 0 &&
+            possibleX < 49 &&
+            possibleY > 0 &&
+            possibleY < 49 &&
+            !closedList.find(i => i.x === possibleX && i.y === possibleY) &&
+            !openList.find(i => i.x === possibleX && i.y === possibleY)
+          ) {
+            openList.push({ x: possibleX, y: possibleY });
+          }
+        }
+      }
+    }
+  }
+  if (closedList.length > 0) {
+    let visual = new RoomVisual(room.name);
+    for (let i = closedList.length - 1; i >= 0; i--) {
+      visual.circle(closedList[i].x, closedList[i].y, { radius: 0.5, fill: "#ff7722", opacity: 0.9 });
+    }
+  }
+  const used = Game.cpu.getUsed() - cpu;
+  console.log("Used", used, "CPU");
+  return closedList;
 };
 
 let findSafeAreaAround = function findSafeAreaAround(pos: SimplePos, room: Room) {
@@ -221,7 +319,7 @@ export function findEmptyRempart(target: _HasRoomPosition, creep: Creep) {
   return target.pos.findClosestByRange(FIND_MY_STRUCTURES, {
     filter: r =>
       r.structureType === "rampart" &&
-      r.pos.lookFor(LOOK_STRUCTURES).length === 1 &&
+      r.pos.lookFor(LOOK_STRUCTURES).filter(i => i.structureType !== "road").length === 1 &&
       (r.pos.lookFor(LOOK_CREEPS).length === 0 || (r.pos.x === creep.pos.x && r.pos.y === creep.pos.y))
   });
 }
@@ -232,15 +330,18 @@ findNonEmptyResourcesInStore = profiler.registerFN(findNonEmptyResourcesInStore,
 findRestSpot = profiler.registerFN(findRestSpot, "findRestSpot");
 findEmptySpotCloseTo = profiler.registerFN(findEmptySpotCloseTo, "findEmptySpotCloseTo");
 findSafeAreaAround = profiler.registerFN(findSafeAreaAround, "findSafeAreaAround");
+findUnsafeArea = profiler.registerFN(findUnsafeArea, "findUnsafeArea");
 
 (global as any).findSafeAreaAround = findSafeAreaAround;
+(global as any).closestRooms = closestRooms;
 
 export {
-  findAndCache,
   findNonEmptyResourceInStore,
   findNonEmptyResourcesInStore,
   findRestSpot,
   findEmptySpotCloseTo,
   findClosestRoom,
-  findSafeAreaAround
+  findSafeAreaAround,
+  findAndCache,
+  findUnsafeArea
 };

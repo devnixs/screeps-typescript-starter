@@ -27,7 +27,7 @@ import { Merchant } from "./managers/merchant";
 import { roleStaticHarvester } from "roles/static-harvester";
 import { roleVersatile } from "roles/versatile";
 import { roleAttacker } from "roles/attacker";
-import { getCpuAverage } from "utils/cpu";
+import { getAverageCpu, measureCpuAverage } from "utils/cpu";
 import { Observer } from "utils/observer";
 import { rolePestControl, RolePestControl } from "roles/pestcontrol";
 import { SafeModeActivator } from "utils/safemode-activator";
@@ -49,6 +49,9 @@ import { RoomPlanner } from "managers/roomplanner";
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
 export const loop = ErrorMapper.wrapLoop(() => {
   profiler.wrap(function() {
+    // console.log("Start tick used", Game.cpu.getUsed());
+    // console.log("After memory access", Memory.lastConquestTime ? Game.cpu.getUsed() : Game.cpu.getUsed());
+
     /*     if ("sim" in Game.rooms) {
       const flag = Game.flags["t"];
       RoomPlanner.initPlanner(flag.pos.x, flag.pos.y, Game.rooms.sim);
@@ -144,6 +147,9 @@ export const loop = ErrorMapper.wrapLoop(() => {
         if (memory.role == "remote-defender") {
           roleRemoteDefender.run(creep);
         }
+        if (memory.role == "remote-defender-helper") {
+          roleRemoteDefender.run(creep);
+        }
         if (memory.role == "local-defender") {
           roleLocalDefender.run(creep);
         }
@@ -165,7 +171,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
     RolePestControl.checkReconstruction();
     SafeModeActivator.activeSafeModeIfNecessary();
     UpgradeManager.runForAllRooms();
-    ConquestManager.run();
+    // ConquestManager.run();
     RoomPlanner.runForAllRooms();
 
     // Automatically delete memory of missing creeps
@@ -175,27 +181,21 @@ export const loop = ErrorMapper.wrapLoop(() => {
       }
     }
 
-    if (Game.time % 1300 === 0) {
+    if (Game.time % 500 === 0) {
       console.log("Bucket :" + Game.cpu.bucket);
       console.log("Used :" + Game.cpu.getUsed());
-      console.log("Average CPU : ", getCpuAverage());
+      console.log("Average CPU : ", getAverageCpu());
       //console.log("Limit :" + Game.cpu.limit);
       //console.log("TickLimit :" + Game.cpu.tickLimit);
     }
 
     Memory.rooms = Memory.rooms || {};
 
-    if (Game.cpu.getUsed() > 100) {
+    if (Game.cpu.getUsed() > 150) {
       console.log("Used a lot of cpu : ", Game.cpu.getUsed(), Game.time);
     }
 
-    if (Game.time % 7 === 0) {
-      Memory.cpuUsages = Memory.cpuUsages || [];
-      Memory.cpuUsages.push(Game.cpu.getUsed());
-      if (Memory.cpuUsages.length > 100) {
-        Memory.cpuUsages.shift();
-      }
-    }
+    measureCpuAverage();
 
     // shutdown attack
     /*

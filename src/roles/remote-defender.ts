@@ -2,8 +2,13 @@ import { requiredHealersForAnAttack } from "../constants/misc";
 import { findRestSpot, findHostile, findEmptyRempart } from "utils/finder";
 import { boostCreep } from "utils/boost-manager";
 import { profiler } from "utils/profiler";
+import { getOffExit } from "utils/get-off-exits";
+import { roleLocalDefender } from "./local-defender";
+import { findOrCachePathfinding } from "utils/cached-pathfindings";
 
-export interface IRemoteDefenderMemory extends CreepMemory {}
+export interface IRemoteDefenderMemory extends CreepMemory {
+  roomTarget?: string;
+}
 
 class RoleRemoteDefender implements IRole {
   run(creep: Creep) {
@@ -11,6 +16,9 @@ class RoleRemoteDefender implements IRole {
     const memory: IRemoteDefenderMemory = creep.memory as any;
 
     let hostile = findHostile(creep);
+    if (hostile && creep.room.controller && creep.room.controller.my) {
+      return roleLocalDefender.run(creep);
+    }
 
     if (creep.hits < creep.hitsMax / 2) {
       creep.heal(creep);
@@ -32,12 +40,20 @@ class RoleRemoteDefender implements IRole {
       }
     }
 
+    if (getOffExit(creep) === OK) {
+      return;
+    }
+
     const rampartTarget = hostile || creep;
 
     // ATTACK MODE
     if (hostile) {
       creep.say("Yarr!", true);
-      creep.rangedAttack(hostile);
+      if (hostile.pos.isNearTo(creep)) {
+        creep.rangedMassAttack();
+      } else {
+        creep.rangedAttack(hostile);
+      }
 
       // find closest empty rempart
       const closestEmptyRempart = findEmptyRempart(rampartTarget, creep);
@@ -57,21 +73,28 @@ class RoleRemoteDefender implements IRole {
       return;
     } else {
       const keeperLair = creep.room.find(FIND_STRUCTURES, {
-        filter: s => s.structureType === "keeperLair" && s.ticksToSpawn && s.ticksToSpawn < 35
+        filter: s => s.structureType === "keeperLair" && s.ticksToSpawn && s.ticksToSpawn < 40
       })[0];
       if (keeperLair) {
-        creep.goTo(keeperLair);
+        // go between the keeper and the closest source to protect the harvester
+        const closestSource = keeperLair.pos.findClosestByRange(FIND_SOURCES) as Source;
+        const path = findOrCachePathfinding(keeperLair.pos, closestSource.pos);
+        const middlePos = path.path.length / 2;
+        const middle = path.path[Math.min(Math.min(middlePos, path.path.length - 1), 3)];
+
+        creep.goTo(middle);
         return;
       }
 
       // PEACEFUL MODE
       if (!memory.subRole) {
         if (memory.homeRoom != creep.room.name) {
-          creep.goTo(new RoomPosition(25, 25, memory.homeRoom));
+          const homeRoom = memory.roomTarget || creep.memory.homeRoom;
+          creep.goTo(new RoomPosition(25, 25, homeRoom));
         } else {
           const rest = findRestSpot(creep, { x: 25, y: 25 });
           if (rest) {
-            creep.say("Zzz");
+            // creep.say("Zzz");
             creep.goTo(rest);
           }
         }
@@ -94,7 +117,7 @@ class RoleRemoteDefender implements IRole {
           if (!canHeal || this.healFriends(creep) === -1) {
             const rest = findRestSpot(creep, { x: 25, y: 25 });
             if (rest) {
-              creep.say("Zzz");
+              // creep.say("Zzz");
               creep.goTo(rest);
             }
           }
@@ -119,9 +142,11 @@ class RoleRemoteDefender implements IRole {
   }
 
   goHome(creep: Creep) {
-    if (creep.room.name !== creep.memory.homeRoom) {
+    const homeRoom = (creep.memory as IRemoteDefenderMemory).roomTarget || creep.memory.homeRoom;
+
+    if (creep.room.name !== homeRoom) {
       // go back home
-      creep.goTo(new RoomPosition(25, 25, creep.memory.homeRoom || ""));
+      creep.goTo(new RoomPosition(25, 25, homeRoom || ""));
       return;
     }
   }

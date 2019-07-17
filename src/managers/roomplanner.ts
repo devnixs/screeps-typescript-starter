@@ -6,21 +6,22 @@ import { findClosestRoom, SimplePos, findEmptySpotCloseTo } from "utils/finder";
 import { explorationConstants } from "constants/memory-constants";
 import { buildRangeFromRoomLimit } from "constants/misc";
 import { mincutHelper } from "utils/mincut-walls";
+import { isFunction } from "util";
 
 const structureColors: any = {
-  [STRUCTURE_EXTENSION]: "white",
+  [STRUCTURE_EXTENSION]: "yellow",
   [STRUCTURE_SPAWN]: "blue",
   [STRUCTURE_NUKER]: "red",
   [STRUCTURE_OBSERVER]: "red",
   [STRUCTURE_TOWER]: "black",
-  [STRUCTURE_TERMINAL]: "yellow",
+  [STRUCTURE_TERMINAL]: "white",
   [STRUCTURE_STORAGE]: "pink",
   [STRUCTURE_LINK]: "orange",
-  [STRUCTURE_CONTAINER]: "pink",
-  [STRUCTURE_OBSERVER]: "red",
-  [STRUCTURE_POWER_SPAWN]: "red",
+  [STRUCTURE_CONTAINER]: "red",
+  [STRUCTURE_OBSERVER]: "black",
+  [STRUCTURE_POWER_SPAWN]: "black",
   [STRUCTURE_LAB]: "purple",
-  [STRUCTURE_NUKER]: "red",
+  [STRUCTURE_NUKER]: "black",
   [STRUCTURE_RAMPART]: "cyan",
   [STRUCTURE_ROAD]: "lawngreen",
   [STRUCTURE_EXTRACTOR]: "purple"
@@ -36,6 +37,12 @@ export class RoomPlanner {
   }
 
   run() {
+    this.showVisuals();
+
+    if (Game.time % 9 > 0) {
+      return;
+    }
+
     const ctrl = this.room.controller as StructureController;
     if (ctrl.level <= 2) {
       this.room.memory.useNewRoomPlanner = true;
@@ -57,27 +64,6 @@ export class RoomPlanner {
       return;
     }
 
-    const showVisuals = false;
-    if (this.room.memory.roomPlanner && showVisuals) {
-      this.room.memory.roomPlanner.structures
-        // .filter(i => i.type !== "road")
-        .forEach((structure, index) => {
-          this.room.visual.circle(structure.x, structure.y, {
-            radius: 0.2,
-            opacity: 0.4,
-            fill: "transparent",
-            lineStyle: "solid",
-            stroke: structureColors[structure.type] || "black",
-            strokeWidth: 0.1
-          });
-          /*           this.room.visual.text(index.toString(), structure.x, structure.y, {
-            opacity: 0.4,
-            color: "white",
-            font: 0.3
-          }); */
-        });
-    }
-
     if (this.room.find(FIND_CONSTRUCTION_SITES).length) {
       return;
     }
@@ -90,9 +76,43 @@ export class RoomPlanner {
       const result = this.room.createConstructionSite(structure.x, structure.y, structure.type);
       if (result === OK) {
         break;
-      } else {
-        continue;
+      } else if (result === ERR_INVALID_TARGET) {
+        // check if there's a road underneath blocking
+        if (structure.type !== "road") {
+          const buildingsUnderneath = this.room.lookForAt(
+            "structure",
+            new RoomPosition(structure.x, structure.y, this.room.name)
+          );
+
+          const roadUnderneath = buildingsUnderneath.find(i => i.structureType === "road");
+          if (roadUnderneath && buildingsUnderneath.length === 1) {
+            roadUnderneath.destroy();
+          }
+        }
       }
+    }
+  }
+
+  showVisuals() {
+    const showVisuals = "show_visuals" in Game.flags;
+    if (this.room.memory.roomPlanner && showVisuals) {
+      this.room.memory.roomPlanner.structures
+        // .filter(i => i.type !== "road")
+        .forEach((structure, index) => {
+          this.room.visual.circle(structure.x, structure.y, {
+            radius: 0.2,
+            opacity: 0.8,
+            fill: "transparent",
+            lineStyle: "solid",
+            stroke: structureColors[structure.type] || "black",
+            strokeWidth: 0.1
+          });
+          /*           this.room.visual.text(index.toString(), structure.x, structure.y, {
+            opacity: 0.4,
+            color: "white",
+            font: 0.3
+          }); */
+        });
     }
   }
 
@@ -137,12 +157,12 @@ export class RoomPlanner {
     RoomPlanner.reserveSpot(storageSector.x, storageSector.y, STRUCTURE_STORAGE, planner);
     RoomPlanner.reserveSpot(storageSector.x - 1, storageSector.y, STRUCTURE_LINK, planner);
     RoomPlanner.reserveSpot(storageSector.x + 1, storageSector.y, STRUCTURE_TERMINAL, planner);
-    RoomPlanner.reserveSpot(storageSector.x, storageSector.y + 1, STRUCTURE_ROAD, planner);
-    RoomPlanner.reserveSpot(storageSector.x, storageSector.y - 1, STRUCTURE_ROAD, planner);
+    RoomPlanner.reserveSpot(storageSector.x, storageSector.y + 1, STRUCTURE_ROAD, planner, 4);
+    RoomPlanner.reserveSpot(storageSector.x, storageSector.y - 1, STRUCTURE_ROAD, planner, 4);
 
     RoomPlanner.buildRoadsToSources(planner, room, sectors);
 
-    RoomPlanner.buildRoadsAroundStructures(planner, room, sectors, null, true);
+    RoomPlanner.buildRoadsAroundStructures(planner, room, sectors, null);
 
     for (let level = 2; level <= 8; level++) {
       const buildable = RoomPlanner.getNewlyAvailableStructuresAtLevel(level);
@@ -155,8 +175,11 @@ export class RoomPlanner {
         }
       });
 
-      RoomPlanner.buildRoadsAroundStructures(planner, room, sectors, level, level <= 3);
+      RoomPlanner.buildRoadsAroundStructures(planner, room, sectors, level);
     }
+
+    RoomPlanner.buildControllerLink(planner, room);
+
     RoomPlanner.buildContainersAroundSources(planner, room);
     RoomPlanner.buildRoadsToMineral(planner, room, sectors);
 
@@ -164,15 +187,6 @@ export class RoomPlanner {
     RoomPlanner.buildWalls(planner, room, sectors);
 
     RoomPlanner.buildRoadsAroundStructures(planner, room, sectors);
-
-    // do walls
-
-    if (ctrl.pos.getRangeTo(new RoomPosition(storageSector.x, storageSector.y, room.name)) > 4) {
-      const linkLocation = findEmptySpotCloseTo(ctrl.pos, room);
-      if (linkLocation) {
-        RoomPlanner.reserveSpot(linkLocation.x, linkLocation.y, STRUCTURE_LINK, planner);
-      }
-    }
 
     RoomPlanner.buildRoadsAroundStructures(planner, room, sectors);
     RoomPlanner.buildExtractor(planner, room);
@@ -207,6 +221,26 @@ export class RoomPlanner {
     }
   }
 
+  static buildControllerLink(planner: RoomPlannerData, room: Room) {
+    const storagePos = planner.structures.find(i => i.type === "storage") as StructurePlanning;
+    var ctrl = room.controller as StructureController;
+    if (ctrl.pos.getRangeTo(new RoomPosition(storagePos.x, storagePos.y, room.name)) > 4) {
+      const linkLocation = PathFinder.search(ctrl.pos, new RoomPosition(storagePos.x, storagePos.y, room.name)).path[2];
+      if (linkLocation) {
+        const positions = [[-1, 0], [0, -1], [1, 0], [0, 1]];
+        for (let i in positions) {
+          const dir = positions[i];
+          const pos = { x: linkLocation.x + dir[0], y: linkLocation.y + dir[1] };
+          const structureExistsHere = planner.structures.find(i => i.x === pos.x && i.y == pos.y);
+          if (!structureExistsHere) {
+            RoomPlanner.reserveSpot(pos.x, pos.y, STRUCTURE_LINK, planner);
+            return;
+          }
+        }
+      }
+    }
+  }
+
   static buildRoadsAroundStructures(
     planner: RoomPlannerData,
     room: Room,
@@ -228,18 +262,20 @@ export class RoomPlanner {
           const position = { x: i + building.x, y: j + building.y };
           const spotType = RoomPlanner.isRoadOrSector(position, planner, sectors);
           const structureExistsHere = planner.structures.find(i => i.x === position.x && i.y === position.y);
-          if (debug && position.x === 29 && position.y === 14) {
-            console.log("building = ", JSON.stringify(building));
-            console.log("level = ", level);
-            console.log("position = ", position.x, position.y);
-            console.log("spotType = ", spotType);
-            console.log("structureExistsHere = ", JSON.stringify(structureExistsHere));
-          }
+
           if (
             spotType === "road" &&
             terrain.get(position.x, position.y) !== TERRAIN_MASK_WALL &&
             !structureExistsHere
           ) {
+            /*             if (position.x === 35 && position.y === 15) {
+              console.log("building = ", JSON.stringify(building));
+              console.log("level = ", level);
+              console.log("position = ", position.x, position.y);
+              console.log("spotType = ", spotType);
+              console.log("structureExistsHere = ", JSON.stringify(structureExistsHere));
+            }
+ */
             RoomPlanner.reserveSpot(position.x, position.y, STRUCTURE_ROAD, planner, level);
           }
         }
@@ -494,8 +530,6 @@ export class RoomPlanner {
     for (let i = 1; i <= 6; i++) {
       sectors = sectors.concat(RoomPlanner.getSectorsFromRadiusPosition(center, i));
     }
-
-    room.spawns[0].pos.look();
 
     // remove non viable sectors
     sectors = sectors.filter(sector => {

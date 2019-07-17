@@ -7,7 +7,7 @@ export class ConquestManager {
   constructor(private room: Room) {}
 
   public static run() {
-    if (Game.time % 1003 > 0) {
+    if (Game.time % 13 > 0) {
       return;
     }
 
@@ -26,7 +26,7 @@ export class ConquestManager {
     if (rooms < gcl && !flag) {
       console.log("Colonizing new room");
 
-      const bestRoom = _.sortBy(Memory.explorations.filter(i => i.c), i => i.c && i.c.s);
+      const bestRoom = _.sortBy(Memory.explorations.filter(i => i.c && !i.eb && !i.er), i => i.c && i.c.s);
 
       if (bestRoom[0] && bestRoom[0].c) {
         const settings = bestRoom[0].c;
@@ -35,6 +35,7 @@ export class ConquestManager {
             new RoomPosition(settings.x, settings.y, bestRoom[0].r)
           );
           console.log("Colonizing ", bestRoom[0].r);
+          Game.notify("Colonizing new room " + bestRoom[0].r);
         }
       }
 

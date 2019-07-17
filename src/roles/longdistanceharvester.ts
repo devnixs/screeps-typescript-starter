@@ -1,6 +1,6 @@
 import { sourceManager } from "utils/source-manager";
 import { profiler } from "../utils/profiler";
-import { findHostile } from "utils/finder";
+import { flee } from "utils/misc-utils";
 
 export interface ILongDistanceHarvesterMemory extends CreepMemory {
   home: string;
@@ -16,12 +16,7 @@ class RoleLongDistanceHarvester implements IRole {
 
     const totalCargoContent = _.sum(creep.carry);
 
-    const enemy = findHostile(creep);
-    if (enemy && enemy.pos.getRangeTo(creep.pos.x, creep.pos.y) < 10) {
-      // flee
-      creep.say("RUN!");
-      const homeRoom = Game.rooms[memory.homeRoom].find(FIND_MY_SPAWNS)[0];
-      creep.goTo(homeRoom);
+    if (flee(creep) === OK) {
       return;
     }
 

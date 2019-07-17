@@ -12,6 +12,7 @@ type roles =
   | "long-distance-harvester"
   | "long-distance-truck"
   | "remote-defender"
+  | "remote-defender-helper"
   | "local-defender"
   | "pickaboo"
   | "healer"
@@ -27,6 +28,7 @@ type roles =
 
 // memory extension samples
 interface CreepMemory {
+  flee: number;
   role: roles;
   homeRoom: string;
   subRole?: string;
@@ -115,6 +117,7 @@ interface DefenseDefinition {
 }
 
 interface RemoteRoomDefinition {
+  ratio?: number;
   // stats
   retrievedEnergy?: number | undefined;
   spentEnergy?: number | undefined;
@@ -306,7 +309,7 @@ interface TravelState {
 
 interface Creep {
   travelTo(destination: HasPos | RoomPosition, ops?: TravelToOptions): number;
-  goTo(destination: HasPos | RoomPosition, ops?: MoveToOpts): number;
+  goTo(destination: HasPos | RoomPosition, ops?: TravelToOptions): number;
 }
 
 interface Room {

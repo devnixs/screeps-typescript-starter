@@ -2,6 +2,8 @@ import { sourceManager } from "utils/source-manager";
 import { profiler } from "../utils/profiler";
 import { findHostile, findNonEmptyResourceInStore, findNonEmptyResourcesInStore } from "utils/finder";
 import { IRemoteDefenderMemory } from "./remote-defender";
+import { flee } from "utils/misc-utils";
+import { Cartographer } from "utils/cartographer";
 
 export interface ILongDistanceTruckMemory extends CreepMemory {
   depositing?: boolean;
@@ -17,14 +19,7 @@ class RoleLongDistanceTruck implements IRole {
 
     const totalCargoContent = _.sum(creep.carry);
 
-    const enemy = findHostile(creep);
-    if (enemy && enemy.pos.getRangeTo(creep.pos.x, creep.pos.y) < 10) {
-      // flee
-      creep.say("RUN!");
-      const homeRoom = Game.rooms[memory.homeRoom].controller;
-      if (homeRoom) {
-        creep.goTo(homeRoom);
-      }
+    if (flee(creep) === OK) {
       return;
     }
 
@@ -103,6 +98,17 @@ class RoleLongDistanceTruck implements IRole {
         return;
       }
 
+      const roomIsSK = Cartographer.roomType(creep.room.name) === "SK";
+      if (roomIsSK) {
+        const droppedResource = creep.pos.findInRange(FIND_DROPPED_RESOURCES, 3).filter(i => i.amount > 200)[0];
+        if (droppedResource) {
+          if (creep.pickup(droppedResource) === ERR_NOT_IN_RANGE) {
+            creep.goTo(droppedResource);
+          }
+          return;
+        }
+      }
+
       // if in target room
       const container = Game.getObjectById(memory.targetContainer) as StructureContainer;
       if (!container) {
@@ -131,7 +137,19 @@ class RoleLongDistanceTruck implements IRole {
       }
       // if not in target room
       else {
-        creep.goTo(container.pos);
+        const homeRoom = Game.rooms[creep.memory.homeRoom];
+        const hasEnemy = homeRoom.memory.needsDefenders.find(i => i.room === container.room.name);
+        const isRoomSK = Cartographer.roomType(container.room.name) === "SK";
+        if (hasEnemy && !isRoomSK) {
+          // go back home until the threat is gone
+          const ctrl = Game.rooms[memory.homeRoom].controller;
+          if (ctrl) {
+            creep.say("🐓");
+            creep.goTo(ctrl);
+          }
+        } else {
+          creep.goTo(container.pos);
+        }
       }
     }
   }

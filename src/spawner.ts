@@ -1,6 +1,6 @@
 import { getSpawnerRequirements, RoleRequirement } from "spawner-requirements";
 import { profiler } from "./utils/profiler";
-import { getCpuAverage, isLowOnCpu } from "utils/cpu";
+import { isLowOnCpu } from "utils/cpu";
 
 const costs = {
   [MOVE]: 50,
@@ -13,7 +13,7 @@ const costs = {
   [CLAIM]: 600
 };
 
-var delay = "sim" in Game.rooms ? 1 : 2;
+var nextCheckTimes: { [roomName: string]: number } = {};
 
 interface BodyPartCombinationResult {
   body: BodyPartConstant[] | null;
@@ -22,11 +22,6 @@ interface BodyPartCombinationResult {
 
 class Spawner {
   run() {
-    // Do the spawning logic once every 20 ticks
-    if (Game.time % delay > 0) {
-      return;
-    }
-
     const idleSpawns = Object.keys(Game.spawns)
       .map(i => Game.spawns[i])
       .filter(i => !i.spawning);
@@ -91,25 +86,31 @@ class Spawner {
   }
 
   handleSingleSpawn(spawn: StructureSpawn) {
+    if (nextCheckTimes[spawn.room.name] && nextCheckTimes[spawn.room.name] > Game.time) {
+      return;
+    }
+
     let requirements = getSpawnerRequirements(spawn);
 
     requirements = requirements.filter(i => !i.onlyRooms || i.onlyRooms.indexOf(spawn.room.name) >= 0);
 
-    const allCreeps = _.values(Game.creeps) as Creep[];
-    const creepsInThisRoom = allCreeps.filter(
+    const allCreeps = (_.values(Game.creeps) as Creep[]).filter(
       i =>
-        i.memory.homeRoom === spawn.room.name &&
-        (i.ticksToLive === undefined ||
-          i.ticksToLive > i.body.length * 3 + (i.room.name != spawn.room.name ? 100 : i.pos.getRangeTo(spawn)))
+        i.ticksToLive === undefined ||
+        i.ticksToLive > i.body.length * 3 + (i.room.name != spawn.room.name ? 100 : i.pos.getRangeTo(spawn))
     );
 
+    const creepsInThisRoom = allCreeps.filter(i => i.memory.homeRoom === spawn.room.name);
+
     const counts = _.countBy(creepsInThisRoom, i => this.getRoleSlug(i.memory.role, i.memory.subRole));
+    const countsAccrossAllRooms = _.countBy(allCreeps, i => this.getRoleSlug(i.memory.role, i.memory.subRole));
     const totalPercentage = _.sum(requirements.map(i => i.percentage));
     const debugMode = false;
 
     const roleInfos = requirements.map(role => {
       const roleSlug = this.getRoleSlug(role.role, role.subRole);
       const currentCount = counts[roleSlug] || 0;
+      const currentCountAccrossAllRooms = countsAccrossAllRooms[roleSlug] || 0;
       const currentPercentage = creepsInThisRoom.length > 0 ? currentCount / creepsInThisRoom.length : 0;
       const desiredPercentage = role.percentage / totalPercentage;
       const templateRepeats = _.sum(
@@ -131,6 +132,7 @@ class Spawner {
         currentPercentage,
         desiredPercentage,
         currentCount: currentCount,
+        currentCountAccrossAllRooms: currentCountAccrossAllRooms,
         requirement: role,
         templateRepeats: templateRepeats
       };
@@ -143,14 +145,20 @@ class Spawner {
         i.currentPercentage < i.desiredPercentage &&
         (!i.requirement.disableIfLowOnCpu || !lowOnCpu) &&
         (i.requirement.maxCount === undefined || i.currentCount < i.requirement.maxCount) &&
-        (i.requirement.maxRepatAccrossAll === undefined || i.templateRepeats < i.requirement.maxRepatAccrossAll)
+        (i.requirement.maxRepatAccrossAll === undefined || i.templateRepeats < i.requirement.maxRepatAccrossAll) &&
+        (!i.requirement.countAllRooms ||
+          !i.requirement.maxCount ||
+          i.currentCountAccrossAllRooms < i.requirement.maxCount)
     )[0];
 
     const roleThatCanBeCreated = roleInfos.filter(
       i =>
         (!i.requirement.disableIfLowOnCpu || !lowOnCpu) &&
         (i.requirement.maxCount === undefined || i.currentCount < i.requirement.maxCount) &&
-        (i.requirement.maxRepatAccrossAll === undefined || i.templateRepeats < i.requirement.maxRepatAccrossAll)
+        (i.requirement.maxRepatAccrossAll === undefined || i.templateRepeats < i.requirement.maxRepatAccrossAll) &&
+        (!i.requirement.countAllRooms ||
+          !i.requirement.maxCount ||
+          i.currentCountAccrossAllRooms < i.requirement.maxCount)
     )[0];
 
     if (debugMode) {
@@ -168,8 +176,9 @@ class Spawner {
       );
     }
 
+    let spawnResult: number = -1;
     if (roleNeededToBeCreated) {
-      this.spawnRole(
+      spawnResult = this.spawnRole(
         spawn,
         roleNeededToBeCreated.requirement,
         debugMode,
@@ -177,8 +186,17 @@ class Spawner {
         roleNeededToBeCreated.templateRepeats
       );
     } else if (roleThatCanBeCreated) {
-      this.spawnRole(spawn, roleThatCanBeCreated.requirement, debugMode, counts, roleThatCanBeCreated.templateRepeats);
+      spawnResult = this.spawnRole(
+        spawn,
+        roleThatCanBeCreated.requirement,
+        debugMode,
+        counts,
+        roleThatCanBeCreated.templateRepeats
+      );
     }
+
+    let nextCheck = spawnResult === OK ? Game.time : Game.time + 20;
+    nextCheckTimes[spawn.room.name] = nextCheck;
   }
 
   doesRoleExist(role: roles, existingRoles: _.Dictionary<number>) {
@@ -209,7 +227,7 @@ class Spawner {
     if (role.minEnergy && maxEnergyPossible < role.minEnergy) {
       console.log("Max energy possible = ", maxEnergyPossible);
       console.log("Not enough energy to create the body. Required=", role.minEnergy);
-      return;
+      return -1;
     }
 
     if (debug) {
@@ -257,24 +275,24 @@ class Spawner {
         console.log("-- Result : ", body);
       }
     } else {
-      return;
+      return -1;
     }
 
     if (!body) {
       console.log("Not enough energy to create the body", role.role, spawn.room.name);
-      return;
+      return -1;
     }
 
     // console.log("Abount to spawn : ", JSON.stringify(role));
     const result = spawn.spawnCreep(body, creepName, {
       memory: {
-        ...role.additionalMemory,
         homeRoom: spawn.room.name,
         role: role.role,
         subRole: role.subRole,
         lastPos: { x: spawn.pos.x, y: spawn.pos.y },
         noMovementTicksCount: 0,
-        r: repeats
+        r: repeats,
+        ...role.additionalMemory
       } as CreepMemory
     });
 
@@ -286,8 +304,20 @@ class Spawner {
     if (debug) {
       console.log("Spawning result ", result);
     }
+
+    return result;
   }
 }
 
 profiler.registerClass(Spawner, "Spawner");
 export const spawner = new Spawner();
+
+(global as any).outputNextCheckTimes = function() {
+  _.forEach(nextCheckTimes, (t, room) => {
+    if (t <= Game.time) {
+      console.log(room, "ready");
+    } else {
+      console.log(room, t - Game.time);
+    }
+  });
+};

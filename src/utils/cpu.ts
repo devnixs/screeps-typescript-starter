@@ -1,7 +1,17 @@
 let cpuAverage = 0;
 let lastRetrievalDate = Game.time;
 
-export function getCpuAverage() {
+export function measureCpuAverage() {
+  if (Game.time % 51 === 0) {
+    Memory.cpuUsages = Memory.cpuUsages || [];
+    Memory.cpuUsages.push(Game.cpu.getUsed());
+    if (Memory.cpuUsages.length > 100) {
+      Memory.cpuUsages.shift();
+    }
+  }
+}
+
+export function getAverageCpu() {
   if (lastRetrievalDate != Game.time) {
     cpuAverage = _.sum(Memory.cpuUsages) / Memory.cpuUsages.length;
     lastRetrievalDate = Game.time;
@@ -9,6 +19,31 @@ export function getCpuAverage() {
 
   return cpuAverage;
 }
+
+export function getUsedPercentage() {
+  return getAverageCpu() / Game.cpu.limit;
+}
+
+export function getReduceUsageRatio() {
+  const average = getAverageCpu();
+  const tolerance = 0.7;
+
+  if (average < Game.cpu.limit * tolerance) {
+    return 1;
+  } else {
+    if (average > Game.cpu.limit) {
+      return 0;
+    } else {
+      return 1 - (average - Game.cpu.limit * tolerance) / (Game.cpu.limit * (1 - tolerance));
+    }
+  }
+}
+
+(global as any).getAverageCpu = getAverageCpu;
+(global as any).getReduceUsageRatio = getReduceUsageRatio;
+(global as any).resetCpu = function() {
+  Memory.cpuUsages = [0];
+};
 
 export function isLowOnCpu() {
   return false;

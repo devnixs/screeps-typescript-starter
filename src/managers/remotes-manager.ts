@@ -4,6 +4,7 @@ import { ILongDistanceTruckMemory } from "roles/longdistancetruck";
 import { profiler } from "utils/profiler";
 import { Cartographer } from "utils/cartographer";
 import { Traveler } from "utils/Traveler";
+import { getReduceUsageRatio } from "utils/cpu";
 
 export class RemotesManager {
   constructor(private room: Room) {}
@@ -22,6 +23,11 @@ export class RemotesManager {
       memory.remotes = [];
     }
 
+    if (this.room.spawns.length === 0) {
+      // this room has been wiped.
+      return;
+    }
+
     if (Game.time % 4 === 0) {
       memory.remotes.forEach(remote => {
         this.runForOneRemote(remote);
@@ -35,6 +41,7 @@ export class RemotesManager {
     this.checkEnergyGeneration();
     this.disableNotRentableRooms();
     this.checkRoomLevel();
+    this.ensureRemotesAreValid();
   }
 
   checkRoomLevel() {
@@ -59,6 +66,44 @@ export class RemotesManager {
     if (newLevel === 8 || newLevel === 7) {
       this.resetRemoteStats();
     }
+  }
+
+  ensureRemotesAreValid() {
+    if (Game.time % 100 > 0) {
+      return;
+    }
+    this.room.memory.remotes = _.uniq(this.room.memory.remotes, i => i.x + "-" + i.y + "-" + i.room);
+
+    const countsByRoom = _.countBy(this.room.memory.remotes, i => i.room);
+
+    _.forEach(countsByRoom, (value, key) => {
+      if (value > 3) {
+        console.log("Removing all remotes in room " + key);
+        this.room.memory.remotes = this.room.memory.remotes.filter(i => i.room !== key);
+      }
+    });
+
+    // make sure sources exists
+    this.room.memory.remotes = this.room.memory.remotes.filter(remote => {
+      const targetRoom = Game.rooms[remote.room];
+      if (!targetRoom) {
+        return true;
+      } else {
+        if (targetRoom.controller && targetRoom.controller.owner) {
+          return false;
+        }
+
+        const source = targetRoom.lookForAt("source", remote.x, remote.y)[0];
+
+        if (!source) {
+          // delete remote
+          console.log("Deleting remote " + JSON.stringify(remote));
+          return false;
+        } else {
+          return true;
+        }
+      }
+    });
   }
 
   resetRemoteStats() {
@@ -96,19 +141,25 @@ export class RemotesManager {
   }
 
   disableNotRentableRooms() {
-    if (Game.time % 100 > 0) {
+    if (Game.time % 104 > 0) {
       return;
     }
 
     const spawns = this.room.find(FIND_MY_SPAWNS).length;
-    let maxTravelAllowed = spawns * 400 + 100;
-    const maxRemotesAllowed = this.room.find(FIND_MY_SPAWNS).length * 4 + 2;
+    let maxTravelAllowed = Math.min(spawns, 2) * 400 + 100;
+    let maxRemotesAllowed = Math.min(spawns, 2) * 4 + 2;
+
+    maxTravelAllowed = getReduceUsageRatio() * maxTravelAllowed;
+    maxRemotesAllowed = getReduceUsageRatio() * maxRemotesAllowed;
 
     // enable all
     this.room.memory.remotes.forEach(i => (i.disabled = false));
 
     // disable non possible rooms
-    this.room.memory.remotes.filter(i => !this.canEnableRoom(i.room)).forEach(i => (i.disabled = true));
+    this.room.memory.remotes
+      .filter(i => !this.canEnableRemote(i))
+      .filter(i => !this.canEnableRoom(i.room))
+      .forEach(i => (i.disabled = true));
 
     let remotes = this.getEnabledRemotes();
     let currentTravel = _.sum(remotes.map(i => i.distance));
@@ -132,6 +183,21 @@ export class RemotesManager {
       });
 
       const worstRoom = roomsSorted[0];
+      if ("debug_mode" in Game.flags) {
+        console.log(
+          "Disabling room ",
+          worstRoom,
+          "because currentTravel > maxTravelAllowed =",
+          currentTravel > maxTravelAllowed,
+          currentTravel,
+          maxTravelAllowed,
+          "and remotes.length > maxRemotesAllowed=",
+          remotes.length > maxRemotesAllowed,
+          remotes.length,
+          maxRemotesAllowed
+        );
+      }
+
       remotes
         .filter(i => i.room === worstRoom)
         .forEach(remote => {
@@ -141,6 +207,19 @@ export class RemotesManager {
       remotes = this.getEnabledRemotes();
       currentTravel = _.sum(remotes.map(i => i.distance));
     }
+  }
+
+  canEnableRemote(remote: RemoteRoomDefinition) {
+    // prevent enabling if it's already enabled in someone else' room
+    const otherRemotes = _.flatten(
+      getMyRooms()
+        .filter(i => i.name !== this.room.name)
+        .map(i => i.memory.remotes)
+    );
+    const foundInOtherRemote = otherRemotes.find(
+      i => i.room === remote.room && i.x === remote.x && i.y === remote.y && !i.disabled
+    );
+    return !foundInOtherRemote;
   }
 
   canEnableRoom(room: string) {
@@ -196,11 +275,12 @@ export class RemotesManager {
 
       const rnd = Math.floor(Math.random() * remotes.length);
       const remote = remotes[rnd];
+      // console.log("Creating remote roads", JSON.stringify(remote));
 
       this.iterateFromAtoB(homeSpawn.pos, new RoomPosition(remote.x, remote.y, remote.room), (pos, index, isLast) => {
         const room = Game.rooms[pos.roomName];
         if (room) {
-          const structureExists = room.lookForAt("structure", pos.x, pos.y)[0];
+          const structureExists = room.lookForAt("structure", pos.x, pos.y).find(i => i.structureType !== "rampart");
           const constructionSiteExists = room.lookForAt("constructionSite", pos.x, pos.y)[0];
           if (!constructionSiteExists && !structureExists && pos.x > 0 && pos.x < 49 && pos.y > 0 && pos.y < 49) {
             const constructionSiteResult = room.createConstructionSite(pos.x, pos.y, STRUCTURE_ROAD);
@@ -220,15 +300,11 @@ export class RemotesManager {
   ) {
     const result = Traveler.findTravelPath(pos1, pos2, {
       range: 1,
-      roomCallback: roomName => {
-        const matrix = new PathFinder.CostMatrix();
-        if (roomName === this.room.name && this.room.memory.roomPlanner && this.room.memory.roomPlanner.structures) {
-          // add planned buildings
-
-          this.room.memory.roomPlanner.structures.forEach(structure => matrix.set(structure.x, structure.y, 0xff));
-        }
-        return matrix;
-      }
+      obstacles: this.room.memory.roomPlanner
+        ? this.room.memory.roomPlanner.structures
+            .filter(i => i.type !== "rampart" && i.type !== "road")
+            .map(i => ({ pos: new RoomPosition(i.x, i.y, this.room.name) }))
+        : []
     });
 
     if (result && result.path) {
@@ -326,8 +402,16 @@ export class RemotesManager {
       if (!targetRoom) {
         remote.energyGeneration = 0;
         remote.wastedEnergy = false;
+        remote.ratio = 1;
       } else {
         const source = targetRoom.lookForAt("source", remote.x, remote.y)[0];
+
+        if (Cartographer.roomType(targetRoom.name) === "SK") {
+          remote.ratio = 1.5;
+        } else {
+          remote.ratio = 1;
+        }
+
         if (!source) {
           remote.energyGeneration = 0;
           remote.wastedEnergy = false;

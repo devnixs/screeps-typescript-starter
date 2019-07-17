@@ -21,7 +21,7 @@ function stringToColor(str: string) {
 }
 
 // assigns a function to Creep.prototype: creep.travelTo(destination)
-Creep.prototype.goTo = function(destination: RoomPosition | { pos: RoomPosition }, options?: MoveToOpts) {
+Creep.prototype.goTo = function(destination: RoomPosition | { pos: RoomPosition }, options?: TravelToOptions) {
   const creep = this;
 
   if (!destination) {
@@ -35,7 +35,18 @@ Creep.prototype.goTo = function(destination: RoomPosition | { pos: RoomPosition 
   }
 
   try {
-    return creep.travelTo(target, { preferHighway: true, stuckValue: 1 });
+    let before = Game.cpu.getUsed();
+    const ret = creep.travelTo(target, { preferHighway: true, ...options });
+    let diff = Game.cpu.getUsed() - before;
+    /*
+    if (
+      this.name === "long-distance-truck23" ||
+      this.name === "long-distance-truck22" ||
+      this.name === "long-distance-truck21"
+    ) {
+      console.log(this.name, "CPU used=", diff);
+    } */
+    return ret;
   } catch (e) {
     console.log("Cannot move creep ", this.name);
     console.log(e);

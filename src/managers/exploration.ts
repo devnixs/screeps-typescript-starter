@@ -68,24 +68,13 @@ export class ExplorationManager {
   static analyzeRoom(room: Room) {
     let memory = Memory.explorations.find(i => i.r == room.name);
 
-    if (room.name === "E7S9") {
-      console.log("Analyzing room", room.name);
-    }
-
     if (memory && memory.t >= Game.time - 5000) {
       return;
-    }
-    if (room.name === "E7S9") {
-      console.log("1");
     }
 
     if (getMyRooms().find(i => i.name === room.name)) {
       return;
     }
-    if (room.name === "E7S9") {
-      console.log("2");
-    }
-
     // console.log("Analyzing room ", room.name);
 
     const closestRoomName = findClosestRoom(room.name);
@@ -96,11 +85,25 @@ export class ExplorationManager {
       console.log("Warning, unable to find closest room to", room.name);
       return;
     }
+
+    const isEnemyBase = room.controller
+      ? room.controller.owner && room.controller.owner.username !== getUsername()
+      : false;
+    const isEnemyRemote =
+      (!isEnemyBase &&
+        (room.controller && room.controller.reservation && room.controller.reservation.username !== getUsername())) ||
+      false;
+
+    const distanceToClosestRoom = Cartographer.findRoomDistanceSum(closestRoom.name, room.name);
+    if (distanceToClosestRoom > 12) {
+      return;
+    }
+
     if (!memory) {
       // This happens only once
 
       let report: ColonizationEvaluation | null = null;
-      if (Game.map.isRoomAvailable(room.name)) {
+      if (!isEnemyBase || (!isEnemyRemote && room.controller)) {
         report = this.analyzeFutureColony(room);
       }
 
@@ -122,15 +125,12 @@ export class ExplorationManager {
     memory.cr = closestRoomName;
 
     // register if enemy
-    memory.eb = room.controller ? room.controller.owner && room.controller.owner.username !== getUsername() : false;
+    memory.eb = isEnemyBase;
 
     memory.el = memory.eb ? room && room.controller && room.controller.level : undefined;
 
     // register if enemy
-    memory.er =
-      (!memory.eb &&
-        (room.controller && room.controller.reservation && room.controller.reservation.username !== getUsername())) ||
-      false;
+    memory.er = isEnemyRemote;
 
     if (memory.eb || memory.er) {
       // delete existing remotes in this room
@@ -138,7 +138,6 @@ export class ExplorationManager {
       return;
     }
 
-    const distanceToClosestRoom = Cartographer.findRoomDistanceSum(closestRoom.name, room.name);
     if (distanceToClosestRoom <= 3) {
       // no need to add remotes if it's too far
       ExplorationManager.analyzeRemotes(room, closestRoom, closestSpawn);
@@ -161,21 +160,12 @@ export class ExplorationManager {
 
       var roomType = Cartographer.roomType(source.room.name);
 
-      const remoteExistInAnotherRoom = !!getMyRooms().find(
-        i => !!i.memory.remotes.find(r => r.room === source.room.name && source.pos.x === r.x && source.pos.y === r.y)
-      );
-
       if (existingRemote && !existingRemote.distance) {
         existingRemote.distance = searchResult.path.length;
       }
       const allowSourceKeepRooms = closestRoom.controller && closestRoom.controller.level >= 7;
 
-      if (
-        (roomType !== "SK" || allowSourceKeepRooms) &&
-        searchResult.path.length < maxDistance &&
-        !existingRemote &&
-        !remoteExistInAnotherRoom
-      ) {
+      if ((roomType !== "SK" || allowSourceKeepRooms) && searchResult.path.length < maxDistance && !existingRemote) {
         console.log(
           "Creating remote at ",
           source.room.name,
@@ -237,12 +227,16 @@ export class ExplorationManager {
 
     const topPlace = topPlacesOrdered[0];
 
-    const distanceWithClosestRoom = Traveler.findTravelPath(
+    const travelPath = Traveler.findTravelPath(
       Game.rooms[closestRoom].spawns[0],
       new RoomPosition(topPlace.x, topPlace.y, room.name)
-    ).path.length;
+    );
+    if (travelPath.incomplete) {
+      return null;
+    }
+    const distanceWithClosestRoom = travelPath.path.length;
 
-    const distanceScore = distanceWithClosestRoom < 300 ? 0 : Math.pow(distanceWithClosestRoom - 500, 2) / 100;
+    const distanceScore = distanceWithClosestRoom < 300 ? 0 : Math.pow(distanceWithClosestRoom - 400, 2) / 100;
 
     const finalScore = topPlace.total + topPlace.wallsCount * 4 + distanceScore;
 

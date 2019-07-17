@@ -44,15 +44,17 @@ export class LinkManager {
   setStates() {
     const links = this.links;
     const totalEnergyInNetwork = _.sum(links.map(link => link.linkObj.energy));
+    const totalEnergyCapacityInNetwork = _.sum(links.map(link => link.linkObj.energyCapacity));
+    const totalEnergyTarget = totalEnergyCapacityInNetwork / 2;
 
     for (let index in links) {
       const link = links[index];
       if (link.linkMemory.type === "input-output") {
         if (
           link.linkObj.energy < LinkManager.inputOutputLinkTargetEnergy() &&
-          totalEnergyInNetwork < LinkManager.totalEnergyInNetworkTarget()
+          totalEnergyInNetwork < totalEnergyTarget
         ) {
-          var totalTarget = LinkManager.totalEnergyInNetworkTarget();
+          var totalTarget = totalEnergyTarget;
           var maxAdd = totalTarget - totalEnergyInNetwork;
           var maxAmount = link.linkObj.energy + maxAdd;
 
@@ -61,8 +63,8 @@ export class LinkManager {
         } else if (link.linkObj.energy > LinkManager.inputOutputLinkTargetEnergy()) {
           link.linkMemory.needsAmount = link.linkObj.energy - LinkManager.inputOutputLinkTargetEnergy();
           link.linkMemory.state = "needs-emptying";
-        } else if (link.linkObj.energy > 100 && totalEnergyInNetwork > LinkManager.totalEnergyInNetworkTarget()) {
-          const excessEnergyInNetwork = totalEnergyInNetwork - LinkManager.totalEnergyInNetworkTarget();
+        } else if (link.linkObj.energy > 100 && totalEnergyInNetwork > totalEnergyTarget) {
+          const excessEnergyInNetwork = totalEnergyInNetwork - totalEnergyTarget;
           link.linkMemory.needsAmount = Math.max(link.linkObj.energy - excessEnergyInNetwork, 0);
           link.linkMemory.state = "needs-emptying";
         } else {

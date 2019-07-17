@@ -1,4 +1,5 @@
 import { ConquestManager } from "managers/conquest";
+import { flee } from "utils/misc-utils";
 
 interface IClaimerMemory extends CreepMemory {}
 
@@ -9,6 +10,10 @@ class RoleClaimer implements IRole {
     const flag = Game.flags["claimer_target"];
 
     if (!flag) {
+      return;
+    }
+
+    if (flee(creep) === OK) {
       return;
     }
 

@@ -1,3 +1,5 @@
+import { findHostile, findHostiles } from "./finder";
+
 // Random utilities that don't belong anywhere else
 
 const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -213,4 +215,44 @@ export function getMyRooms() {
 export function paddingLeft(paddingValue: string, str: string | number) {
   str = str.toString();
   return String(paddingValue + str).slice(-paddingValue.length);
+}
+
+export function flee(creep: Creep) {
+  let fleeing = false;
+  fleeing = fleeing || creep.memory.flee ? creep.memory.flee > Game.time - 5 : false;
+  if (!fleeing) {
+    const enemy = findHostile(creep);
+    fleeing = enemy ? enemy.pos.getRangeTo(creep.pos.x, creep.pos.y) < 10 : false;
+    if (fleeing) {
+      creep.memory.flee = Game.time;
+    }
+  }
+  if (fleeing) {
+    // flee
+    creep.say("RUN!");
+    const homeRoom = Game.rooms[creep.memory.homeRoom].controller;
+
+    if (homeRoom) {
+      // avoid area around hostiles
+      const enemies = findHostiles(creep);
+
+      const positions: HasPos[] = [];
+      for (let i = -3; i <= 3; i++) {
+        for (let j = -3; j <= 3; j++) {
+          enemies.forEach(enemy => {
+            const x = enemy.pos.x + i;
+            const y = enemy.pos.y + j;
+            if (x >= 1 && x <= 49 && y >= 1 && y < 49) {
+              positions.push({ pos: new RoomPosition(x, y, enemy.room.name) });
+            }
+          });
+        }
+      }
+
+      creep.goTo(homeRoom, { stuckValue: 1, obstacles: positions });
+    }
+    return OK;
+  } else {
+    return -1;
+  }
 }

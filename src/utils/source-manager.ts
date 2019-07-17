@@ -87,6 +87,9 @@ class SourceManager {
   }
 
   pickupDroppedEnergy(creep: Creep) {
+    if (creep.room.memory.isUnderSiege) {
+      return -1;
+    }
     const droppedEnergy = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES, {
       filter: i =>
         i.resourceType === RESOURCE_ENERGY && i.pos.getRangeTo(creep.pos.x, creep.pos.y) <= 5 && i.amount >= 300
@@ -187,15 +190,20 @@ class SourceManager {
     }
 
     if (!targetStructure) {
+      const minContainerCapacityPercent = creep.memory.role === "truck" ? 0.02 : 0.25;
+
       targetStructure = findAndCache<FIND_STRUCTURES>(
         creep,
         "harvest_container_id",
         FIND_STRUCTURES,
-        (targetStructure: any) => targetStructure.store.energy >= targetStructure.storeCapacity / 4,
+        // truck are allowed to withdraw at low energies because it's important they can refill extensions
+        (targetStructure: any) =>
+          targetStructure.store.energy >= targetStructure.storeCapacity * minContainerCapacityPercent,
         {
           filter: (structure: StructureContainer) => {
             return (
-              structure.structureType == STRUCTURE_CONTAINER && structure.store.energy >= structure.storeCapacity / 4
+              structure.structureType == STRUCTURE_CONTAINER &&
+              structure.store.energy >= structure.storeCapacity * minContainerCapacityPercent
             );
           }
         }
@@ -269,6 +277,7 @@ class SourceManager {
   }
 
   storeEnergy(creep: Creep) {
+    let initialCpu = Game.cpu.getUsed();
     let targetStructure: AnyStructure | undefined = undefined;
     const inputLink = LinkManager.getInputLinkThatCanReceiveEnergy(creep.pos);
 

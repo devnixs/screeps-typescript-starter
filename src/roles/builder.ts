@@ -16,6 +16,13 @@ export class RoleBuilder implements IRole {
     room: Room,
     forceFind: boolean
   ): { object: ConstructionSite | StructureWall | StructureRampart; isConstructionSite: boolean } | null {
+    const nukes = room.find(FIND_NUKES);
+
+    const getNukeDamageAtLocation = (pos: RoomPosition) =>
+      _.sum(
+        nukes.map(n => (n.pos.x === pos.x && n.pos.y === pos.y ? 10000000 : n.pos.inRangeTo(pos, 2) ? 5000000 : 0))
+      );
+
     var lowRampart = room.find(FIND_STRUCTURES, {
       filter: i => i.structureType === "rampart" && i.hits < 1000
     })[0] as (StructureRampart | undefined);
@@ -25,36 +32,37 @@ export class RoleBuilder implements IRole {
         isConstructionSite: false
       };
     }
+    var constructionSite = room.find(FIND_CONSTRUCTION_SITES)[0];
 
-    if (!room.memory.isUnderSiege) {
-      var constructionSites = room.find(FIND_CONSTRUCTION_SITES);
-
-      if (constructionSites.length) {
-        return {
-          object: constructionSites[0],
-          isConstructionSite: true
-        };
-      }
+    if (constructionSite && (!room.memory.isUnderSiege || constructionSite.structureType === "rampart")) {
+      return {
+        object: constructionSite,
+        isConstructionSite: true
+      };
     }
 
     const controllerLevel = room.controller ? room.controller.level : 0;
     var minWallsHp = wallsMinHp(controllerLevel);
     var minRampartsHp = rampartMinHp(controllerLevel);
+
     var walls = room.find(FIND_STRUCTURES, {
       filter: i => i.structureType === "constructedWall" && i.hits > 0 && (i.hits < minWallsHp || forceFind)
     }) as (StructureWall | StructureRampart)[];
 
     var rampart = room.find(FIND_STRUCTURES, {
-      filter: i => i.structureType === "rampart" && (i.hits < minRampartsHp || forceFind)
+      filter: i =>
+        i.structureType === "rampart" && (i.hits - getNukeDamageAtLocation(i.pos) < minRampartsHp || forceFind)
     }) as (StructureWall | StructureRampart)[];
 
-    var rampartAndWalls = walls.concat(rampart);
+    var rampartAndWalls = walls
+      .concat(rampart)
+      .map(r => ({ element: r, hits: r.hits - getNukeDamageAtLocation(r.pos) }));
 
     rampartAndWalls.sort((a, b) => a.hits - b.hits);
 
     if (rampartAndWalls.length) {
       return {
-        object: rampartAndWalls[0],
+        object: rampartAndWalls[0].element,
         isConstructionSite: false
       };
     }

@@ -54,7 +54,9 @@ class RoleScout implements IRole {
         const type = Cartographer.roomType(room);
 
         const isEnemy = (roomMemory && roomMemory.eb) || type == "SK";
-        return !isEnemy;
+
+        const canGo = Game.map.isRoomAvailable(room);
+        return !isEnemy && canGo;
       });
 
       // some time we want to ignore trying to find closer rooms. This helps scouting further.

@@ -31,7 +31,7 @@ export class UpgradeManager {
     const storage = this.room.storage;
 
     if (storage) {
-      const closestLink = storage.pos.findClosestByRange(FIND_MY_STRUCTURES, {
+      const closestLink = this.room.controller.pos.findClosestByRange(FIND_MY_STRUCTURES, {
         filter: i => i.structureType === "link"
       });
       const controller = this.room.controller;
@@ -48,8 +48,12 @@ export class UpgradeManager {
       }
 
       if (rcl === 8) {
-        const points = Math.max(storage.store.energy - 500000, 0) / 100000;
-        this.room.memory.upgraderRatio = Math.ceil(Math.pow(points, 2) * 2);
+        if (this.room.controller.ticksToDowngrade < 60000) {
+          this.room.memory.upgraderRatio = 10;
+        } else {
+          const points = Math.max(storage.store.energy - 500000, 0) / 100000;
+          this.room.memory.upgraderRatio = Math.ceil(Math.pow(points, 2) * 2);
+        }
       } else {
         const points = storage.store.energy / 100000;
         this.room.memory.upgraderRatio = Math.ceil(Math.pow(points, 2) * 2);
