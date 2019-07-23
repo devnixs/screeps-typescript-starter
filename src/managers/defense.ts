@@ -2,6 +2,16 @@ import { getMyRooms } from "utils/misc-utils";
 import { Cartographer } from "utils/cartographer";
 import { Chemist } from "./chemist";
 
+interface ThreatLevelAndTime {
+  threatLevel: number;
+  time: number;
+}
+
+const lastSeenThreatLevels: { [roomName: string]: ThreatLevelAndTime } = {};
+(global as any).getLastSeenThreatLevels = function() {
+  console.log(JSON.stringify(lastSeenThreatLevels));
+};
+
 export class DefenseManager {
   constructor(private room: Room) {}
 
@@ -12,7 +22,7 @@ export class DefenseManager {
   }
 
   run() {
-    if (Game.time % 4 > 0) {
+    if (Game.time % 3 > 0) {
       return;
     }
 
@@ -55,16 +65,19 @@ export class DefenseManager {
   setupSiegeMode() {
     this.room.memory.isUnderSiege = true;
     console.log("Room", this.room.name, "is under siege!");
-    this.room.memory.boostMode = [RANGED_ATTACK];
-    new Chemist(this.room).setupBoostMode();
+    this.room.memory.boostMode = {
+      parts: [RANGED_ATTACK],
+      reason: "siege"
+    };
     Game.notify("Room " + this.room.name + " is under siege! Tick=" + Game.time);
   }
 
   removeSiegeMode() {
     this.room.memory.isUnderSiege = false;
     console.log("Room", this.room.name, "is no longer under siege.");
-    this.room.memory.boostMode = undefined;
-    new Chemist(this.room).stopBoostMode();
+    if (this.room.memory.boostMode && this.room.memory.boostMode.reason === "siege") {
+      this.room.memory.boostMode = undefined;
+    }
   }
 
   checkRemotes() {
@@ -74,6 +87,18 @@ export class DefenseManager {
         this.addDefenders(remoteRoom);
       }
     });
+
+    // if there's a remote with more than 50 threat, use boosts to defend
+    const highThreatRoom = this.room.memory.needsDefenders.find(i => i.threatLevel > 50);
+    if (highThreatRoom) {
+      highThreatRoom.boosted = true;
+      this.room.memory.boostMode = {
+        parts: [RANGED_ATTACK, HEAL],
+        reason: "remote"
+      };
+    } else if (this.room.memory.boostMode && this.room.memory.boostMode.reason === "remote") {
+      this.room.memory.boostMode = undefined;
+    }
   }
 
   addDefenders(targetRoom: Room) {
@@ -125,15 +150,25 @@ export class DefenseManager {
   }
 
   getThreatLevel(targetRoom: Room) {
-    if (Cartographer.roomType(targetRoom.name) === "SK") {
-      const threatLevel = 16;
-      targetRoom.visual.text("DANGER " + threatLevel, 20, 20, {
-        color: "white",
-        backgroundColor: "black",
-        opacity: 0.5
-      });
-      return threatLevel;
+    const lastSeenThreat = lastSeenThreatLevels[targetRoom.name];
+
+    if (lastSeenThreat && lastSeenThreat.time > Game.time - 20) {
+      if (lastSeenThreat.threatLevel > 0) {
+        targetRoom.visual.text("DANGER " + lastSeenThreat.threatLevel, 20, 20, {
+          color: "white",
+          backgroundColor: "black",
+          opacity: 0.5
+        });
+      }
+      return lastSeenThreat.threatLevel;
     }
+
+    let threatLevel = 0;
+
+    if (Cartographer.roomType(targetRoom.name) === "SK") {
+      threatLevel += 16;
+    }
+
     const enemies =
       targetRoom &&
       targetRoom.find(FIND_HOSTILE_CREEPS, {
@@ -177,16 +212,22 @@ export class DefenseManager {
           })
         )
       );
-      const threatLevel = _.sum(threatValues);
+      threatLevel += _.sum(threatValues);
+    }
+
+    if (threatLevel > 0) {
+      lastSeenThreatLevels[targetRoom.name] = {
+        threatLevel: threatLevel,
+        time: Game.time
+      };
 
       targetRoom.visual.text("DANGER " + threatLevel, 20, 20, {
         color: "white",
         backgroundColor: "black",
         opacity: 0.5
       });
-      return threatLevel;
-    } else {
-      return 0;
     }
+
+    return threatLevel;
   }
 }

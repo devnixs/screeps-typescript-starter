@@ -19,9 +19,10 @@ let findClosestRoom = function(targetRoom: string) {
   var myRooms = _.uniq(Object.keys(Game.spawns).map(spwnName => Game.spawns[spwnName].room.name)).filter(
     i => i != targetRoom
   );
-  const targetSpawn = Game.rooms[targetRoom].spawns[0]
-    ? Game.rooms[targetRoom].spawns[0].pos
-    : new RoomPosition(25, 25, targetRoom);
+  const targetSpawn =
+    Game.rooms[targetRoom] && Game.rooms[targetRoom].spawns[0]
+      ? Game.rooms[targetRoom].spawns[0].pos
+      : new RoomPosition(25, 25, targetRoom);
 
   var roomsAndDistances = myRooms.map(sourceRoom => {
     const sourceSpawn = Game.rooms[sourceRoom].spawns[0].pos;
@@ -316,12 +317,15 @@ let findSafeAreaAround = function findSafeAreaAround(pos: SimplePos, room: Room)
 
 export function findEmptyRempart(target: _HasRoomPosition, creep: Creep) {
   // find closest empty rempart
-  return target.pos.findClosestByRange(FIND_MY_STRUCTURES, {
+  var ramparts = creep.room.find(FIND_MY_STRUCTURES, {
     filter: r =>
       r.structureType === "rampart" &&
       r.pos.lookFor(LOOK_STRUCTURES).filter(i => i.structureType !== "road").length === 1 &&
       (r.pos.lookFor(LOOK_CREEPS).length === 0 || (r.pos.x === creep.pos.x && r.pos.y === creep.pos.y))
   });
+
+  const closest = _.sortBy(ramparts, i => Math.abs(i.pos.x - target.pos.x) + Math.abs(i.pos.y - target.pos.y));
+  return closest[0];
 }
 
 findAndCache = profiler.registerFN(findAndCache, "findAndCache");

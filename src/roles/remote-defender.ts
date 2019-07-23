@@ -20,7 +20,7 @@ class RoleRemoteDefender implements IRole {
       return roleLocalDefender.run(creep);
     }
 
-    if (creep.hits < creep.hitsMax / 2) {
+    if (creep.hits < creep.hitsMax * 0.8) {
       creep.heal(creep);
       hostile && creep.rangedAttack(hostile);
       this.goHome(creep);
@@ -41,6 +41,10 @@ class RoleRemoteDefender implements IRole {
     }
 
     if (getOffExit(creep) === OK) {
+      return;
+    }
+
+    if (boostCreep(creep) === OK) {
       return;
     }
 
@@ -72,9 +76,13 @@ class RoleRemoteDefender implements IRole {
 
       return;
     } else {
-      const keeperLair = creep.room.find(FIND_STRUCTURES, {
-        filter: s => s.structureType === "keeperLair" && s.ticksToSpawn && s.ticksToSpawn < 40
-      })[0];
+      const keeperLair = _.sortBy(
+        creep.room.find(FIND_STRUCTURES, {
+          filter: s => s.structureType === "keeperLair" && s.ticksToSpawn && s.ticksToSpawn < 50
+        }),
+        i => (i as StructureKeeperLair).ticksToSpawn
+      )[0];
+
       if (keeperLair) {
         // go between the keeper and the closest source to protect the harvester
         const closestSource = keeperLair.pos.findClosestByRange(FIND_SOURCES) as Source;
@@ -86,10 +94,11 @@ class RoleRemoteDefender implements IRole {
         return;
       }
 
+      const homeRoom = memory.roomTarget || creep.memory.homeRoom;
+
       // PEACEFUL MODE
       if (!memory.subRole) {
-        if (memory.homeRoom != creep.room.name) {
-          const homeRoom = memory.roomTarget || creep.memory.homeRoom;
+        if (homeRoom != creep.room.name) {
           creep.goTo(new RoomPosition(25, 25, homeRoom));
         } else {
           const rest = findRestSpot(creep, { x: 25, y: 25 });
@@ -115,11 +124,11 @@ class RoleRemoteDefender implements IRole {
         } else {
           const canHeal = creep.getActiveBodyparts(HEAL);
           if (!canHeal || this.healFriends(creep) === -1) {
-            const rest = findRestSpot(creep, { x: 25, y: 25 });
+            creep.say("Zzz");
+            /* const rest = findRestSpot(creep, { x: 25, y: 25 });
             if (rest) {
-              // creep.say("Zzz");
               creep.goTo(rest);
-            }
+            } */
           }
         }
       }
@@ -143,12 +152,8 @@ class RoleRemoteDefender implements IRole {
 
   goHome(creep: Creep) {
     const homeRoom = (creep.memory as IRemoteDefenderMemory).roomTarget || creep.memory.homeRoom;
-
-    if (creep.room.name !== homeRoom) {
-      // go back home
-      creep.goTo(new RoomPosition(25, 25, homeRoom || ""));
-      return;
-    }
+    const ctrl = Game.rooms[homeRoom].controller as StructureController;
+    creep.goTo(ctrl);
   }
 
   needsHealing(creep: Creep) {

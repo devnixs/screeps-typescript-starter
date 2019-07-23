@@ -50,6 +50,7 @@ interface PlannedLocation {
 }
 
 interface RoomMemory {
+  boostModeIsSetup: boolean;
   useNewRoomPlanner: any;
   walls: number[] | undefined;
   restSpot: { x: number; y: number } | undefined;
@@ -89,9 +90,14 @@ interface RoomMemory {
   lastProgress: number | undefined;
   lastProgressChecktime: number;
 
-  boostMode: BodyPartConstant[] | undefined;
+  boostMode: BoostMode | undefined;
   lastRemoteCheckCtrlLevel: number | undefined;
   roomPlanner: RoomPlannerData;
+}
+
+interface BoostMode {
+  parts: BodyPartConstant[];
+  reason: "siege" | "remote";
 }
 
 interface RoomPlannerData {

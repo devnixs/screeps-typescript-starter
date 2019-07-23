@@ -19,7 +19,7 @@ export function boostCreep(creep: Creep) {
   if (creep.room.name !== creep.memory.homeRoom) {
     return -1;
   }
-  const bodyPartsThatNeedBoosts = creep.room.memory.boostMode;
+  const bodyPartsThatNeedBoosts = creep.room.memory.boostMode.parts;
   const nonBoostedBodyPartsThatNeedBoosts = creep.body
     .filter(i => !i.boost)
     .map(i => i.type)

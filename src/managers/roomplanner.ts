@@ -151,6 +151,12 @@ export class RoomPlanner {
     // find the closest sector to the ctrl to build the storage between the first 14 sectors
     const storageSector = _(sectors)
       .take(14)
+      .filter(sector => {
+        const hasStructure = this.getPositionsFromSector(sector).find(sectorPos => {
+          return !!planner.structures.find(structure => structure.x === sectorPos.x && structure.y === sectorPos.y);
+        });
+        return !hasStructure;
+      })
       .sortBy(s => new RoomPosition(s.x, s.y, room.name).getRangeTo(ctrl))
       .first();
 

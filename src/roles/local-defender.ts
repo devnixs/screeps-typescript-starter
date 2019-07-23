@@ -39,7 +39,17 @@ class RoleLocalDefender implements IRole {
 
     if (creep.hits < creep.hitsMax) {
       creep.heal(creep);
+    } else {
+      const damagedCreepInRange = creep.pos.findInRange(FIND_MY_CREEPS, 3, { filter: i => i.hits < i.hitsMax })[0];
+      if (damagedCreepInRange) {
+        if (damagedCreepInRange.pos.isNearTo(creep)) {
+          creep.heal(damagedCreepInRange);
+        } else {
+          creep.rangedHeal(damagedCreepInRange);
+        }
+      }
     }
+
     // ATTACK MODE
     if (hostile) {
       creep.say("Yarr!", true);
@@ -68,9 +78,22 @@ class RoleLocalDefender implements IRole {
       }
     } else {
       const rest = findRestSpot(creep, { x: 25, y: 25 });
-      if (rest && !doNotMove) {
-        creep.say("Zzz");
-        creep.goTo(rest, moveOptions);
+      if (hostile) {
+        const range = creep.pos.getRangeTo(hostile);
+        if (range < 3) {
+          if (rest && !doNotMove) {
+            creep.goTo(rest, moveOptions);
+          }
+        } else if (range === 3) {
+          // do nothing
+        } else {
+          creep.goTo(hostile);
+        }
+      } else {
+        if (rest && !doNotMove) {
+          creep.say("Zzz");
+          creep.goTo(rest, moveOptions);
+        }
       }
     }
   }

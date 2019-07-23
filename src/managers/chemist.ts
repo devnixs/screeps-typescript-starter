@@ -41,9 +41,17 @@ export class Chemist {
   }
 
   run() {
+    if (Array.isArray(this.room.memory.boostMode)) {
+      this.room.memory.boostMode = undefined;
+    }
+
     const checkTime = "sim" in Game.rooms ? 1 : 1000;
     if (Game.time % checkTime === 0) {
       this.setupLabGroups();
+    }
+
+    if (Game.time % 5 === 0) {
+      this.checkBoostMode();
     }
 
     if (this.isBoostMode()) {
@@ -68,10 +76,19 @@ export class Chemist {
     return !!this.room.memory.boostMode;
   }
 
+  checkBoostMode() {
+    if (this.room.memory.boostMode && !this.room.memory.boostModeIsSetup) {
+      this.setupBoostMode();
+    } else if (!this.room.memory.boostMode && this.room.memory.boostModeIsSetup) {
+      this.stopBoostMode();
+    }
+  }
+
   setupBoostMode() {
     console.log("Swithing to boost mode", this.room);
     this.labGroups.forEach(group => this.returnLabToIdleState(group));
     this.assignBoosts();
+    this.room.memory.boostModeIsSetup = true;
   }
 
   runAllBoostLabs() {
@@ -93,7 +110,7 @@ export class Chemist {
   }
 
   assignBoosts() {
-    const boostedParts = this.room.memory.boostMode;
+    const boostedParts = this.room.memory.boostMode && this.room.memory.boostMode.parts;
     const spawn = this.room.spawns[0];
     if (!boostedParts) {
       return;
@@ -148,6 +165,7 @@ export class Chemist {
     console.log("Stopping to boost mode");
     // shutdown all labs groups
     this.labGroups.forEach(group => this.returnLabToIdleState(group));
+    this.room.memory.boostModeIsSetup = false;
   }
 
   setupLabGroups() {

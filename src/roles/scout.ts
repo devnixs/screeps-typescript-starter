@@ -51,9 +51,8 @@ class RoleScout implements IRole {
       const removedEnemyRooms = neighboorRooms.filter(pair => {
         const room = pair[1];
         const roomMemory = Memory.explorations.find(i => i.r === room);
-        const type = Cartographer.roomType(room);
 
-        const isEnemy = (roomMemory && roomMemory.eb) || type == "SK";
+        const isEnemy = roomMemory && roomMemory.eb;
 
         const canGo = Game.map.isRoomAvailable(room);
         return !isEnemy && canGo;
@@ -135,7 +134,30 @@ class RoleScout implements IRole {
       }
     }
 
-    const moveOptions: MoveToOpts = { ignoreRoads: true, swampCost: 1, plainCost: 1 };
+    const moveOptions: MoveToOpts = {
+      ignoreRoads: true,
+      swampCost: 1,
+      plainCost: 1,
+      costCallback: (roomName, matrix) => {
+        // avoid enemies if possible
+        const room = Game.rooms[roomName];
+        if (room) {
+          const enemies = room.find(FIND_HOSTILE_CREEPS);
+          enemies.forEach(enemy => {
+            for (let i = -3; i <= 3; i++)
+              for (let j = -3; j <= 3; j++) {
+                const x = enemy.pos.x + i;
+                const y = enemy.pos.y + j;
+                if (x >= 0 || x <= 49 || y >= 0 || y <= 49) {
+                  matrix.set(x, y, 200);
+                }
+              }
+          });
+        }
+
+        return matrix;
+      }
+    };
 
     if (memory.targetExit) {
       creep.goTo(new RoomPosition(memory.targetExit.x, memory.targetExit.y, creep.room.name), moveOptions);

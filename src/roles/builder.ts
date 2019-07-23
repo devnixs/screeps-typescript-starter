@@ -3,6 +3,7 @@ import { findRestSpot } from "utils/finder";
 import { profiler } from "../utils/profiler";
 import { wallsMinHp, rampartMinHp } from "constants/misc";
 import { roleHarvester } from "./harvester";
+import { getObstaclesToAvoidRangedEnemies } from "utils/misc-utils";
 
 interface IBuilderMemory extends CreepMemory {
   building: boolean;
@@ -71,11 +72,16 @@ export class RoleBuilder implements IRole {
 
   run(creep: Creep) {
     const memory: IBuilderMemory = creep.memory as any;
+    const moveOptions: TravelToOptions = {};
+
+    if (creep.room.memory.isUnderSiege) {
+      moveOptions.obstacles = getObstaclesToAvoidRangedEnemies(creep);
+    }
 
     if (memory.subRole) {
       const targetRoom = memory.subRole;
       if (targetRoom !== creep.room.name) {
-        creep.goTo(new RoomPosition(25, 25, targetRoom));
+        creep.goTo(new RoomPosition(25, 25, targetRoom), moveOptions);
         return;
       }
     }
@@ -117,7 +123,7 @@ export class RoleBuilder implements IRole {
       if (memory.isConstructionSite) {
         var buildResult = creep.build(targetObject as ConstructionSite);
         if (buildResult == ERR_NOT_IN_RANGE) {
-          creep.goTo(targetObject);
+          creep.goTo(targetObject, moveOptions);
         }
       } else {
         var structureObject = targetObject as AnyStructure;
@@ -128,7 +134,7 @@ export class RoleBuilder implements IRole {
 
         var repairResult = creep.repair(structureObject);
         if (repairResult == ERR_NOT_IN_RANGE) {
-          creep.goTo(targetObject);
+          creep.goTo(targetObject, moveOptions);
         }
       }
     } else if (sourceManager.getEnergy(creep) !== OK) {

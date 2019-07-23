@@ -219,7 +219,7 @@ export function paddingLeft(paddingValue: string, str: string | number) {
 
 export function flee(creep: Creep) {
   let fleeing = false;
-  fleeing = fleeing || creep.memory.flee ? creep.memory.flee > Game.time - 5 : false;
+  fleeing = fleeing || creep.memory.flee ? creep.memory.flee > Game.time - 10 : false;
   if (!fleeing) {
     const enemy = findHostile(creep);
     fleeing = enemy ? enemy.pos.getRangeTo(creep.pos.x, creep.pos.y) < 10 : false;
@@ -255,4 +255,29 @@ export function flee(creep: Creep) {
   } else {
     return -1;
   }
+}
+
+export function getObstaclesToAvoidRangedEnemies(creep: Creep) {
+  // avoid area around hostiles
+  const enemies = findHostiles(creep);
+
+  const positions: HasPos[] = [];
+  enemies.forEach(enemy => {
+    let range = 1;
+    if (enemy.getActiveBodyparts(RANGED_ATTACK)) {
+      range = 3;
+    }
+
+    for (let i = -range; i <= range; i++) {
+      for (let j = -range; j <= range; j++) {
+        const x = enemy.pos.x + i;
+        const y = enemy.pos.y + j;
+        if (x >= 1 && x <= 49 && y >= 1 && y < 49) {
+          positions.push({ pos: new RoomPosition(x, y, enemy.room.name) });
+        }
+      }
+    }
+  });
+
+  return positions;
 }

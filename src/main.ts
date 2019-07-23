@@ -42,6 +42,7 @@ import { roleLocalDefender } from "roles/local-defender";
 import { UpgradeManager } from "managers/upgrader";
 import { ConquestManager } from "managers/conquest";
 import { RoomPlanner } from "managers/roomplanner";
+import { StatsManager } from "managers/stats-manager";
 
 // profiler.enable();
 
@@ -220,6 +221,8 @@ export const loop = ErrorMapper.wrapLoop(() => {
     if (Game.time >= 4536722 + 3000 && Game.flags["dismantler_attack"]) {
       Game.flags["dismantler_attack"].remove();
     } */
+
+    StatsManager.runForAllRooms();
 
     if (error) {
       throw error;

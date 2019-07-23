@@ -283,6 +283,7 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
           });
         },
         additionalMemory: {
+          boostable: defense.boosted,
           homeSpawnPosition: spawn.pos,
           home: spawn.pos.roomName
         } as Partial<IRemoteDefenderMemory>
@@ -296,7 +297,6 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
         maxCount: remoteDefenderHelperCount,
         bodyTemplate: [MOVE, MOVE, MOVE, RANGED_ATTACK, RANGED_ATTACK, HEAL],
         sortBody: [TOUGH, MOVE, ATTACK, RANGED_ATTACK, HEAL],
-        countAllRooms: true,
         onlyRooms: [remoteDefenderHelperSource],
         additionalMemory: {
           roomTarget: remoteDefenderHelperTarget
@@ -361,7 +361,7 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
           bodyTemplate: [MOVE, RANGED_ATTACK, RANGED_ATTACK],
           maxRepatAccrossAll: Math.ceil(remote.threatLevel * 2),
           bodyTemplatePrepend: [HEAL, HEAL, MOVE],
-          maxCount: 2,
+          maxCount: remote.threatLevel / 50,
           sortBody: [TOUGH, MOVE, ATTACK, HEAL],
           additionalMemory: {
             homeSpawnPosition: spawn.pos,

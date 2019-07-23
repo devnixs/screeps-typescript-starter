@@ -157,8 +157,7 @@ export class RemotesManager {
 
     // disable non possible rooms
     this.room.memory.remotes
-      .filter(i => !this.canEnableRemote(i))
-      .filter(i => !this.canEnableRoom(i.room))
+      .filter(i => !this.canEnableRemote(i) || !this.canEnableRoom(i.room))
       .forEach(i => (i.disabled = true));
 
     let remotes = this.getEnabledRemotes();
@@ -223,7 +222,8 @@ export class RemotesManager {
   }
 
   canEnableRoom(room: string) {
-    if (this.room.controller && this.room.controller.level < 3) {
+    const ctrlLevel = this.room.controller ? this.room.controller.level : 0;
+    if (ctrlLevel < 3) {
       return false;
     }
 
@@ -231,10 +231,10 @@ export class RemotesManager {
     if (remotesInThisRoom.length === 0) {
       return false;
     }
-    if (Cartographer.roomType(room) === "SK") {
+    if (Cartographer.roomType(room) === "SK" && ctrlLevel < 8) {
       return false;
     }
-    if (Cartographer.roomType(room) === "CORE") {
+    if (Cartographer.roomType(room) === "CORE" && ctrlLevel < 8) {
       return false;
     }
 
@@ -243,24 +243,15 @@ export class RemotesManager {
 
     if (totalSpent > 0) {
       const ratio = totalRetrieved / totalSpent;
-      if (totalSpent > 50000 && ratio < 1.2) {
+      if (totalSpent > 50000 && ratio < 1.4) {
         // disable this room;
         return false;
       }
-      if (totalSpent > 25000 && ratio < 0.5) {
+      if (totalSpent > 25000 && ratio < 1) {
         // disable this room;
         return false;
       }
     }
-    /*
-    const isHeavilyHarassed = !!remotesInThisRoom.find(i =>
-      i.heavilyArrassedTick ? i.heavilyArrassedTick > Game.time - 1500 : false
-    );
-    if (isHeavilyHarassed) {
-      // wait for a while before going there again
-      return false;
-    }
- */
     return true;
   }
 
