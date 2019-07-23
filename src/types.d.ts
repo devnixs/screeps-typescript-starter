@@ -299,6 +299,8 @@ interface TravelToOptions {
   repath?: number;
   route?: { [roomName: string]: boolean };
   ensurePath?: boolean;
+
+  disableCaching?: boolean;
 }
 
 interface TravelData {

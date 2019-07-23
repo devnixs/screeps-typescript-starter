@@ -127,7 +127,7 @@ export class DefenseManager {
         idleDefenders[0].memory.subRole = room.room;
         currentDefense += idleDefenders[0].memory.r || 0;
         idleDefenders[0].say("Reassigned to " + room.room);
-        console.log("Reassigned", idleDefenders[0].name, " to " + room.room);
+        // console.log("Reassigned", idleDefenders[0].name, " to " + room.room);
         idleDefenders = defenders.filter(i => !i.memory.subRole);
       }
     });
@@ -140,7 +140,7 @@ export class DefenseManager {
         const hasThreat = this.room.memory.needsDefenders.find(i => i.room === targetRoom && i.threatLevel > 0);
         if (!hasThreat) {
           defender.say("Unassigned");
-          console.log("Unassigned", defender.name, "from room", targetRoom);
+          // console.log("Unassigned", defender.name, "from room", targetRoom);
           defender.memory.subRole = undefined;
         }
       }

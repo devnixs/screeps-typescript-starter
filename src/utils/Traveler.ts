@@ -1,3 +1,5 @@
+import { CachedPaths } from "./cached-paths";
+
 /**
  * To start using Traveler, require it in main.js:
  * Example: var Traveler = require('Traveler.js');
@@ -23,6 +25,10 @@ export class Traveler {
 
     if (!destination) {
       return ERR_INVALID_ARGS;
+    }
+
+    if (creep.spawning) {
+      return ERR_BUSY;
     }
 
     if (creep.fatigue > 0) {
@@ -95,13 +101,24 @@ export class Traveler {
       delete travelData.path;
     }
 
-    // pathfinding
     let newPath = false;
+    if (
+      !travelData.path &&
+      !options.disableCaching &&
+      (options.ignoreCreeps === undefined || options.ignoreCreeps === true) &&
+      !options.freshMatrix
+    ) {
+      const path = CachedPaths.getPath(creep.pos, destination);
+      if (path) {
+        newPath = true;
+        state.destination = destination;
+        travelData.path = path;
+      }
+    }
+
+    // pathfinding
     if (!travelData.path) {
       newPath = true;
-      if (creep.spawning) {
-        return ERR_BUSY;
-      }
 
       state.destination = destination;
 
@@ -129,6 +146,9 @@ export class Traveler {
       }
 
       travelData.path = Traveler.serializePath(creep.pos, ret.path, color);
+      if ((options.ignoreCreeps === undefined || options.ignoreCreeps === true) && !ret.incomplete) {
+        CachedPaths.storePath(creep.pos, destination, travelData.path);
+      }
       state.stuckCount = 0;
     }
 
@@ -613,7 +633,13 @@ export class Traveler {
     if (x > 49 || x < 0 || y > 49 || y < 0) {
       return;
     }
-    return new RoomPosition(x, y, origin.roomName);
+
+    try {
+      return new RoomPosition(x, y, origin.roomName);
+    } catch (e) {
+      console.log("Room position is invalid", x, y, origin.roomName);
+      throw e;
+    }
   }
 
   /**
@@ -654,11 +680,16 @@ export class Traveler {
       state.lastCoord = { x: travelData.state[STATE_PREV_X], y: travelData.state[STATE_PREV_Y] };
       state.cpu = travelData.state[STATE_CPU];
       state.stuckCount = travelData.state[STATE_STUCK];
-      state.destination = new RoomPosition(
-        travelData.state[STATE_DEST_X],
-        travelData.state[STATE_DEST_Y],
-        travelData.state[STATE_DEST_ROOMNAME]
-      );
+      try {
+        state.destination = new RoomPosition(
+          travelData.state[STATE_DEST_X],
+          travelData.state[STATE_DEST_Y],
+          travelData.state[STATE_DEST_ROOMNAME]
+        );
+      } catch (e) {
+        console.log("Room position is invalid. ", STATE_DEST_X, STATE_DEST_Y, STATE_DEST_ROOMNAME);
+        throw e;
+      }
     } else {
       state.cpu = 0;
       state.destination = destination;

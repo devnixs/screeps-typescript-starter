@@ -43,6 +43,8 @@ import { UpgradeManager } from "managers/upgrader";
 import { ConquestManager } from "managers/conquest";
 import { RoomPlanner } from "managers/roomplanner";
 import { StatsManager } from "managers/stats-manager";
+import { SegmentManager } from "managers/segments";
+import { CachedPaths } from "utils/cached-paths";
 
 // profiler.enable();
 
@@ -174,6 +176,8 @@ export const loop = ErrorMapper.wrapLoop(() => {
     UpgradeManager.runForAllRooms();
     // ConquestManager.run();
     RoomPlanner.runForAllRooms();
+    CachedPaths.run();
+    SegmentManager.run();
 
     // Automatically delete memory of missing creeps
     for (const name in Memory.creeps) {

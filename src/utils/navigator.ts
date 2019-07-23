@@ -1,5 +1,6 @@
 import { defaultReusePath } from "../constants/misc";
 import "./Traveler";
+import { ErrorMapper } from "./ErrorMapper";
 
 function hashCode(str: string) {
   // java String#hashCode
