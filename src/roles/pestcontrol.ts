@@ -7,7 +7,7 @@ interface IVersatileMemory extends CreepMemory {}
 
 export class RolePestControl implements IRole {
   static checkReconstruction() {
-    if (Game.time % 15 !== 0) {
+    if (Game.time % 150 !== 0) {
       return;
     }
     const roomsToWatch = ["E25N37", "E23N36"];

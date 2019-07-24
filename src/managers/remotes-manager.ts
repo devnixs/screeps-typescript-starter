@@ -69,7 +69,7 @@ export class RemotesManager {
   }
 
   ensureRemotesAreValid() {
-    if (Game.time % 100 > 0) {
+    if (Game.time % 103 > 0) {
       return;
     }
     this.room.memory.remotes = _.uniq(this.room.memory.remotes, i => i.x + "-" + i.y + "-" + i.room);
@@ -170,11 +170,16 @@ export class RemotesManager {
       const roomsSorted = _.sortBy(rooms, room => {
         const remotesInThisRoom = this.getEnabledRemotes().filter(i => i.room === room);
         const points = remotesInThisRoom.map(i => i.distance);
+        const roomType = Cartographer.roomType(room);
         let average = _.sum(points) / points.length;
 
         if (points.length >= 2) {
           // bonus when there are multiple sources in the same room
           average = average / (1 + points.length / 20);
+        }
+
+        if (roomType === "SK") {
+          average = average * 3;
         }
 
         // console.log("Room ", room, "has average", average);
@@ -261,7 +266,7 @@ export class RemotesManager {
 
   createRoads() {
     const remotes = this.getEnabledRemotes();
-    if (Game.time % 300 === 0 && remotes.length) {
+    if (Game.time % 287 === 0 && remotes.length) {
       const homeSpawn = this.room.find(FIND_MY_SPAWNS)[0];
 
       const rnd = Math.floor(Math.random() * remotes.length);
@@ -361,7 +366,7 @@ export class RemotesManager {
   }
 
   checkReservation() {
-    if (Game.time % 10 > 0) {
+    if (Game.time % 11 > 0) {
       return;
     }
     this.getEnabledRemotes().forEach(remote => {
@@ -385,7 +390,7 @@ export class RemotesManager {
   }
 
   checkEnergyGeneration() {
-    if (Game.time % 10 > 0) {
+    if (Game.time % 11 > 0) {
       return;
     }
     this.getEnabledRemotes().forEach(remote => {

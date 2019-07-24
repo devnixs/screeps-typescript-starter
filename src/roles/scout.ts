@@ -134,11 +134,10 @@ class RoleScout implements IRole {
       }
     }
 
-    const moveOptions: MoveToOpts = {
+    const moveOptions: TravelToOptions = {
       ignoreRoads: true,
-      swampCost: 1,
-      plainCost: 1,
-      costCallback: (roomName, matrix) => {
+      disableCaching: true,
+      roomCallback: (roomName: string, matrix: CostMatrix) => {
         // avoid enemies if possible
         const room = Game.rooms[roomName];
         if (room) {

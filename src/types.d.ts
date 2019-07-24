@@ -41,6 +41,7 @@ interface CreepMemory {
   rest: any;
 
   r?: number; // templateRepeat
+  s?: number; // Last rest time
 }
 
 interface PlannedLocation {

@@ -257,6 +257,10 @@ export function flee(creep: Creep) {
   }
 }
 
+export function runFromTimeToTime(duration: number, every: number) {
+  return Math.floor((Game.time / duration) % every) === 0;
+}
+
 export function getObstaclesToAvoidRangedEnemies(creep: Creep) {
   // avoid area around hostiles
   const enemies = findHostiles(creep);

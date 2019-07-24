@@ -2,8 +2,10 @@ import { sourceManager } from "utils/source-manager";
 import { profiler } from "../utils/profiler";
 import { findHostile, findNonEmptyResourceInStore, findNonEmptyResourcesInStore } from "utils/finder";
 import { IRemoteDefenderMemory } from "./remote-defender";
-import { flee } from "utils/misc-utils";
+import { flee, runFromTimeToTime } from "utils/misc-utils";
 import { Cartographer } from "utils/cartographer";
+
+function measureCpu() {}
 
 export interface ILongDistanceTruckMemory extends CreepMemory {
   depositing?: boolean;
@@ -47,39 +49,40 @@ class RoleLongDistanceTruck implements IRole {
     // if creep is supposed to transfer energy to a structure
     if (memory.depositing == true) {
       // first let's see if a road needs to be built
-      const constructionSite = creep.pos.findClosestByRange(FIND_CONSTRUCTION_SITES);
-      if (
-        constructionSite &&
-        constructionSite.pos.inRangeTo(creep, 5) &&
-        constructionSite.structureType !== "rampart"
-      ) {
-        if (creep.build(constructionSite) === ERR_NOT_IN_RANGE) {
-          creep.goTo(constructionSite);
+      if (runFromTimeToTime(10, 10)) {
+        const constructionSite = creep.pos.findClosestByRange(FIND_CONSTRUCTION_SITES);
+        if (
+          constructionSite &&
+          constructionSite.pos.inRangeTo(creep, 5) &&
+          constructionSite.structureType !== "rampart"
+        ) {
+          if (creep.build(constructionSite) === ERR_NOT_IN_RANGE) {
+            creep.goTo(constructionSite);
+          }
+          return;
         }
-        return;
       }
 
       // if in home room
       if (creep.room.name == memory.home) {
-        sourceManager.store(creep);
-      }
-      // if not in home room...
-      else {
-        const damagedRoad: StructureRoad = creep.pos.findInRange(FIND_STRUCTURES, 3, {
-          filter: structure => structure.structureType === "road" && structure.hits < structure.hitsMax * 0.75
-        })[0] as any;
+        sourceManager.storeInStorageIfPossible(creep);
+      } else {
+        // if not in home room...
+        if (runFromTimeToTime(10, 10)) {
+          const damagedRoad: StructureRoad = creep.pos.findInRange(FIND_STRUCTURES, 3, {
+            filter: structure => structure.structureType === "road" && structure.hits < structure.hitsMax * 0.75
+          })[0] as any;
 
-        if (damagedRoad) {
-          if (creep.repair(damagedRoad) === ERR_NOT_IN_RANGE) {
-            creep.goTo(damagedRoad);
+          if (damagedRoad) {
+            if (creep.repair(damagedRoad) === ERR_NOT_IN_RANGE) {
+              creep.goTo(damagedRoad);
+            }
+            return;
           }
-          return;
         }
 
         // find exit to home room
-        const moveResult = creep.goTo(
-          new RoomPosition(memory.homeSpawnPosition.x, memory.homeSpawnPosition.y, memory.home)
-        );
+        creep.goTo(new RoomPosition(memory.homeSpawnPosition.x, memory.homeSpawnPosition.y, memory.home));
       }
     }
     // if creep is supposed to harvest energy from source
@@ -119,18 +122,20 @@ class RoleLongDistanceTruck implements IRole {
         return;
       }
       if (creep.room.name == container.room.name) {
-        const nonEmptyResources = findNonEmptyResourcesInStore(container.store);
-        if (nonEmptyResources.length) {
-          const withdrawResult = creep.withdraw(container, nonEmptyResources[0]);
-          if (withdrawResult === ERR_NOT_IN_RANGE) {
-            creep.goTo(container);
-          }
-          // if more than 1, wait one tick to get the other resource
-          if (withdrawResult === OK && nonEmptyResources.length === 1) {
+        if (container.pos.getRangeTo(creep) > 1) {
+          creep.goTo(container);
+          return;
+        } else {
+          const nonEmptyResources = findNonEmptyResourcesInStore(container.store);
+          if (nonEmptyResources.length) {
+            const withdrawResult = creep.withdraw(container, nonEmptyResources[0]);
+            // if more than 1, wait one tick to get the other resource
+            if (withdrawResult === OK && nonEmptyResources.length === 1) {
+              memory.depositing = true;
+            }
+          } else {
             memory.depositing = true;
           }
-        } else {
-          memory.depositing = true;
         }
 
         return;
@@ -143,7 +148,7 @@ class RoleLongDistanceTruck implements IRole {
         if (hasEnemy && !isRoomSK) {
           // go back home until the threat is gone
           const ctrl = Game.rooms[memory.homeRoom].controller;
-          if (ctrl) {
+          if (ctrl && !ctrl.pos.isNearTo(creep)) {
             creep.say("🐓");
             creep.goTo(ctrl);
           }

@@ -38,8 +38,9 @@ export class RoomPlanner {
 
   run() {
     this.showVisuals();
+    this.findRestSpot();
 
-    if (Game.time % 9 > 0) {
+    if (Game.time % 37 > 0) {
       return;
     }
 
@@ -91,6 +92,8 @@ export class RoomPlanner {
         }
       }
     }
+
+    this.addRampartToCriticalStructures();
   }
 
   showVisuals() {
@@ -113,6 +116,43 @@ export class RoomPlanner {
             font: 0.3
           }); */
         });
+    }
+  }
+
+  addRampartToCriticalStructures() {
+    let criticalStructures: AnyOwnedStructure[] = this.room.find(FIND_MY_STRUCTURES, {
+      filter: s =>
+        s.structureType === "spawn" ||
+        s.structureType === "tower" ||
+        s.structureType === "storage" ||
+        s.structureType === "terminal" ||
+        s.structureType === "nuker"
+    });
+
+    for (let index in criticalStructures) {
+      const structure = criticalStructures[index];
+
+      const rampartExists = this.room.lookForAt(LOOK_STRUCTURES, structure).find(i => i.structureType === "rampart");
+      if (!rampartExists) {
+        return this.room.createConstructionSite(structure.pos.x, structure.pos.y, STRUCTURE_RAMPART);
+      }
+    }
+    return -1;
+  }
+
+  findRestSpot() {
+    if (Game.time % 1000 > 0 && this.room.memory.restSpot) {
+      return;
+    }
+    const spawn = this.room.spawns[0];
+    const restSpot = findEmptySpotCloseTo(
+      spawn.pos,
+      this.room,
+      false,
+      pos => pos.findInRange(FIND_STRUCTURES, 3).length === 0
+    );
+    if (restSpot) {
+      this.room.memory.restSpot = restSpot;
     }
   }
 

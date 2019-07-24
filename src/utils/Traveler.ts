@@ -102,6 +102,7 @@ export class Traveler {
     }
 
     let newPath = false;
+    let usedCachedPath = false;
     if (
       !travelData.path &&
       !options.disableCaching &&
@@ -113,6 +114,7 @@ export class Traveler {
         newPath = true;
         state.destination = destination;
         travelData.path = path;
+        usedCachedPath = true;
       }
     }
 
@@ -146,7 +148,11 @@ export class Traveler {
       }
 
       travelData.path = Traveler.serializePath(creep.pos, ret.path, color);
-      if ((options.ignoreCreeps === undefined || options.ignoreCreeps === true) && !ret.incomplete) {
+      if (
+        (options.ignoreCreeps === undefined || options.ignoreCreeps === true) &&
+        !ret.incomplete &&
+        !options.disableCaching
+      ) {
         CachedPaths.storePath(creep.pos, destination, travelData.path);
       }
       state.stuckCount = 0;
@@ -169,16 +175,27 @@ export class Traveler {
     }
 
     let nextDirection = parseInt(travelData.path[0], 10);
-    if (options.returnData) {
-      if (nextDirection) {
-        let nextPos = Traveler.positionAtDirection(creep.pos, nextDirection);
-        if (nextPos) {
-          options.returnData.nextPos = nextPos;
+
+    if (nextDirection) {
+      let nextPos = Traveler.positionAtDirection(creep.pos, nextDirection);
+      if (nextPos && state.stuckCount === 1) {
+        const creepThere = nextPos.lookFor(LOOK_CREEPS)[0];
+        if (creepThere && creepThere.memory && creepThere.memory.s && creepThere.memory.s >= Game.time - 1) {
+          // swap with him
+          creepThere.move(Traveler.invertDirection(nextDirection) as DirectionConstant);
         }
       }
-      options.returnData.state = state;
-      options.returnData.path = travelData.path;
+      if (options.returnData) {
+        if (nextDirection) {
+          if (nextPos) {
+            options.returnData.nextPos = nextPos;
+          }
+        }
+        options.returnData.state = state;
+        options.returnData.path = travelData.path;
+      }
     }
+
     return creep.move(nextDirection as DirectionConstant);
   }
 
@@ -637,9 +654,13 @@ export class Traveler {
     try {
       return new RoomPosition(x, y, origin.roomName);
     } catch (e) {
-      console.log("Room position is invalid", x, y, origin.roomName);
+      console.log("Room position is invalid", x, y, origin.roomName, direction);
       throw e;
     }
+  }
+
+  public static invertDirection(direction: number): number {
+    return ((direction + 4 - 1) % 8) + 1;
   }
 
   /**

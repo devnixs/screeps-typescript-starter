@@ -86,6 +86,7 @@ let findAndCache = function findAndCache<K extends FindConstant>(
   let obj = Game.getObjectById(entry.id) as any;
 
   if (!obj) {
+    delete caches[key];
     return null;
   }
 
@@ -141,6 +142,14 @@ interface IRestPosition {
 }
 
 let findRestSpot = function findRestSpot(creep: Creep, closeTo?: { x: number; y: number }) {
+  creep.memory.s = Game.time;
+  creep.room.visual.circle(creep.pos.x, creep.pos.y, {
+    radius: 0.3,
+    fill: "transparent",
+    stroke: "#DCDCAA",
+    strokeWidth: 0.15,
+    opacity: 0.9
+  });
   if (creep.room.memory.restSpot) {
     return new RoomPosition(creep.room.memory.restSpot.x, creep.room.memory.restSpot.y, creep.room.name);
   } else {
@@ -156,7 +165,12 @@ export interface SimplePos {
   y: number;
 }
 
-let findEmptySpotCloseTo = function findEmptySpotCloseTo(pos: SimplePos, room: Room, ignoreFirst: boolean = false) {
+let findEmptySpotCloseTo = function findEmptySpotCloseTo(
+  pos: SimplePos,
+  room: Room,
+  ignoreFirst: boolean = false,
+  filter?: (pos: RoomPosition) => boolean
+) {
   const openList = [pos];
   const closedList = [];
 
@@ -168,7 +182,9 @@ let findEmptySpotCloseTo = function findEmptySpotCloseTo(pos: SimplePos, room: R
       .find(i => i.type === LOOK_STRUCTURES || (i.type === LOOK_TERRAIN && i.terrain === "wall"));
 
     if (!structureHere && (!ignoreFirst || current.x != pos.x || current.y != pos.y)) {
-      return current;
+      if (!filter || filter(new RoomPosition(current.x, current.y, room.name))) {
+        return current;
+      }
     }
 
     for (let i = -1; i <= 1; i++) {
@@ -338,6 +354,7 @@ findUnsafeArea = profiler.registerFN(findUnsafeArea, "findUnsafeArea");
 
 (global as any).findSafeAreaAround = findSafeAreaAround;
 (global as any).closestRooms = closestRooms;
+(global as any).findEmptySpotCloseTo = findEmptySpotCloseTo;
 
 export {
   findNonEmptyResourceInStore,

@@ -12,7 +12,7 @@ export class UpgradeManager {
   }
 
   run() {
-    if (Game.time % 10 > 0) {
+    if (Game.time % 13 > 0) {
       return;
     }
 

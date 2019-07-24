@@ -39,7 +39,7 @@ export class DefenseManager {
 
     const threatLevel = this.getThreatLevel(this.room);
     const towerCount = this.room.find(FIND_MY_STRUCTURES, { filter: s => s.structureType === "tower" }).length;
-    const towerThreatCompensation = towerCount * 5;
+    const towerThreatCompensation = towerCount * 8;
 
     const threatDifference = threatLevel - towerThreatCompensation;
 

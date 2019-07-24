@@ -36,9 +36,9 @@ Creep.prototype.goTo = function(destination: RoomPosition | { pos: RoomPosition 
   }
 
   try {
-    let before = Game.cpu.getUsed();
+    // let before = Game.cpu.getUsed();
     const ret = creep.travelTo(target, { preferHighway: true, ...options });
-    let diff = Game.cpu.getUsed() - before;
+    // let diff = Game.cpu.getUsed() - before;
     /*
     if (
       this.name === "long-distance-truck23" ||
@@ -49,7 +49,7 @@ Creep.prototype.goTo = function(destination: RoomPosition | { pos: RoomPosition 
     } */
     return ret;
   } catch (e) {
-    console.log("Cannot move creep ", this.name);
+    console.log("Cannot move creep ", this.name, this.pos.roomName);
     console.log(e);
     return -1;
   }

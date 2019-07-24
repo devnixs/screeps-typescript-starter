@@ -1,4 +1,4 @@
-import { findAndCache, findRestSpot } from "./finder";
+import { findAndCache, findRestSpot, findNonEmptyResourceInStore } from "./finder";
 import { LinkManager } from "./link-manager";
 import { profiler } from "../utils/profiler";
 import { desiredEnergyInTerminal } from "constants/misc";
@@ -39,10 +39,6 @@ class SourceManager {
     }
   }
   mineMineral(creep: Creep) {
-    if (this.pickupDroppedMineral(creep) === OK) {
-      return OK;
-    }
-
     const targetMineralDeposit = findAndCache<FIND_MINERALS>(
       creep,
       "harvest_mineral_id",
@@ -90,6 +86,11 @@ class SourceManager {
     if (creep.room.memory.isUnderSiege) {
       return -1;
     }
+
+    if (creep.getActiveBodyparts(MOVE) < 3) {
+      return;
+    }
+
     const droppedEnergy = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES, {
       filter: i =>
         i.resourceType === RESOURCE_ENERGY && i.pos.getRangeTo(creep.pos.x, creep.pos.y) <= 5 && i.amount >= 300
@@ -161,6 +162,23 @@ class SourceManager {
     }
   }
 
+  storeInStorageIfPossible(creep: Creep) {
+    const storage = creep.room.storage;
+    if (storage) {
+      if (storage.pos.isNearTo(creep)) {
+        const res = findNonEmptyResourceInStore(creep.carry);
+        if (res) {
+          creep.transfer(storage, res);
+        }
+      } else {
+        creep.goTo(storage);
+      }
+      return OK;
+    } else {
+      return this.store(creep);
+    }
+  }
+
   getEnergy(creep: Creep) {
     let targetStructure: AnyStructure | undefined = undefined;
 
@@ -179,7 +197,7 @@ class SourceManager {
       }
     }
 
-    if (!targetStructure) {
+    if (!targetStructure && creep.getActiveBodyparts(MOVE) >= 4) {
       targetStructure = creep.pos.findInRange(FIND_STRUCTURES, 4, {
         filter: i => i.structureType === "container" && i.store.energy > i.storeCapacity / 4
       })[0];
@@ -317,10 +335,10 @@ class SourceManager {
     }
 
     if (targetStructure) {
-      let transferResult: number = creep.transfer(targetStructure, RESOURCE_ENERGY);
-      if (transferResult == ERR_NOT_IN_RANGE) {
+      if (creep.pos.isNearTo(targetStructure)) {
+        creep.transfer(targetStructure, RESOURCE_ENERGY);
+      } else {
         creep.goTo(targetStructure);
-        transferResult = creep.transfer(targetStructure, RESOURCE_ENERGY);
       }
     } else {
       return -1;

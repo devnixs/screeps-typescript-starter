@@ -2,7 +2,7 @@ import { getMyRooms } from "utils/misc-utils";
 
 export class StatsManager {
   static runForAllRooms() {
-    if (Game.time % 10 > 0) {
+    if (Game.time % 13 > 0) {
       return;
     }
 

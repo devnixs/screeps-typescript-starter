@@ -11,6 +11,7 @@ interface ICachePath {
 
 const maxPaths = 450;
 const cacheDuration = 10000;
+const enablePathCaching = true;
 
 let cache: ICachePath | null = null;
 (global as any).getCachedPaths = () => cache;
@@ -24,6 +25,9 @@ export class CachedPaths {
   }
 
   static storePath(start: RoomPosition, end: RoomPosition, path: string) {
+    if (!enablePathCaching) {
+      return;
+    }
     if (!cache) {
       console.log("Path cache is not loaded yet. Aborting");
       return;
@@ -54,6 +58,9 @@ export class CachedPaths {
   }
 
   static getPath(start: RoomPosition, end: RoomPosition): string | null {
+    if (!enablePathCaching) {
+      return null;
+    }
     if (!cache) {
       console.log("Path cache is not loaded yet. Aborting");
       return null;
@@ -104,6 +111,10 @@ export class CachedPaths {
   }
 
   static run() {
+    if (!enablePathCaching) {
+      return;
+    }
+
     if (!cache) {
       SegmentManager.loadSegment<ICachePath>(Segments.CachedRoutes, cachedRoutes => {
         if (cachedRoutes) {

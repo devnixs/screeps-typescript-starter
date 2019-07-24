@@ -29,7 +29,7 @@ class RoleReserver implements IRole {
         if (reserveResult === ERR_NOT_IN_RANGE) {
           creep.goTo(ctrl);
         }
-        if (Game.time % 1000 === 0) {
+        if (Game.time % 1242 === 0) {
           // We're in range
           if (reserveResult === OK) {
             creep.signController(ctrl, signature);

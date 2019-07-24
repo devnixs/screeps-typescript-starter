@@ -148,7 +148,7 @@ class RoleTruck implements IRole {
         });
         this.goToRestSpot(creep);
 
-        const checkTime = "sim" in Game.rooms ? 1 : 2;
+        const checkTime = "sim" in Game.rooms ? 1 : 4;
         if (Game.time % checkTime === 0) {
           // periodically check for jobs
           this.setJob(creep);
@@ -422,6 +422,7 @@ class RoleTruck implements IRole {
     var labs = this.getLabs(creep.room).map(i => ({ memory: i, obj: Game.getObjectById(i.id) as StructureLab }));
     var labsThatNeedsEmptying = labs.filter(
       i =>
+        i.obj &&
         i.memory.state === "needs-emptying" &&
         i.obj.mineralAmount > 0 &&
         (i.obj.cooldown === 0 || i.obj.mineralAmount > 300)

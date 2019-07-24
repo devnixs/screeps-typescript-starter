@@ -3,7 +3,7 @@ import { isInSafeArea } from "./safe-area";
 
 export class SafeModeActivator {
   static activeSafeModeIfNecessary() {
-    if (Game.time % 2 > 0) {
+    if (Game.time % 4 > 0) {
       return;
     }
 

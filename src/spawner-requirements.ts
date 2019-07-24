@@ -8,7 +8,7 @@ import { RoleBuilder } from "roles/builder";
 import { IReserverMemory } from "roles/reserver";
 import { ILongDistanceTruckMemory } from "roles/longdistancetruck";
 import { IRemoteDefenderMemory } from "roles/remote-defender";
-import { getMyRooms } from "utils/misc-utils";
+import { getMyRooms, runFromTimeToTime } from "utils/misc-utils";
 import { isInSafeArea } from "utils/safe-area";
 import { profiler } from "utils/profiler";
 import { Cartographer } from "utils/cartographer";
@@ -506,7 +506,10 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
       exactBody: [MOVE],
       percentage: 1,
       role: "scout",
-      maxCount: !spawn.room.memory.isUnderSiege && controllerLevel >= 3 ? 1 : 0
+      maxCount:
+        runFromTimeToTime(1500, 5) && !spawn.room.memory.isUnderSiege && controllerLevel >= 3 && controllerLevel < 8
+          ? 1
+          : 0
     },
     ...upgraders,
     {

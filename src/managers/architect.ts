@@ -5,7 +5,7 @@ import { mincutHelper } from "../utils/mincut-walls";
 import { Traveler } from "utils/Traveler";
 
 const isSimulation = "sim" in Game.rooms;
-const delay = isSimulation ? 1 : 20;
+const delay = isSimulation ? 1 : 40;
 
 export class Architect {
   emptySpot: Vector | undefined;
@@ -57,7 +57,7 @@ export class Architect {
       return;
     }
 
-    if(this.room.memory.useNewRoomPlanner){
+    if (this.room.memory.useNewRoomPlanner) {
       return;
     }
 
