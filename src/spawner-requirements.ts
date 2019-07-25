@@ -507,7 +507,7 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
       percentage: 1,
       role: "scout",
       maxCount:
-        runFromTimeToTime(1500, 5) && !spawn.room.memory.isUnderSiege && controllerLevel >= 3 && controllerLevel < 8
+        runFromTimeToTime(1500, 4500) && !spawn.room.memory.isUnderSiege && controllerLevel >= 3 && controllerLevel < 8
           ? 1
           : 0
     },

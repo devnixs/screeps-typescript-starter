@@ -9,7 +9,7 @@ interface ThreatLevelAndTime {
 
 const lastSeenThreatLevels: { [roomName: string]: ThreatLevelAndTime } = {};
 (global as any).getLastSeenThreatLevels = function() {
-  console.log(JSON.stringify(lastSeenThreatLevels));
+  return lastSeenThreatLevels;
 };
 
 export class DefenseManager {
@@ -37,7 +37,7 @@ export class DefenseManager {
       return;
     }
 
-    const threatLevel = this.getThreatLevel(this.room);
+    const threatLevel = this.getThreatLevel(this.room.name);
     const towerCount = this.room.find(FIND_MY_STRUCTURES, { filter: s => s.structureType === "tower" }).length;
     const towerThreatCompensation = towerCount * 8;
 
@@ -82,10 +82,7 @@ export class DefenseManager {
 
   checkRemotes() {
     _.uniq(this.room.memory.remotes.filter(i => !i.disabled).map(i => i.room)).forEach(room => {
-      const remoteRoom = Game.rooms[room];
-      if (remoteRoom) {
-        this.addDefenders(remoteRoom);
-      }
+      this.addDefenders(room);
     });
 
     // if there's a remote with more than 50 threat, use boosts to defend
@@ -101,14 +98,14 @@ export class DefenseManager {
     }
   }
 
-  addDefenders(targetRoom: Room) {
+  addDefenders(targetRoom: string) {
     const threatLevel = this.getThreatLevel(targetRoom);
     if (threatLevel > 0) {
       // console.log("Found threat in room", targetRoom.name);
       this.room.memory.needsDefenders.push({
-        room: targetRoom.name,
+        room: targetRoom,
         threatLevel: threatLevel,
-        mode: targetRoom.name === this.room.name ? "local" : "remote"
+        mode: targetRoom === this.room.name ? "local" : "remote"
       });
     }
   }
@@ -149,38 +146,32 @@ export class DefenseManager {
     // if there are still
   }
 
-  getThreatLevel(targetRoom: Room) {
-    const lastSeenThreat = lastSeenThreatLevels[targetRoom.name];
+  getThreatLevel(targetRoomName: string) {
+    const targetRoom = Game.rooms[targetRoomName];
+    const lastSeenThreat = lastSeenThreatLevels[targetRoomName];
 
-    if (lastSeenThreat && lastSeenThreat.time > Game.time - 20) {
-      if (lastSeenThreat.threatLevel > 0) {
-        targetRoom.visual.text("DANGER " + lastSeenThreat.threatLevel, 20, 20, {
-          color: "white",
-          backgroundColor: "black",
-          opacity: 0.5
-        });
-      }
+    if (!targetRoom && lastSeenThreat && lastSeenThreat.time > Game.time - 70) {
       return lastSeenThreat.threatLevel;
     }
 
     let threatLevel = 0;
 
-    if (Cartographer.roomType(targetRoom.name) === "SK") {
+    if (Cartographer.roomType(targetRoomName) === "SK") {
       threatLevel += 16;
     }
 
-    const enemies =
-      targetRoom &&
-      targetRoom.find(FIND_HOSTILE_CREEPS, {
-        filter: i =>
-          i.body.find(
-            bodyPart =>
-              bodyPart.type === "attack" ||
-              bodyPart.type === "ranged_attack" ||
-              bodyPart.type === "heal" ||
-              bodyPart.type === "work"
-          )
-      });
+    const enemies = targetRoom
+      ? targetRoom.find(FIND_HOSTILE_CREEPS, {
+          filter: i =>
+            i.body.find(
+              bodyPart =>
+                bodyPart.type === "attack" ||
+                bodyPart.type === "ranged_attack" ||
+                bodyPart.type === "heal" ||
+                bodyPart.type === "work"
+            )
+        })
+      : [];
 
     if (enemies.length) {
       const threatValues = _.flatten(
@@ -216,16 +207,17 @@ export class DefenseManager {
     }
 
     if (threatLevel > 0) {
-      lastSeenThreatLevels[targetRoom.name] = {
+      lastSeenThreatLevels[targetRoomName] = {
         threatLevel: threatLevel,
         time: Game.time
       };
 
-      targetRoom.visual.text("DANGER " + threatLevel, 20, 20, {
-        color: "white",
-        backgroundColor: "black",
-        opacity: 0.5
-      });
+      targetRoom &&
+        targetRoom.visual.text("DANGER " + threatLevel, 20, 20, {
+          color: "white",
+          backgroundColor: "black",
+          opacity: 0.5
+        });
     }
 
     return threatLevel;

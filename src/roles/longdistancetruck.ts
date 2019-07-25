@@ -49,18 +49,16 @@ class RoleLongDistanceTruck implements IRole {
     // if creep is supposed to transfer energy to a structure
     if (memory.depositing == true) {
       // first let's see if a road needs to be built
-      if (runFromTimeToTime(10, 10)) {
-        const constructionSite = creep.pos.findClosestByRange(FIND_CONSTRUCTION_SITES);
-        if (
-          constructionSite &&
-          constructionSite.pos.inRangeTo(creep, 5) &&
-          constructionSite.structureType !== "rampart"
-        ) {
-          if (creep.build(constructionSite) === ERR_NOT_IN_RANGE) {
-            creep.goTo(constructionSite);
-          }
-          return;
+      const constructionSite = creep.pos.findClosestByRange(FIND_CONSTRUCTION_SITES);
+      if (
+        constructionSite &&
+        constructionSite.pos.inRangeTo(creep, 5) &&
+        constructionSite.structureType !== "rampart"
+      ) {
+        if (creep.build(constructionSite) === ERR_NOT_IN_RANGE) {
+          creep.goTo(constructionSite);
         }
+        return;
       }
 
       // if in home room
@@ -68,7 +66,7 @@ class RoleLongDistanceTruck implements IRole {
         sourceManager.storeInStorageIfPossible(creep);
       } else {
         // if not in home room...
-        if (runFromTimeToTime(10, 10)) {
+        if (runFromTimeToTime(5, 20)) {
           const damagedRoad: StructureRoad = creep.pos.findInRange(FIND_STRUCTURES, 3, {
             filter: structure => structure.structureType === "road" && structure.hits < structure.hitsMax * 0.75
           })[0] as any;

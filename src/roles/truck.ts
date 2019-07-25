@@ -176,8 +176,8 @@ class RoleTruck implements IRole {
       return OK;
     }
 
-    const getStructureThatNeedsEnergy = sourceManager.getStructureThatNeedsEnergy(creep);
-    if (!getStructureThatNeedsEnergy) {
+    const structureThatNeedsEnergy = sourceManager.getStructureThatNeedsEnergy(creep);
+    if (!structureThatNeedsEnergy) {
       if (creep.carry.energy > 0) {
         // empty energy first
         return sourceManager.storeEnergy(creep);
@@ -196,7 +196,11 @@ class RoleTruck implements IRole {
     }
 
     if (memory.isDepositingEnergy) {
-      return sourceManager.storeEnergy(creep);
+      if (creep.pos.isNearTo(structureThatNeedsEnergy)) {
+        return creep.transfer(structureThatNeedsEnergy, RESOURCE_ENERGY);
+      } else {
+        return creep.goTo(structureThatNeedsEnergy);
+      }
     } else {
       return sourceManager.getEnergyFromStorageIfPossible(creep);
     }

@@ -22,8 +22,8 @@ class RoleLongDistanceHarvester implements IRole {
       return;
     }
 
-    if (runFromTimeToTime(10, 10)) {
-      if (totalCargoContent >= creep.carryCapacity / 2 && creep.getActiveBodyparts(CARRY)) {
+    if (totalCargoContent >= creep.carryCapacity / 2 && creep.getActiveBodyparts(CARRY)) {
+      if (runFromTimeToTime(5, 10)) {
         const constructionSite = creep.pos.findInRange(FIND_CONSTRUCTION_SITES, 5, {
           filter: i => i.structureType === "container"
         })[0];
@@ -33,6 +33,9 @@ class RoleLongDistanceHarvester implements IRole {
           }
           return;
         }
+      }
+
+      if (runFromTimeToTime(5, 20)) {
         const damagedContainer = creep.pos
           .lookFor("structure")
           .filter(i => i.structureType === "container" && i.hits < i.hitsMax * 0.75)[0];
@@ -69,13 +72,21 @@ class RoleLongDistanceHarvester implements IRole {
         const container = creep.room.find(FIND_STRUCTURES, {
           filter: i => i.structureType === "container" && i.pos.isNearTo(source.pos)
         })[0];
-        if (container && creep.pos.getRangeTo(container) > 0) {
-          creep.goTo(container);
-          return;
-        }
-        if (container && creep.pos.getRangeTo(container) === 0) {
-          memory.sittingOnContainer = true;
-          return;
+        if (container) {
+          if (creep.pos.getRangeTo(container) > 0) {
+            creep.goTo(container);
+            return;
+          }
+          if (creep.pos.getRangeTo(container) === 0) {
+            memory.sittingOnContainer = true;
+            return;
+          }
+        } else {
+          if (creep.pos.isNearTo(source)) {
+            creep.harvest(source);
+          } else {
+            creep.goTo(source);
+          }
         }
       }
     }

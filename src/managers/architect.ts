@@ -7,6 +7,8 @@ import { Traveler } from "utils/Traveler";
 const isSimulation = "sim" in Game.rooms;
 const delay = isSimulation ? 1 : 40;
 
+const constructionSitesProgress: { [id: string]: number } = {};
+
 export class Architect {
   emptySpot: Vector | undefined;
   constructor(private room: Room) {}
@@ -40,7 +42,7 @@ export class Architect {
   }
 
   cleanupStaleConstructionSites() {
-    if (Game.time % 20000 > 0) {
+    if (Game.time % 2000 > 0) {
       return;
     }
     Object.keys(Game.constructionSites)
@@ -49,9 +51,33 @@ export class Architect {
       .forEach(ConstructionSite => ConstructionSite.remove());
   }
 
+  cleanupConstructionSitesWithNoProgress() {
+    if (Game.time % 3000 > 0) {
+      return;
+    }
+
+    _.uniq(Object.keys(Game.constructionSites).concat(Object.keys(constructionSitesProgress)))
+      .map(i => ({ id: i, current: Game.constructionSites[i], old: constructionSitesProgress[i] }))
+      .forEach(i => {
+        if (!i.old && i.current) {
+          constructionSitesProgress[i.id] = i.current.progress;
+        }
+
+        if (i.old && !i.current) {
+          delete constructionSitesProgress[i.id];
+        }
+
+        if (i.old && i.current && i.old === i.current.progress) {
+          // there has been no progress since last time. Delete construction site.
+          i.current.remove();
+        }
+      });
+  }
+
   run() {
     this.cleanupNonVisibleConstructionSites();
     this.cleanupStaleConstructionSites();
+    this.cleanupConstructionSitesWithNoProgress();
 
     if (Object.keys(Game.constructionSites).length > MAX_CONSTRUCTION_SITES * 0.9) {
       return;

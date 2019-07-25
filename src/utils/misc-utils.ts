@@ -258,7 +258,7 @@ export function flee(creep: Creep) {
 }
 
 export function runFromTimeToTime(duration: number, every: number) {
-  return Math.floor((Game.time / duration) % every) === 0;
+  return Math.floor((Game.time / duration) % Math.floor(every / duration)) === 0;
 }
 
 export function getObstaclesToAvoidRangedEnemies(creep: Creep) {

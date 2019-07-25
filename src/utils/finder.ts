@@ -66,7 +66,7 @@ let findAndCache = function findAndCache<K extends FindConstant>(
   findConstant: FindConstant,
   keepAliveCheck: (element: FindTypes[K]) => boolean,
   filter: FindPathOpts & FilterOptions<K> & { algorithm?: string },
-  duration: number = 50
+  duration: number = 10
 ): FindTypes[K] | null {
   const key = creep.id + cacheKey;
 
