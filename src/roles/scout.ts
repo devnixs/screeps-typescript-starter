@@ -40,7 +40,7 @@ class RoleScout implements IRole {
       const myRooms = getMyRooms();
       if (!myRooms.find(i => i === creep.room)) {
         ExplorationManager.analyzeRoom(creep.room);
-        const roomMemory = Memory.explorations.find(i => i.r === creep.room.name);
+        const roomMemory = ExplorationManager.getExploration(creep.room.name);
         if (roomMemory) {
           roomMemory.l = Game.time;
         }
@@ -50,7 +50,7 @@ class RoleScout implements IRole {
 
       const removedEnemyRooms = neighboorRooms.filter(pair => {
         const room = pair[1];
-        const roomMemory = Memory.explorations.find(i => i.r === room);
+        const roomMemory = ExplorationManager.getExploration(room);
 
         const isEnemy = roomMemory && roomMemory.eb;
 
@@ -74,7 +74,7 @@ class RoleScout implements IRole {
       const lastCheckedFirst = _.sortBy(avoidMyRooms, pair => {
         const room = pair[1];
 
-        const roomMemory = Memory.explorations.find(i => i.r === room);
+        const roomMemory = ExplorationManager.getExploration(room);
 
         if (myRooms.find(i => i.name === room)) {
           return Infinity;
@@ -111,7 +111,7 @@ class RoleScout implements IRole {
       (currentSignUser !== getUsername() || (currentSign && !currentSign.endsWith(signature)))
     ) {
       creep.goTo(creep.room.controller);
-      const hasExplorationMemory = Memory.explorations.find(i => i.r === creep.room.name);
+      const hasExplorationMemory = ExplorationManager.getExploration(creep.room.name);
       if (hasExplorationMemory && hasExplorationMemory.c) {
         creep.signController(creep.room.controller, hasExplorationMemory.c.s + " " + signature);
       } else {

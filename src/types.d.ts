@@ -192,7 +192,7 @@ interface Memory {
   closestRooms: { [roomName: string]: string };
 
   // roomExplorations: RoomExplorationReport[];
-  explorations: RoomExplorationReport[];
+  // explorations: RoomExplorationReport[];
 
   lastConquestTime: number | undefined;
 }
