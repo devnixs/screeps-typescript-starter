@@ -53,12 +53,17 @@ export function hasMinerals(store: { [resourceType: string]: number }): boolean 
   return false;
 }
 
+let username: string | undefined = undefined;
 export function getUsername(): string {
+  if (username) {
+    return username;
+  }
   try {
     for (let i in Game.rooms) {
       let room = Game.rooms[i];
       if (room.controller && room.controller.my) {
-        return room.controller.owner.username;
+        username = room.controller.owner.username;
+        return username;
       }
     }
   } catch (e) {

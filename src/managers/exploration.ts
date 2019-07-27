@@ -2,7 +2,7 @@ import { getMyRooms, getUsername } from "utils/misc-utils";
 import { Cartographer } from "utils/cartographer";
 import { profiler } from "utils/profiler";
 import { Traveler } from "utils/Traveler";
-import { findClosestRoom, SimplePos } from "utils/finder";
+import { findClosestRoom } from "utils/finder";
 import { explorationConstants } from "constants/memory-constants";
 import { buildRangeFromRoomLimit } from "constants/misc";
 import { SegmentManager, RoomExplorationsSegments } from "./segments";

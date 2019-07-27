@@ -1,5 +1,3 @@
-import { SimplePos } from "utils/finder";
-
 // example declaration file - remove these and add your own custom typings
 
 type roles =
@@ -113,11 +111,15 @@ interface AttackSetup {
 }
 
 interface AttackParty {
+  isApproxPath: boolean;
   id: number;
   creeps: AttackPartyCreep[];
   status: "forming" | "moving" | "regrouping" | "attacking" | "retreating" | "dead";
   boosted: boolean;
   count: number;
+  rallyPoint?: { x: number; y: number; roomName: string };
+  currentPositionIndex?: number;
+  attackPath?: string;
 }
 
 interface AttackPartyCreep {
@@ -229,6 +231,11 @@ interface Memory {
 }
 
 type MEMORY_TICK = "t";
+
+interface SimplePos {
+  x: number;
+  y: number;
+}
 
 interface RoomExplorationReport {
   /**

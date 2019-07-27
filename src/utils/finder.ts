@@ -160,11 +160,6 @@ let findRestSpot = function findRestSpot(creep: Creep, closeTo?: { x: number; y:
   }
 };
 
-export interface SimplePos {
-  x: number;
-  y: number;
-}
-
 let findEmptySpotCloseTo = function findEmptySpotCloseTo(
   pos: SimplePos,
   room: Room,
