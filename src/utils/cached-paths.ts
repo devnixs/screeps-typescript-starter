@@ -29,7 +29,7 @@ export class CachedPaths {
       return;
     }
     if (!cache) {
-      console.log("Path cache is not loaded yet. Aborting");
+      // console.log("Path cache is not loaded yet. Aborting");
       return;
     }
 
@@ -45,11 +45,11 @@ export class CachedPaths {
     const key = CachedPaths.serializeStartEnd(start, end);
     const existing = cache[key];
     if (existing) {
-      console.log("path ", key, "already exists. Updating.");
+      // console.log("path ", key, "already exists. Updating.");
       existing.date = Game.time;
       existing.path = path;
     } else {
-      console.log("Saving path ", key);
+      // console.log("Saving path ", key);
       cache[key] = {
         date: Game.time,
         path: path
@@ -62,7 +62,7 @@ export class CachedPaths {
       return null;
     }
     if (!cache) {
-      console.log("Path cache is not loaded yet. Aborting");
+      // console.log("Path cache is not loaded yet. Aborting");
       return null;
     }
     if (start.roomName === end.roomName) {
@@ -126,13 +126,13 @@ export class CachedPaths {
     }
 
     if (cache && Game.time % 1000 === 0) {
-      console.log("Cleaning up old paths...");
+      // console.log("Cleaning up old paths...");
       // cleanup old paths
       Object.keys(cache).forEach(key => {
         const cacheNotNull = cache as ICachePath;
         const path = cacheNotNull[key];
         if (path.date < Game.time - cacheDuration) {
-          console.log("Deleted old path ", key);
+          // console.log("Deleted old path ", key);
           delete cacheNotNull[key];
         }
       });

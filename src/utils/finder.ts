@@ -7,7 +7,7 @@ interface RoomAndExpiration {
 }
 const closestRooms: { [target: string]: RoomAndExpiration } = {};
 
-let findClosestRoom = function(targetRoom: string) {
+let findClosestRoom = function(targetRoom: string, filter?: (room: Room) => boolean) {
   if (closestRooms[targetRoom] && closestRooms[targetRoom].expiration <= Game.time) {
     delete closestRooms[targetRoom];
   }
@@ -24,21 +24,37 @@ let findClosestRoom = function(targetRoom: string) {
       ? Game.rooms[targetRoom].spawns[0].pos
       : new RoomPosition(25, 25, targetRoom);
 
-  var roomsAndDistances = myRooms.map(sourceRoom => {
-    const sourceSpawn = Game.rooms[sourceRoom].spawns[0].pos;
-    var distance = Traveler.findTravelPath(sourceSpawn, targetSpawn);
-    if (distance.incomplete) {
-      return {
-        roomName: sourceRoom,
-        distance: 1000000
-      };
-    } else {
-      return {
-        roomName: sourceRoom,
-        distance: distance.path.length
-      };
-    }
-  });
+  var roomsAndDistances = myRooms
+    .map(sourceRoom => {
+      const allowed = !filter || filter(Game.rooms[sourceRoom]);
+      if (!allowed) {
+        return {
+          roomName: sourceRoom,
+          distance: 1000000,
+          allowed: false
+        };
+      }
+      const sourceSpawn = Game.rooms[sourceRoom].spawns[0].pos;
+      var distance = Traveler.findTravelPath(sourceSpawn, targetSpawn);
+      if (distance.incomplete) {
+        return {
+          roomName: sourceRoom,
+          distance: 1000000,
+          allowed: false
+        };
+      } else {
+        return {
+          roomName: sourceRoom,
+          distance: distance.path.length,
+          allowed: true
+        };
+      }
+    })
+    .filter(i => i.allowed);
+
+  if (!roomsAndDistances.length) {
+    return undefined;
+  }
 
   var closest = _.sortBy(roomsAndDistances, i => i.distance);
   if (!closest.length) {

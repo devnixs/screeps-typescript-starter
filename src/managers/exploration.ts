@@ -35,7 +35,7 @@ export class ExplorationManager {
 
     const oldExplorations = (Memory as any).explorations;
     if (oldExplorations) {
-      console.log("Cleaning up old explorations");
+      // console.log("Cleaning up old explorations");
       roomExplorations = roomExplorations.concat(oldExplorations);
       delete (Memory as any).explorations;
       ExplorationManager.saveExplorationsInSegments();
@@ -50,9 +50,9 @@ export class ExplorationManager {
     roomsAreLoading = true;
     let loadedSegments = 0;
     for (let segmentId of RoomExplorationsSegments) {
-      console.log("Loading exploration segment", segmentId);
+      // console.log("Loading exploration segment", segmentId);
       SegmentManager.loadSegment(segmentId, (data: RoomExplorationReport[] | null) => {
-        console.log("Exploration segment", segmentId, "loaded. with data : ", data ? data.length + "elements" : "null");
+        // console.log("Exploration segment", segmentId, "loaded. with data : ", data ? data.length + "elements" : "null");
         if (data) {
           roomExplorations = roomExplorations.concat(data);
           roomExplorations = _.uniq(roomExplorations, i => i.r);
@@ -60,7 +60,7 @@ export class ExplorationManager {
         loadedSegments++;
 
         if (loadedSegments === RoomExplorationsSegments.length) {
-          console.log("All Exploration segments have been loaded.");
+          // console.log("All Exploration segments have been loaded.");
           roomsAreLoaded = true;
           roomsAreLoading = false;
         }

@@ -18,14 +18,20 @@ export class AttackManager {
     }
     const flag = Game.flags["attack"];
     if (!Memory.attack && flag) {
-      var closestRoom = findClosestRoom(flag.pos.roomName);
+      var closestRoom = findClosestRoom(flag.pos.roomName, i => (i.controller ? i.controller.level >= 6 : false));
       if (closestRoom) {
         const isRoomReady = this.isRoomReadyToStartAttack(closestRoom);
 
         if (isRoomReady.ready) {
           AttackManager.startAttack(closestRoom, flag.pos.roomName);
         } else {
-          console.log("Cannot start attack : " + isRoomReady.reason);
+          console.log(
+            "Cannot start attack : " + isRoomReady.reason,
+            "from room ",
+            closestRoom,
+            "to room",
+            flag.pos.roomName
+          );
         }
       }
     }

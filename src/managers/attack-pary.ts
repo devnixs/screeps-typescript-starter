@@ -55,7 +55,7 @@ export class AttackPartyManager {
         leader.creep.say("👬");
       }
       if (this.attackParty.status === "attacking") {
-        leader.creep.say("😵");
+        leader.creep.say("☠️");
       }
       if (this.attackParty.status === "retreating") {
         leader.creep.say("🦃");
@@ -143,7 +143,13 @@ export class AttackPartyManager {
       return;
     }
 
-    this.moveAndAttack(creeps, "forward");
+    const regroupResult = this.regroupIfNecessary(creeps);
+
+    if (regroupResult === "needs-regroup") {
+      this.attackEnemiesAround(creeps);
+    } else {
+      this.moveAndAttack(creeps, "forward");
+    }
   }
 
   private healEachOthers(creeps: AttackPartyCreepLoaded[]): "OK" | "NeedsRetreat" {
@@ -162,6 +168,30 @@ export class AttackPartyManager {
       return "NeedsRetreat";
     } else {
       return "OK";
+    }
+  }
+
+  private regroupIfNecessary(creeps: AttackPartyCreepLoaded[]): "needs-regroup" | "ok" {
+    let needRegroup = false;
+    const leader = creeps[0];
+    for (const creepInfo of creeps) {
+      const normalPositionX = leader.creep.pos.x + creepInfo.x;
+      const normalPositionY = leader.creep.pos.y + creepInfo.y;
+
+      if (
+        creepInfo.creep.room.name === leader.creep.room.name &&
+        (normalPositionX !== creepInfo.creep.pos.x || normalPositionY !== creepInfo.creep.pos.y)
+      ) {
+        needRegroup = true;
+        creepInfo.creep.say("🦄");
+        creepInfo.creep.goTo(new RoomPosition(normalPositionX, normalPositionY, creepInfo.creep.room.name));
+      }
+    }
+
+    if (needRegroup) {
+      return "needs-regroup";
+    } else {
+      return "ok";
     }
   }
 
@@ -208,7 +238,20 @@ export class AttackPartyManager {
     }
   }
 
+  private attackEnemiesAround(creeps: AttackPartyCreepLoaded[]) {
+    const leader = creeps[0];
+    const enemyInRange = leader.creep.pos.findInRange(FIND_HOSTILE_CREEPS, 4);
+    if (enemyInRange.length) {
+      this.attackObject(creeps, enemyInRange[0]);
+    }
+  }
+
   private moveParty(creeps: AttackPartyCreepLoaded[], direction: "forward" | "backward") {
+    if (!!creeps.find(i => i.creep.fatigue > 0)) {
+      // creeps are tired. wait.
+      return undefined;
+    }
+
     if (
       !this.attackParty.attackPath ||
       this.attackParty.currentPositionIndex === undefined ||
@@ -260,7 +303,11 @@ export class AttackPartyManager {
       return firstObstacle as AnyStructure | Creep;
     } else {
       for (const creepInfo of creeps) {
-        creepInfo.creep.move(nextDirection as DirectionConstant);
+        const result = creepInfo.creep.move(nextDirection as DirectionConstant);
+        if (result === OK && creepInfo === creeps[0]) {
+          // leader leads the pace
+          this.attackParty.currentPositionIndex++;
+        }
       }
       return undefined;
     }
@@ -283,39 +330,50 @@ export class AttackPartyManager {
           : { x: 25, y: 25 };
     }
 
-    const attackPath = Traveler.findTravelPath(
-      leader.creep,
-      new RoomPosition(targetLocation.x, targetLocation.y, this.attack.toRoom),
-      {
-        roomCallback: (room, matrix) => {
-          const terrain = Game.map.getRoomTerrain(room);
-          // make sure floor is walkable at creep locations
+    const targetRoomPos = new RoomPosition(targetLocation.x, targetLocation.y, this.attack.toRoom);
+    console.log("Computing attack path from ", leader.creep.pos, "to", targetRoomPos);
+    const attackPath = Traveler.findTravelPath(leader.creep, targetRoomPos, {
+      roomCallback: (room, matrix) => {
+        console.log("Callback for room ", room);
+        const terrain = Game.map.getRoomTerrain(room);
+        // make sure floor is walkable at creep locations
 
-          for (let i = 0; i < 50; i++) {
-            for (let j = 0; j < 50; j++) {
-              const isWall = terrain.get(i, j) === TERRAIN_MASK_WALL;
-              if (isWall) {
-                for (const otherCreep of otherCreeps) {
-                  matrix.set(i - otherCreep.x, j - otherCreep.y, 0xff);
-                }
+        for (let i = 0; i < 50; i++) {
+          for (let j = 0; j < 50; j++) {
+            const isWall = terrain.get(i, j) === TERRAIN_MASK_WALL;
+            if (isWall) {
+              for (const creep of creeps) {
+                /*                   if (Game.rooms[room]) {
+                    Game.rooms[room].visual.circle(i - creep.x, j - creep.y, {
+                      radius: 0.2,
+                      opacity: 0.8,
+                      fill: "transparent",
+                      lineStyle: "solid",
+                      stroke: "green",
+                      strokeWidth: 0.1
+                    });
+                  } */
+                matrix.set(i - creep.x, j - creep.y, 0xff);
               }
             }
           }
-
-          if (roomVisibility && room === roomVisibility.name) {
-            // add ramparts and walls are hard to walk on
-            const walls = roomVisibility.find(FIND_STRUCTURES, {
-              filter: i => i.structureType === "rampart" || i.structureType === "constructedWall"
-            }) as (StructureWall | StructureRampart)[];
-            for (const wall of walls) {
-              matrix.set(wall.pos.x, wall.pos.y, this.wallHitToCost(wall.hits));
-            }
-          }
-
-          return matrix;
         }
+
+        if (roomVisibility && room === roomVisibility.name) {
+          // add ramparts and walls are hard to walk on
+          const walls = roomVisibility.find(FIND_STRUCTURES, {
+            filter: i => i.structureType === "rampart" || i.structureType === "constructedWall"
+          }) as (StructureWall | StructureRampart)[];
+          for (const wall of walls) {
+            matrix.set(wall.pos.x, wall.pos.y, this.wallHitToCost(wall.hits));
+          }
+        }
+
+        return matrix;
       }
-    );
+    });
+
+    console.log("Attack path is complete?", attackPath.incomplete);
 
     var pathSerialized = Traveler.serializePath(leader.creep.pos, attackPath.path);
     // if there's already a path, truncate where we are and append the new path
