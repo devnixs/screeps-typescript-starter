@@ -459,7 +459,7 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
     {
       percentage: 2,
       role: "reparator",
-      maxCount: 0, // handled by towers
+      maxCount: spawn.room.towers.length > 0 ? 0 : 1, // handled by towers
       bodyTemplate: [MOVE, WORK, CARRY],
       capMaxEnergy: 1400,
       disableIfLowOnCpu: true

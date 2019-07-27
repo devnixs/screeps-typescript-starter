@@ -59,7 +59,7 @@ export class Architect {
     _.uniq(Object.keys(Game.constructionSites).concat(Object.keys(constructionSitesProgress)))
       .map(i => ({ id: i, current: Game.constructionSites[i], old: constructionSitesProgress[i] }))
       .forEach(i => {
-        if (!i.old && i.current) {
+        if (i.current) {
           constructionSitesProgress[i.id] = i.current.progress;
         }
 

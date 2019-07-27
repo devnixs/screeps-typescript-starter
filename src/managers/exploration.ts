@@ -2,7 +2,7 @@ import { getMyRooms, getUsername } from "utils/misc-utils";
 import { Cartographer } from "utils/cartographer";
 import { profiler } from "utils/profiler";
 import { Traveler } from "utils/Traveler";
-import { findClosestRoom } from "utils/finder";
+import { findClosestRoom, SimplePos } from "utils/finder";
 import { explorationConstants } from "constants/memory-constants";
 import { buildRangeFromRoomLimit } from "constants/misc";
 import { SegmentManager, RoomExplorationsSegments } from "./segments";
@@ -135,6 +135,11 @@ export class ExplorationManager {
     const isEnemyBase = room.controller
       ? room.controller.owner && room.controller.owner.username !== getUsername()
       : false;
+
+    const enemySpawns: SimplePos[] = isEnemyBase
+      ? room.find(FIND_HOSTILE_SPAWNS).map(i => ({ x: i.pos.x, y: i.pos.y }))
+      : [];
+
     const isEnemyRemote =
       (!isEnemyBase &&
         (room.controller && room.controller.reservation && room.controller.reservation.username !== getUsername())) ||
@@ -160,7 +165,8 @@ export class ExplorationManager {
         er: false,
         cr: closestRoomName,
         c: report,
-        l: Game.time
+        l: Game.time,
+        es: enemySpawns
       };
       roomExplorations.push(memory);
     }

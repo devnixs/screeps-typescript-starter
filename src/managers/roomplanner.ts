@@ -1,12 +1,8 @@
-import { getMyRooms, getUsername } from "utils/misc-utils";
-import { Cartographer } from "utils/cartographer";
-import { profiler } from "utils/profiler";
-import { Traveler } from "utils/Traveler";
-import { findClosestRoom, SimplePos, findEmptySpotCloseTo } from "utils/finder";
-import { explorationConstants } from "constants/memory-constants";
 import { buildRangeFromRoomLimit } from "constants/misc";
+import { findEmptySpotCloseTo, SimplePos } from "utils/finder";
 import { mincutHelper } from "utils/mincut-walls";
-import { isFunction } from "util";
+import { getMyRooms } from "utils/misc-utils";
+import { profiler } from "utils/profiler";
 
 const structureColors: any = {
   [STRUCTURE_EXTENSION]: "yellow",

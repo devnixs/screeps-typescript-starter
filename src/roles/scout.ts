@@ -9,7 +9,7 @@ import { Cartographer } from "utils/cartographer";
 export interface IScoutMemory extends CreepMemory {
   targetRoom: string | undefined;
   targetExitDir: FindConstant | undefined;
-  targetExit?: { x: number; y: number };
+  targetExit?: { x: number; y: number; roomName: string };
   lastPos: { x: number; y: number };
 }
 
@@ -97,7 +97,7 @@ class RoleScout implements IRole {
       memory.targetRoom = bestExit[1];
       const closest = creep.pos.findClosestByRange(memory.targetExitDir) as RoomPosition;
       if (closest) {
-        memory.targetExit = { x: closest.x, y: closest.y };
+        memory.targetExit = { x: closest.x, y: closest.y, roomName: creep.pos.roomName };
       } else {
         delete memory.targetExit;
       }
@@ -159,7 +159,10 @@ class RoleScout implements IRole {
     };
 
     if (memory.targetExit) {
-      creep.goTo(new RoomPosition(memory.targetExit.x, memory.targetExit.y, creep.room.name), moveOptions);
+      creep.goTo(
+        new RoomPosition(memory.targetExit.x, memory.targetExit.y, memory.targetExit.roomName || creep.room.name),
+        moveOptions
+      );
     } else {
       creep.goTo(new RoomPosition(25, 25, memory.targetRoom), moveOptions);
     }

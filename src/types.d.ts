@@ -1,3 +1,5 @@
+import { SimplePos } from "utils/finder";
+
 // example declaration file - remove these and add your own custom typings
 
 type roles =
@@ -94,6 +96,34 @@ interface RoomMemory {
   boostMode: BoostMode | undefined;
   lastRemoteCheckCtrlLevel: number | undefined;
   roomPlanner: RoomPlannerData;
+
+  needsAttackers: AttackerNeed | undefined;
+}
+
+interface AttackerNeed {
+  boosted: boolean;
+  count: number;
+}
+
+interface AttackSetup {
+  fromRoom: string;
+  toRoom: string;
+
+  parties: AttackParty[];
+}
+
+interface AttackParty {
+  id: number;
+  creeps: AttackPartyCreep[];
+  status: "forming" | "moving" | "regrouping" | "attacking" | "retreating" | "dead";
+  boosted: boolean;
+  count: number;
+}
+
+interface AttackPartyCreep {
+  id: string;
+  x: number;
+  y: number;
 }
 
 interface BoostMode {
@@ -183,7 +213,6 @@ interface Memory {
   log: any;
   existingTowerIds: string[] | undefined;
   noNotificationBefore: number | undefined;
-  attackSquad: string[] | undefined;
   lastBucketQuantity: number | undefined;
   lastBucketRefillTime: number | undefined;
 
@@ -195,6 +224,8 @@ interface Memory {
   // explorations: RoomExplorationReport[];
 
   lastConquestTime: number | undefined;
+
+  attack: AttackSetup | undefined;
 }
 
 type MEMORY_TICK = "t";
@@ -212,6 +243,10 @@ interface RoomExplorationReport {
    * enemy base
    */
   eb: boolean;
+  /**
+   * enemy spawns locations
+   */
+  es: SimplePos[];
   /**
    * enemy room controller level
    */
