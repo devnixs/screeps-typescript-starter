@@ -45,6 +45,8 @@ import { RoomPlanner } from "managers/roomplanner";
 import { StatsManager } from "managers/stats-manager";
 import { SegmentManager } from "managers/segments";
 import { CachedPaths } from "utils/cached-paths";
+import { AttackManager } from "managers/attack";
+import { AttackPartyManager } from "managers/attack-pary";
 
 // profiler.enable();
 
@@ -178,6 +180,8 @@ export const loop = ErrorMapper.wrapLoop(() => {
     RoomPlanner.runForAllRooms();
     CachedPaths.run();
     SegmentManager.run();
+    AttackManager.run();
+    AttackPartyManager.runForAllAttackParties();
 
     // Automatically delete memory of missing creeps
     for (const name in Memory.creeps) {

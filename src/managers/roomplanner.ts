@@ -1,5 +1,5 @@
 import { buildRangeFromRoomLimit } from "constants/misc";
-import { findEmptySpotCloseTo, SimplePos } from "utils/finder";
+import { findEmptySpotCloseTo } from "utils/finder";
 import { mincutHelper } from "utils/mincut-walls";
 import { getMyRooms } from "utils/misc-utils";
 import { profiler } from "utils/profiler";

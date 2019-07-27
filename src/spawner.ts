@@ -298,7 +298,7 @@ class Spawner {
 
     if (result === OK && role.onSpawn) {
       const totalCost = _.sum(body.map(i => costs[i]));
-      role.onSpawn(totalCost, body);
+      role.onSpawn(totalCost, body, creepName);
     }
 
     if (debug) {

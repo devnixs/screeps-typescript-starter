@@ -12,6 +12,8 @@ import { getMyRooms, runFromTimeToTime } from "utils/misc-utils";
 import { isInSafeArea } from "utils/safe-area";
 import { profiler } from "utils/profiler";
 import { Cartographer } from "utils/cartographer";
+import { IAttackerMemory } from "roles/attacker";
+import { AttackManager } from "managers/attack";
 
 export interface RoleRequirement {
   role: roles;
@@ -33,7 +35,7 @@ export interface RoleRequirement {
   onlyRooms?: string[];
   disableIfLowOnCpu?: boolean;
 
-  onSpawn?: (totalCost: number, body: BodyPartConstant[]) => void;
+  onSpawn?: (totalCost: number, body: BodyPartConstant[], creepName: string) => void;
 }
 
 // MOVE	            50	Moves the creep. Reduces creep fatigue by 2/tick. See movement.
@@ -399,6 +401,29 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
       } as RoleRequirement;
     });
 
+  const attackers = spawn.room.memory.needsAttackers
+    ? ({
+        percentage: 100,
+        role: "attacker",
+        subRole: Game.time.toString(), // this will cound each attackers are individuals, and for it to be high priority
+        maxCount: spawn.room.memory.needsAttackers.count,
+        bodyTemplate: [MOVE, MOVE, RANGED_ATTACK, HEAL],
+        sortBody: [RANGED_ATTACK, MOVE, HEAL],
+        maxRepeat: spawn.room.spawns.length * 5,
+        onSpawn: (a, b, name) => {
+          AttackManager.assignToAttackParty(
+            name,
+            (spawn.room.memory.needsAttackers && spawn.room.memory.needsAttackers.partyId) || 0
+          );
+        },
+        disableIfLowOnCpu: true,
+        additionalMemory: {
+          home: spawn.pos.roomName,
+          ready: false
+        } as Partial<IAttackerMemory>
+      } as RoleRequirement)
+    : null;
+
   let trucksCount = 2;
   if (controllerLevel === 2) {
     trucksCount = 1;
@@ -423,6 +448,7 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
       maxCount: trucksCount,
       bodyTemplate: [MOVE, CARRY, CARRY]
     },
+    attackers,
     {
       percentage: 2,
       role: "builder",

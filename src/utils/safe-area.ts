@@ -1,4 +1,4 @@
-import { SimplePos, findSafeAreaAround, findUnsafeArea } from "./finder";
+import { findSafeAreaAround, findUnsafeArea } from "./finder";
 import { profiler } from "./profiler";
 
 const safeAreas: { [roomName: string]: SimplePos[] } = {};

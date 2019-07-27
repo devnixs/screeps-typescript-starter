@@ -4,6 +4,7 @@ import { Traveler } from "utils/Traveler";
 import { ExplorationManager } from "./exploration";
 import { isFunction } from "util";
 import { getUsername } from "utils/misc-utils";
+import { IAttackerMemory } from "roles/attacker";
 
 export class AttackPartyManager {
   attack: AttackSetup;
@@ -79,11 +80,13 @@ export class AttackPartyManager {
         return true;
       });
 
+      console.log("Found rally point : ", JSON.stringify(rallyPoint));
+
       if (!rallyPoint) {
         console.log("Could not find rally point!");
         return;
       } else {
-        this.attackParty.rallyPoint = { ...rallyPoint, roomName: leader.creep.room.name };
+        this.attackParty.rallyPoint = { x: rallyPoint.x, y: rallyPoint.y, roomName: leader.creep.room.name };
       }
     }
 
@@ -155,7 +158,7 @@ export class AttackPartyManager {
     }
 
     // are creeps too badly damaged?
-    if (creepsAndDamage[0].health <= 0.7) {
+    if (creepsAndDamage[0] && creepsAndDamage[0].health <= 0.7) {
       return "NeedsRetreat";
     } else {
       return "OK";
@@ -164,6 +167,13 @@ export class AttackPartyManager {
 
   private runRetreatingParty() {
     const creeps = this.creeps();
+
+    // check death
+    if (creeps.length === 0) {
+      this.attackParty.status = "dead";
+      return;
+    }
+
     const healResult = this.healEachOthers(creeps);
     if (healResult === "OK") {
       this.attackParty.status = "attacking";
@@ -185,6 +195,7 @@ export class AttackPartyManager {
   }
 
   private moveAndAttack(creeps: AttackPartyCreepLoaded[], direction: "forward" | "backward") {
+    console.log("Party moving", direction);
     const leader = creeps[0];
     const enemyInRange = leader.creep.pos.findInRange(FIND_HOSTILE_CREEPS, 4);
     const blockingObject = this.moveParty(creeps, direction);
@@ -200,7 +211,7 @@ export class AttackPartyManager {
   private moveParty(creeps: AttackPartyCreepLoaded[], direction: "forward" | "backward") {
     if (
       !this.attackParty.attackPath ||
-      !this.attackParty.currentPositionIndex ||
+      this.attackParty.currentPositionIndex === undefined ||
       this.attackParty.attackPath.length <= this.attackParty.currentPositionIndex
     ) {
       return;
@@ -245,6 +256,7 @@ export class AttackPartyManager {
         stroke: "red",
         strokeWidth: 0.1
       });
+      console.log("Found obstacle : ", firstObstacle);
       return firstObstacle as AnyStructure | Creep;
     } else {
       for (const creepInfo of creeps) {
@@ -360,9 +372,9 @@ export class AttackPartyManager {
   private creeps(): AttackPartyCreepLoaded[] {
     let creeps: AttackPartyCreepLoaded[] = [];
     for (const creepInfo of this.attackParty.creeps) {
-      const creep = Game.getObjectById(creepInfo.id) as Creep | undefined;
+      const creep = Game.creeps[creepInfo.name] as Creep | undefined;
       if (!creep) {
-        this.attackParty.creeps = this.attackParty.creeps.filter(i => i.id !== creepInfo.id);
+        this.attackParty.creeps = this.attackParty.creeps.filter(i => i.name !== creepInfo.name);
         this.onCreepDied();
         continue;
       }
@@ -375,17 +387,20 @@ export class AttackPartyManager {
   }
 
   private runFormingParty() {
+    let readyCount = 0;
     for (const creepInfo of this.attackParty.creeps) {
-      const creep = Game.getObjectById(creepInfo.id) as Creep | undefined;
+      const creep = Game.creeps[creepInfo.name] as Creep | undefined;
       if (!creep) {
-        this.attackParty.creeps = this.attackParty.creeps.filter(i => i.id !== creepInfo.id);
+        this.attackParty.creeps = this.attackParty.creeps.filter(i => i.name !== creepInfo.name);
         continue;
       }
-
+      if ((creep.memory as IAttackerMemory).ready) {
+        readyCount++;
+      }
       this.goToRest(creep);
     }
 
-    if (this.attackParty.creeps.length === this.attackParty.count) {
+    if (readyCount === this.attackParty.count) {
       this.attackParty.status = "moving";
     }
   }

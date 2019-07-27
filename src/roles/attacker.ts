@@ -3,20 +3,13 @@ import { findRestSpot } from "utils/finder";
 import { boostCreep } from "utils/boost-manager";
 import { AttackManager } from "managers/attack";
 
-interface IAttackerMemory extends CreepMemory {
-  attackPartyId: number;
-  assigned: boolean;
+export interface IAttackerMemory extends CreepMemory {
+  ready: boolean;
 }
 
 class RoleAttacker implements IRole {
   run(creep: Creep) {
     const memory: IAttackerMemory = creep.memory as any;
-
-    if (!memory.assigned && memory.attackPartyId) {
-      AttackManager.assignToAttackParty(creep, memory.attackPartyId);
-      memory.assigned = true;
-    }
-
     if (creep.ticksToLive === 1480) {
       creep.notifyWhenAttacked(false);
     }
@@ -27,6 +20,21 @@ class RoleAttacker implements IRole {
     }
 
     if (creep.memory.subRole === "stop") {
+      return;
+    }
+
+    memory.ready = true;
+
+    const attack = Memory.attack;
+    if (!attack) {
+      console.log("No current attack. Suiciding.");
+      creep.suicide();
+      return;
+    }
+    const party = attack.parties.find(i => (i.creeps.find(j => j.name === creep.name) ? true : false));
+    if (!party) {
+      console.log("Attack party not found. Suiciding.");
+      creep.suicide();
       return;
     }
   }

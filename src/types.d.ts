@@ -101,6 +101,7 @@ interface RoomMemory {
 interface AttackerNeed {
   boosted: boolean;
   count: number;
+  partyId: number;
 }
 
 interface AttackSetup {
@@ -123,7 +124,7 @@ interface AttackParty {
 }
 
 interface AttackPartyCreep {
-  id: string;
+  name: string;
   x: number;
   y: number;
 }
