@@ -112,6 +112,7 @@ interface AttackSetup {
 }
 
 interface AttackParty {
+  failed: boolean;
   isApproxPath: boolean;
   id: number;
   creeps: AttackPartyCreep[];
@@ -123,6 +124,12 @@ interface AttackParty {
   attackPath?: string;
   ttl: number;
   distance?: number;
+  blocker?: Blocker;
+}
+
+interface Blocker {
+  dir: "forward" | "backward";
+  obj: string;
 }
 
 interface AttackPartyCreep {

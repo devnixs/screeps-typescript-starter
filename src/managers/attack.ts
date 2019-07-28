@@ -55,6 +55,22 @@ export class AttackManager {
     this.setNeeds(true);
   }
 
+  static stopAttackIfFailed() {
+    const attack = Memory.attack;
+    if (!attack) {
+      return;
+    }
+
+    if (attack.parties.filter(i => i.failed).length >= 3) {
+      // stop attack
+      console.log("Too many attack failed. Stop attack");
+      const flag = Game.flags["attack"];
+      if (flag) {
+        flag.remove();
+      }
+    }
+  }
+
   static createAttackParties() {
     if (Game.time % 5 > 0) {
       return;
@@ -64,7 +80,7 @@ export class AttackManager {
     if (!attack) {
       return;
     }
-    const existingParty = attack.parties.find(i => i.status !== "dead" || (!i.distance || i.distance <= i.ttl));
+    const existingParty = attack.parties.find(i => i.status !== "dead" && (!i.distance || i.distance <= i.ttl - 150));
     if (existingParty) {
       return;
     }
@@ -86,7 +102,8 @@ export class AttackManager {
       id: Game.time,
       status: "forming",
       isApproxPath: true,
-      ttl: 1500
+      ttl: 1500,
+      failed: false
     } as AttackParty;
 
     console.log("Creating attack party ", JSON.stringify(party));

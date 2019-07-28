@@ -107,14 +107,14 @@ export class ExplorationManager {
     ExplorationManager.saveExplorationsInSegments();
   }
 
-  static analyzeRoom(room: Room) {
+  static analyzeRoom(room: Room, force = false) {
     let memory = ExplorationManager.getExploration(room.name);
     if (memory === null) {
       // segments are not loaded yet. aborting.
       return;
     }
 
-    if (memory && memory.t >= Game.time - 5000) {
+    if (memory && memory.t >= Game.time - 5000 && !force) {
       return;
     }
 

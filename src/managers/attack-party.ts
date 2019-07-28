@@ -24,11 +24,12 @@ export class AttackPartyManager {
   public run() {
     const creeps = this.creeps();
 
-    this.setTimeToLive();
-
     // check death
     if (creeps.length === 0 && this.attackParty.status !== "forming") {
       this.attackParty.status = "dead";
+      if (this.attackParty.ttl > 200) {
+        this.attackParty.failed = true;
+      }
     }
 
     if (this.attackParty.status === "forming") {
@@ -47,11 +48,12 @@ export class AttackPartyManager {
       this.runRetreatingParty();
     }
 
+    this.setTimeToLive();
     this.sayStatus();
   }
 
   private setTimeToLive() {
-    if (Game.time % 10 > 0) {
+    if (Game.time % 10 > 0 || this.attackParty.status === "dead") {
       return;
     }
 
@@ -116,7 +118,7 @@ export class AttackPartyManager {
       const targetPos = new RoomPosition(
         this.attackParty.rallyPoint.x + creepInfo.x,
         this.attackParty.rallyPoint.y + creepInfo.y,
-        leader.creep.room.name
+        this.attackParty.rallyPoint.roomName
       );
       if (
         creepInfo.creep.pos.x === targetPos.x &&
@@ -148,6 +150,9 @@ export class AttackPartyManager {
     if (this.attackParty.attackPath && this.attackParty.isApproxPath && roomVisibility) {
       // recompute path now that we have vision
       this.findAttackPath();
+
+      // since we just entered the room, let's refresh our exploration of it
+      ExplorationManager.analyzeRoom(roomVisibility);
     }
 
     const healResult = this.healEachOthers(creeps);
@@ -189,8 +194,8 @@ export class AttackPartyManager {
     let needRegroup = false;
     const leader = creeps[0];
     for (const creepInfo of creeps) {
-      const normalPositionX = leader.creep.pos.x + creepInfo.x;
-      const normalPositionY = leader.creep.pos.y + creepInfo.y;
+      const normalPositionX = leader.creep.pos.x + creepInfo.x - leader.x;
+      const normalPositionY = leader.creep.pos.y + creepInfo.y - leader.y;
 
       if (
         creepInfo.creep.room.name === leader.creep.room.name &&
@@ -240,18 +245,16 @@ export class AttackPartyManager {
 
   private moveAndAttack(creeps: AttackPartyCreepLoaded[], direction: "forward" | "backward") {
     const leader = creeps[0];
-    const enemyInRange = leader.creep.pos.findInRange(FIND_HOSTILE_CREEPS, 4);
+    const attackResult = this.attackEnemiesAround(creeps);
     const blockingObject = this.moveParty(creeps, direction);
-    if (enemyInRange.length) {
-      this.attackObject(creeps, enemyInRange[0]);
-    } else {
+    if (attackResult === "OK") {
       if (blockingObject) {
         this.attackObject(creeps, blockingObject);
       }
     }
   }
 
-  private attackEnemiesAround(creeps: AttackPartyCreepLoaded[]) {
+  private attackEnemiesAround(creeps: AttackPartyCreepLoaded[]): "attacked" | "OK" {
     const leader = creeps[0];
     const enemyInRange = leader.creep.pos.findInRange(FIND_HOSTILE_CREEPS, 4);
     const creepsNotUnderRamparts = enemyInRange.filter(
@@ -259,10 +262,34 @@ export class AttackPartyManager {
     );
     if (creepsNotUnderRamparts.length) {
       this.attackObject(creeps, creepsNotUnderRamparts[0]);
+      return "attacked";
+    } else {
+      return "OK";
     }
   }
 
+  private getTargets(room: Room): RoomPosition[] {
+    let targets: (AnyStructure | undefined)[] = [];
+    targets = targets.concat(room.spawns);
+    targets = targets.concat([room.terminal]);
+    targets = targets.concat([room.storage]);
+    targets = targets.concat(room.towers);
+
+    return targets.filter(i => i).map(i => (i as AnyStructure).pos);
+  }
+
   private moveParty(creeps: AttackPartyCreepLoaded[], direction: "forward" | "backward") {
+    if (this.attackParty.blocker && this.attackParty.blocker.dir === direction) {
+      var obj = Game.getObjectById(this.attackParty.blocker.obj);
+      if (obj) {
+        return obj as AnyStructure | Creep;
+      } else {
+        delete this.attackParty.blocker;
+      }
+    } else {
+      delete this.attackParty.blocker;
+    }
+
     if (!!creeps.find(i => i.creep.fatigue > 0)) {
       // creeps are tired. wait.
       return undefined;
@@ -279,6 +306,25 @@ export class AttackPartyManager {
     if (this.attackParty.currentPositionIndex === 0 && direction === "backward") {
       console.log("Cannot go backward when at rallying point");
       return;
+    }
+
+    if (this.attackParty.attackPath && "show_visuals" in Game.flags) {
+      let currentPos: RoomPosition | void = creeps[0].creep.pos;
+      for (let index = this.attackParty.currentPositionIndex; index < this.attackParty.attackPath.length; index++) {
+        const dir = this.attackParty.attackPath[index];
+        currentPos = Traveler.positionAtDirection(currentPos, parseInt(dir));
+        if (!currentPos) {
+          break;
+        }
+        creeps[0].creep.room.visual.circle(currentPos.x, currentPos.y, {
+          radius: 0.2,
+          opacity: 0.8,
+          fill: "transparent",
+          lineStyle: "solid",
+          stroke: "blue",
+          strokeWidth: 0.1
+        });
+      }
     }
 
     const leader = creeps[0];
@@ -320,8 +366,14 @@ export class AttackPartyManager {
         stroke: "red",
         strokeWidth: 0.1
       });
+      this.attackParty.blocker = {
+        dir: direction,
+        obj: firstObstacle.id
+      };
+
       return firstObstacle as AnyStructure | Creep;
     } else {
+      delete this.attackParty.blocker;
       for (const creepInfo of creeps) {
         const result = creepInfo.creep.move(nextDirection as DirectionConstant);
         if (result === OK && creepInfo === creeps[0]) {
@@ -337,71 +389,95 @@ export class AttackPartyManager {
     }
   }
 
+  private getAttackMatrixForRoom(creeps: AttackPartyCreepLoaded[], room: string, matrix: CostMatrix) {
+    console.log("Callback for room ", room);
+    const roomVisibility = Game.rooms[room];
+    const terrain = Game.map.getRoomTerrain(room);
+    // make sure floor is walkable at creep locations
+
+    for (let i = 0; i < 50; i++) {
+      for (let j = 0; j < 50; j++) {
+        const isWall = terrain.get(i, j) === TERRAIN_MASK_WALL;
+        if (isWall) {
+          for (const creep of creeps) {
+            matrix.set(i - creep.x, j - creep.y, 0xff);
+          }
+        }
+      }
+    }
+
+    if (roomVisibility && room === roomVisibility.name) {
+      // add ramparts and walls are hard to walk on
+      const walls = roomVisibility.find(FIND_STRUCTURES, {
+        filter: i => i.structureType === "rampart" || i.structureType === "constructedWall"
+      }) as (StructureWall | StructureRampart)[];
+      for (const wall of walls) {
+        for (const creep of creeps) {
+          matrix.set(wall.pos.x - creep.x, wall.pos.y - creep.y, this.wallHitToCost(wall.hits));
+        }
+      }
+    }
+    return matrix;
+  }
+
+  pathMatrixInTargetRoom: CostMatrix | null = null;
+  private getAttackPath(from: RoomPosition, to: RoomPosition, creeps: AttackPartyCreepLoaded[]) {
+    return Traveler.findTravelPath(from, to, {
+      ignoreCreeps: true,
+      ignoreStructures: true,
+      range: 0,
+      ignoreRoads: true,
+      allowHostile: true,
+
+      roomCallback: (room, matrix) => {
+        if (room === this.attack.toRoom) {
+          if (this.pathMatrixInTargetRoom) {
+            return this.pathMatrixInTargetRoom;
+          } else {
+            this.pathMatrixInTargetRoom = this.getAttackMatrixForRoom(creeps, room, matrix);
+            return this.pathMatrixInTargetRoom;
+          }
+        } else {
+          return this.getAttackMatrixForRoom(creeps, room, matrix);
+        }
+      }
+    });
+  }
+
   private findAttackPath() {
     const creeps = this.creeps();
     const leader = creeps[0];
-    const otherCreeps = _.tail(creeps);
     const roomVisibility = Game.rooms[this.attack.toRoom];
 
-    let targetLocation: SimplePos;
+    let targets: RoomPosition[] = [];
     if (roomVisibility) {
-      targetLocation = roomVisibility.spawns[0].pos;
+      targets = this.getTargets(roomVisibility);
     } else {
+      let targetLocation: SimplePos;
       const roomInformations = ExplorationManager.getExploration(this.attack.toRoom);
       targetLocation =
         roomInformations && roomInformations.es && roomInformations.es.length
           ? roomInformations.es[0]
           : { x: 25, y: 25 };
+      targets = [new RoomPosition(targetLocation.x, targetLocation.y, this.attack.toRoom)];
     }
 
-    const targetRoomPos = new RoomPosition(targetLocation.x, targetLocation.y, this.attack.toRoom);
-    console.log("Computing attack path from ", leader.creep.pos, "to", targetRoomPos);
-    const attackPath = Traveler.findTravelPath(leader.creep, targetRoomPos, {
-      ignoreCreeps: true,
-      ignoreStructures: true,
-      roomCallback: (room, matrix) => {
-        console.log("Callback for room ", room);
-        const terrain = Game.map.getRoomTerrain(room);
-        // make sure floor is walkable at creep locations
+    var pathSerialized = "";
+    let previousPosition = leader.creep.pos;
 
-        for (let i = 0; i < 50; i++) {
-          for (let j = 0; j < 50; j++) {
-            const isWall = terrain.get(i, j) === TERRAIN_MASK_WALL;
-            if (isWall) {
-              for (const creep of creeps) {
-                /*                   if (Game.rooms[room]) {
-                    Game.rooms[room].visual.circle(i - creep.x, j - creep.y, {
-                      radius: 0.2,
-                      opacity: 0.8,
-                      fill: "transparent",
-                      lineStyle: "solid",
-                      stroke: "green",
-                      strokeWidth: 0.1
-                    });
-                  } */
-                matrix.set(i - creep.x, j - creep.y, 0xff);
-              }
-            }
-          }
-        }
+    for (const spawn of targets) {
+      console.log("Adding target ", spawn);
+      var attackPath = this.getAttackPath(previousPosition, spawn, creeps);
+      console.log("Attack path is complete?", attackPath.incomplete);
+      pathSerialized = pathSerialized + Traveler.serializePath(previousPosition, attackPath.path);
 
-        if (roomVisibility && room === roomVisibility.name) {
-          // add ramparts and walls are hard to walk on
-          const walls = roomVisibility.find(FIND_STRUCTURES, {
-            filter: i => i.structureType === "rampart" || i.structureType === "constructedWall"
-          }) as (StructureWall | StructureRampart)[];
-          for (const wall of walls) {
-            matrix.set(wall.pos.x, wall.pos.y, this.wallHitToCost(wall.hits));
-          }
-        }
-
-        return matrix;
+      if (attackPath.incomplete) {
+        break;
+      } else {
+        previousPosition = spawn;
       }
-    });
+    }
 
-    console.log("Attack path is complete?", attackPath.incomplete);
-
-    var pathSerialized = Traveler.serializePath(leader.creep.pos, attackPath.path);
     // if there's already a path, truncate where we are and append the new path
     if (this.attackParty.attackPath) {
       const upToNow = this.attackParty.attackPath.slice(0, this.attackParty.currentPositionIndex);
