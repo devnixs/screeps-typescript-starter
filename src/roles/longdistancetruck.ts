@@ -63,7 +63,11 @@ class RoleLongDistanceTruck implements IRole {
 
       // if in home room
       if (creep.room.name == memory.home) {
-        sourceManager.storeInStorageIfPossible(creep);
+        if (creep.room.energyAvailable < creep.room.energyCapacityAvailable / 2) {
+          sourceManager.store(creep);
+        } else {
+          sourceManager.storeInStorageIfPossible(creep);
+        }
       } else {
         // if not in home room...
         if (runFromTimeToTime(5, 20)) {

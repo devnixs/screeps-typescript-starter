@@ -22,6 +22,15 @@ export class AttackPartyManager {
   }
 
   public run() {
+    const creeps = this.creeps();
+
+    this.setTimeToLive();
+
+    // check death
+    if (creeps.length === 0 && this.attackParty.status !== "forming") {
+      this.attackParty.status = "dead";
+    }
+
     if (this.attackParty.status === "forming") {
       this.runFormingParty();
     }
@@ -39,6 +48,15 @@ export class AttackPartyManager {
     }
 
     this.sayStatus();
+  }
+
+  private setTimeToLive() {
+    if (Game.time % 10 > 0) {
+      return;
+    }
+
+    var lowestTtl = _.min(this.creeps().map(i => i.creep.ticksToLive || 1500)) || 0;
+    this.attackParty.ttl = lowestTtl;
   }
 
   private sayStatus() {
@@ -74,6 +92,9 @@ export class AttackPartyManager {
         for (const creepInfo of creeps) {
           const isSpotAvailable = terrain.get(pos.x + creepInfo.x, pos.y + creepInfo.y) !== TERRAIN_MASK_WALL;
           if (!isSpotAvailable) {
+            return false;
+          }
+          if (pos.x < 5 || pos.x > 45 || pos.y < 5 || pos.y > 45) {
             return false;
           }
         }
@@ -118,13 +139,6 @@ export class AttackPartyManager {
 
   private runAttackingParty() {
     const creeps = this.creeps();
-
-    // check death
-    if (creeps.length === 0) {
-      this.attackParty.status = "dead";
-      return;
-    }
-
     const roomVisibility = Game.rooms[this.attack.toRoom];
 
     if (!this.attackParty.attackPath) {
@@ -225,7 +239,6 @@ export class AttackPartyManager {
   }
 
   private moveAndAttack(creeps: AttackPartyCreepLoaded[], direction: "forward" | "backward") {
-    console.log("Party moving", direction);
     const leader = creeps[0];
     const enemyInRange = leader.creep.pos.findInRange(FIND_HOSTILE_CREEPS, 4);
     const blockingObject = this.moveParty(creeps, direction);
@@ -241,8 +254,11 @@ export class AttackPartyManager {
   private attackEnemiesAround(creeps: AttackPartyCreepLoaded[]) {
     const leader = creeps[0];
     const enemyInRange = leader.creep.pos.findInRange(FIND_HOSTILE_CREEPS, 4);
-    if (enemyInRange.length) {
-      this.attackObject(creeps, enemyInRange[0]);
+    const creepsNotUnderRamparts = enemyInRange.filter(
+      i => !i.pos.lookFor(LOOK_STRUCTURES).find(i => i.structureType === "rampart")
+    );
+    if (creepsNotUnderRamparts.length) {
+      this.attackObject(creeps, creepsNotUnderRamparts[0]);
     }
   }
 
@@ -277,17 +293,22 @@ export class AttackPartyManager {
     }
 
     const nextPositions = creeps
-      .map(creep => {
-        return Traveler.positionAtDirection(creep.creep.pos, nextDirection);
+      .map(creepInfo => {
+        return Traveler.positionAtDirection(creepInfo.creep.pos, nextDirection);
       })
       .filter(i => i)
       .map(i => i as RoomPosition);
 
-    const obstacles = nextPositions.map(
-      pos =>
-        pos.lookFor(LOOK_STRUCTURES).find(i => i.structureType !== "road") ||
-        pos.lookFor(LOOK_CREEPS).find(i => i.owner.username !== getUsername())
-    );
+    const obstacles = nextPositions
+      .map(pos => {
+        const rampart = pos.lookFor(LOOK_STRUCTURES).find(i => i.structureType !== "road");
+        if (rampart) {
+          return rampart;
+        }
+        const creep = pos.lookFor(LOOK_CREEPS).find(i => i.owner.username !== getUsername());
+        return creep;
+      })
+      .filter(i => i);
 
     const firstObstacle = obstacles[0];
     if (firstObstacle) {
@@ -299,14 +320,17 @@ export class AttackPartyManager {
         stroke: "red",
         strokeWidth: 0.1
       });
-      console.log("Found obstacle : ", firstObstacle);
       return firstObstacle as AnyStructure | Creep;
     } else {
       for (const creepInfo of creeps) {
         const result = creepInfo.creep.move(nextDirection as DirectionConstant);
         if (result === OK && creepInfo === creeps[0]) {
           // leader leads the pace
-          this.attackParty.currentPositionIndex++;
+          if (direction === "forward") {
+            this.attackParty.currentPositionIndex++;
+          } else {
+            this.attackParty.currentPositionIndex--;
+          }
         }
       }
       return undefined;
@@ -333,6 +357,8 @@ export class AttackPartyManager {
     const targetRoomPos = new RoomPosition(targetLocation.x, targetLocation.y, this.attack.toRoom);
     console.log("Computing attack path from ", leader.creep.pos, "to", targetRoomPos);
     const attackPath = Traveler.findTravelPath(leader.creep, targetRoomPos, {
+      ignoreCreeps: true,
+      ignoreStructures: true,
       roomCallback: (room, matrix) => {
         console.log("Callback for room ", room);
         const terrain = Game.map.getRoomTerrain(room);
@@ -396,6 +422,11 @@ export class AttackPartyManager {
     const otherCreeps = _.tail(creeps);
 
     leader.creep.goTo(new RoomPosition(25, 25, this.attack.toRoom));
+    if (!this.attackParty.distance) {
+      this.attackParty.distance =
+        leader.creep.memory._trav && leader.creep.memory._trav.path ? leader.creep.memory._trav.path.length : 0;
+    }
+
     for (const creep of otherCreeps) {
       creep.creep.goTo(leader.creep, { movingTarget: true });
     }
@@ -454,8 +485,8 @@ export class AttackPartyManager {
       }
       if ((creep.memory as IAttackerMemory).ready) {
         readyCount++;
+        this.goToRest(creep);
       }
-      this.goToRest(creep);
     }
 
     if (readyCount === this.attackParty.count) {

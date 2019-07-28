@@ -85,7 +85,7 @@ export class Chemist {
   }
 
   setupBoostMode() {
-    console.log("Swithing to boost mode", this.room);
+    console.log("Switching to boost mode", this.room.name);
     this.labGroups.forEach(group => this.returnLabToIdleState(group));
     this.assignBoosts();
     this.room.memory.boostModeIsSetup = true;
@@ -162,7 +162,7 @@ export class Chemist {
   }
 
   stopBoostMode() {
-    console.log("Stopping to boost mode");
+    console.log("Stopping boost mode in room", this.room.name);
     // shutdown all labs groups
     this.labGroups.forEach(group => this.returnLabToIdleState(group));
     this.room.memory.boostModeIsSetup = false;
@@ -184,7 +184,7 @@ export class Chemist {
 
     // TODO: Create packs of groups
 
-    console.log("Setting up lab groups");
+    console.log("Setting up lab groups in room", this.room.name);
     this.setupLabGroup(labs);
   }
 

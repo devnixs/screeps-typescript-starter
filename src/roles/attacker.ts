@@ -10,6 +10,10 @@ export interface IAttackerMemory extends CreepMemory {
 class RoleAttacker implements IRole {
   run(creep: Creep) {
     const memory: IAttackerMemory = creep.memory as any;
+    if (memory.ready) {
+      // handled as a party
+      return;
+    }
     if (creep.ticksToLive === 1480) {
       creep.notifyWhenAttacked(false);
     }

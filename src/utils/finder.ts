@@ -24,33 +24,32 @@ let findClosestRoom = function(targetRoom: string, filter?: (room: Room) => bool
       ? Game.rooms[targetRoom].spawns[0].pos
       : new RoomPosition(25, 25, targetRoom);
 
-  var roomsAndDistances = myRooms
-    .map(sourceRoom => {
-      const allowed = !filter || filter(Game.rooms[sourceRoom]);
-      if (!allowed) {
-        return {
-          roomName: sourceRoom,
-          distance: 1000000,
-          allowed: false
-        };
-      }
-      const sourceSpawn = Game.rooms[sourceRoom].spawns[0].pos;
-      var distance = Traveler.findTravelPath(sourceSpawn, targetSpawn);
-      if (distance.incomplete) {
-        return {
-          roomName: sourceRoom,
-          distance: 1000000,
-          allowed: false
-        };
-      } else {
-        return {
-          roomName: sourceRoom,
-          distance: distance.path.length,
-          allowed: true
-        };
-      }
-    })
-    .filter(i => i.allowed);
+  var roomsAndDistances = myRooms.map(sourceRoom => {
+    const allowed = !filter || filter(Game.rooms[sourceRoom]);
+    if (!allowed) {
+      return {
+        roomName: sourceRoom,
+        distance: 1000000,
+        allowed: false
+      };
+    }
+    const sourceSpawn = Game.rooms[sourceRoom].spawns[0].pos;
+    var distance = Traveler.findTravelPath(sourceSpawn, targetSpawn);
+    if (distance.incomplete) {
+      return {
+        roomName: sourceRoom,
+        distance: 1000000,
+        allowed: false
+      };
+    } else {
+      return {
+        roomName: sourceRoom,
+        distance: distance.path.length,
+        allowed: true
+      };
+    }
+  });
+  // .filter(i => i.allowed);
 
   if (!roomsAndDistances.length) {
     return undefined;

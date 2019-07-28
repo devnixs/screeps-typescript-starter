@@ -46,7 +46,7 @@ import { StatsManager } from "managers/stats-manager";
 import { SegmentManager } from "managers/segments";
 import { CachedPaths } from "utils/cached-paths";
 import { AttackManager } from "managers/attack";
-import { AttackPartyManager } from "managers/attack-pary";
+import { AttackPartyManager } from "managers/attack-party";
 
 // profiler.enable();
 

@@ -419,7 +419,8 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
         disableIfLowOnCpu: true,
         additionalMemory: {
           home: spawn.pos.roomName,
-          ready: false
+          ready: false,
+          boostable: spawn.room.memory.needsAttackers.boosted
         } as Partial<IAttackerMemory>
       } as RoleRequirement)
     : null;

@@ -121,6 +121,8 @@ interface AttackParty {
   rallyPoint?: { x: number; y: number; roomName: string };
   currentPositionIndex?: number;
   attackPath?: string;
+  ttl: number;
+  distance?: number;
 }
 
 interface AttackPartyCreep {
@@ -131,7 +133,7 @@ interface AttackPartyCreep {
 
 interface BoostMode {
   parts: BodyPartConstant[];
-  reason: "siege" | "remote";
+  reason: "siege" | "remote" | "attack";
 }
 
 interface RoomPlannerData {

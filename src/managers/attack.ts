@@ -3,7 +3,7 @@ import { ExplorationManager } from "./exploration";
 import { getMyRooms } from "utils/misc-utils";
 
 // This makes a quad
-const attackPartyPositions = [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 }];
+const attackPartyPositions = [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 }, { x: 2, y: 0 }];
 
 export class AttackManager {
   static run() {
@@ -52,6 +52,7 @@ export class AttackManager {
         });
       }
     }
+    this.setNeeds(true);
   }
 
   static createAttackParties() {
@@ -63,29 +64,33 @@ export class AttackManager {
     if (!attack) {
       return;
     }
+    const existingParty = attack.parties.find(i => i.status !== "dead" || (!i.distance || i.distance <= i.ttl));
+    if (existingParty) {
+      return;
+    }
+
     var ready = AttackManager.isRoomReadyToStartAttack(attack.fromRoom);
     if (!ready.ready) {
       console.log("Cannot create party: ", ready.reason);
       return;
     }
 
-    const existingParty = attack.parties.find(i => i.status !== "dead");
-    if (existingParty) {
-      return;
-    }
     const targetInformation = ExplorationManager.getExploration(attack.toRoom);
     if (targetInformation) {
       // TODO: decide if we need to boost our creeps
     }
-
-    attack.parties.push({
-      boosted: false,
+    var party = {
+      boosted: true,
       count: 4,
       creeps: [],
       id: Game.time,
       status: "forming",
-      isApproxPath: true
-    });
+      isApproxPath: true,
+      ttl: 1500
+    } as AttackParty;
+
+    console.log("Creating attack party ", JSON.stringify(party));
+    attack.parties.push(party);
   }
 
   static startAttack(fromRoom: string, toRoom: string) {
@@ -101,16 +106,27 @@ export class AttackManager {
       toRoom,
       parties: []
     };
+
+    Game.rooms[fromRoom].memory.boostMode = {
+      reason: "attack",
+      parts: [HEAL, RANGED_ATTACK]
+    };
   }
 
   static stopAttack() {
     console.log("Stopping attack");
 
-    Memory.attack = undefined;
+    const attack = Memory.attack;
+    if (attack) {
+      Game.rooms[attack.fromRoom].memory.boostMode = undefined;
+      Memory.attack = undefined;
+    } else {
+      console.log("ERROR: attack was already stopped");
+    }
   }
 
-  static setNeeds() {
-    if (Game.time % 5 > 0) {
+  static setNeeds(force = false) {
+    if (Game.time % 5 > 0 && !force) {
       return;
     }
 
@@ -170,6 +186,28 @@ export class AttackManager {
       };
     }
 
+    const attack = Memory.attack;
+    if (attack) {
+      const boostMode = Game.rooms[attack.fromRoom].memory.boostMode;
+      if (boostMode && boostMode.reason === "attack") {
+        // check that boosts have been dispatched
+        const labs = AttackManager.getLabs(Game.rooms[attack.fromRoom]);
+        const labNotReady = labs.find(i =>
+          i.memory.boostBodyType && (i.memory.needsResource !== i.lab.mineralType || i.lab.mineralAmount < 2000)
+            ? true
+            : false
+        );
+        if (labNotReady) {
+          return {
+            ready: false,
+            reason: `Lab not ready : ${labNotReady.lab.id} needs ${labNotReady.memory.needsAmount} ${
+              labNotReady.memory.needsResource
+            }`
+          };
+        }
+      }
+    }
+
     /*     var storage = room.storage;
     if (!storage || storage.store.energy < storage.storeCapacity * 0.1) {
       return {
@@ -182,6 +220,11 @@ export class AttackManager {
       ready: true,
       reason: `All conditions are fulfiled`
     };
+  }
+  static getLabs(room: Room) {
+    var groups = room.memory.labGroups || [];
+    const labs = _.flatten(groups.map(i => i.labResults.concat([i.labSource1, i.labSource2])));
+    return labs.map(i => ({ lab: Game.getObjectById(i.id) as StructureLab, memory: i })).filter(i => i.lab);
   }
 }
 
