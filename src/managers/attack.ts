@@ -10,6 +10,8 @@ export class AttackManager {
     AttackManager.setNeeds();
     AttackManager.checkAttackStatus();
     AttackManager.createAttackParties();
+    AttackManager.stopAttackIfSuccessful();
+    AttackManager.stopAttackIfFailed();
   }
 
   static checkAttackStatus() {
@@ -57,13 +59,29 @@ export class AttackManager {
 
   static stopAttackIfFailed() {
     const attack = Memory.attack;
-    if (!attack) {
+    if (!attack || Game.time % 5 > 0) {
       return;
     }
 
     if (attack.parties.filter(i => i.failed).length >= 3) {
       // stop attack
-      console.log("Too many attack failed. Stop attack");
+      console.log("Too many attack failed. Stopping attack");
+      const flag = Game.flags["attack"];
+      if (flag) {
+        flag.remove();
+      }
+    }
+  }
+
+  static stopAttackIfSuccessful() {
+    const attack = Memory.attack;
+    if (!attack || Game.time % 5 > 0) {
+      return;
+    }
+
+    if (attack.parties.find(i => i.status === "complete")) {
+      // stop attack
+      console.log("Attack successful. Stopping attack");
       const flag = Game.flags["attack"];
       if (flag) {
         flag.remove();
@@ -206,6 +224,7 @@ export class AttackManager {
     const attack = Memory.attack;
     if (attack) {
       const boostMode = Game.rooms[attack.fromRoom].memory.boostMode;
+      console.log("Checking attack creation status: ");
       if (boostMode && boostMode.reason === "attack") {
         // check that boosts have been dispatched
         const labs = AttackManager.getLabs(Game.rooms[attack.fromRoom]);
@@ -221,7 +240,11 @@ export class AttackManager {
               labNotReady.memory.needsResource
             }`
           };
+        } else {
+          console.log("All labs are ready");
         }
+      } else {
+        console.log("No boost mode in progress");
       }
     }
 

@@ -32,6 +32,11 @@ export class AttackPartyManager {
       }
     }
 
+    const targetRoom = Game.rooms[this.attack.toRoom];
+    if (targetRoom && targetRoom.controller && targetRoom.controller.safeMode) {
+      this.attackParty.status = "complete";
+    }
+
     if (this.attackParty.status === "forming") {
       this.runFormingParty();
     }
@@ -79,6 +84,9 @@ export class AttackPartyManager {
       }
       if (this.attackParty.status === "retreating") {
         leader.creep.say("🦃");
+      }
+      if (this.attackParty.status === "complete") {
+        leader.creep.say("😎");
       }
     }
   }
@@ -452,6 +460,11 @@ export class AttackPartyManager {
     let targets: RoomPosition[] = [];
     if (roomVisibility) {
       targets = this.getTargets(roomVisibility);
+      if (targets.length === 0) {
+        // no more targets in this room.
+        this.attackParty.status = "complete";
+        return;
+      }
     } else {
       let targetLocation: SimplePos;
       const roomInformations = ExplorationManager.getExploration(this.attack.toRoom);
@@ -468,7 +481,7 @@ export class AttackPartyManager {
     for (const spawn of targets) {
       console.log("Adding target ", spawn);
       var attackPath = this.getAttackPath(previousPosition, spawn, creeps);
-      console.log("Attack path is complete?", attackPath.incomplete);
+      console.log("Attack path is incomplete?", attackPath.incomplete);
       pathSerialized = pathSerialized + Traveler.serializePath(previousPosition, attackPath.path);
 
       if (attackPath.incomplete) {

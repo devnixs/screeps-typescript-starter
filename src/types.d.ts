@@ -116,7 +116,7 @@ interface AttackParty {
   isApproxPath: boolean;
   id: number;
   creeps: AttackPartyCreep[];
-  status: "forming" | "moving" | "regrouping" | "attacking" | "retreating" | "dead";
+  status: "forming" | "moving" | "regrouping" | "attacking" | "retreating" | "complete" | "dead";
   boosted: boolean;
   count: number;
   rallyPoint?: { x: number; y: number; roomName: string };

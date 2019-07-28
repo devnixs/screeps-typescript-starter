@@ -51,7 +51,7 @@ export class UpgradeManager {
         if (this.room.controller.ticksToDowngrade < 60000) {
           this.room.memory.upgraderRatio = 10;
         } else {
-          const points = Math.max(storage.store.energy - 500000, 0) / 100000;
+          const points = Math.max(storage.store.energy - 200000, 0) / 100000;
           this.room.memory.upgraderRatio = Math.ceil(Math.pow(points, 2) * 2);
         }
       } else {
