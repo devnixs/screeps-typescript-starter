@@ -50,6 +50,7 @@ export class StatsManager {
         energyAccumulated: total,
         spawnsUsage,
         storedEnergy,
+        nukes: room.find(FIND_NUKES).length,
         creepsCount: _.countBy(allCreeps.filter(i => i.memory.homeRoom === room.name), c => c.memory.role)
       };
     });

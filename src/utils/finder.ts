@@ -354,6 +354,12 @@ export function findEmptyRempart(target: _HasRoomPosition, creep: Creep) {
   return closest[0];
 }
 
+export function getAttackFlag() {
+  return Object.keys(Game.flags)
+    .filter(i => i.startsWith("attack"))
+    .map(i => Game.flags[i])[0];
+}
+
 findAndCache = profiler.registerFN(findAndCache, "findAndCache");
 findNonEmptyResourceInStore = profiler.registerFN(findNonEmptyResourceInStore, "findNonEmptyResourceInStore");
 findNonEmptyResourcesInStore = profiler.registerFN(findNonEmptyResourcesInStore, "findNonEmptyResourcesInStore");

@@ -1,4 +1,4 @@
-import { findClosestRoom } from "utils/finder";
+import { findClosestRoom, getAttackFlag } from "utils/finder";
 import { ExplorationManager } from "./exploration";
 import { getMyRooms } from "utils/misc-utils";
 
@@ -18,7 +18,7 @@ export class AttackManager {
     if (Game.time % 5 > 0) {
       return;
     }
-    const flag = Game.flags["attack"];
+    const flag = getAttackFlag();
     if (!Memory.attack && flag) {
       var closestRoom = findClosestRoom(flag.pos.roomName, i => (i.controller ? i.controller.level >= 6 : false));
       if (closestRoom) {
@@ -66,7 +66,7 @@ export class AttackManager {
     if (attack.parties.filter(i => i.failed).length >= 3) {
       // stop attack
       console.log("Too many attack failed. Stopping attack");
-      const flag = Game.flags["attack"];
+      const flag = getAttackFlag();
       if (flag) {
         flag.remove();
       }
@@ -82,7 +82,7 @@ export class AttackManager {
     if (attack.parties.find(i => i.status === "complete")) {
       // stop attack
       console.log("Attack successful. Stopping attack");
-      const flag = Game.flags["attack"];
+      const flag = getAttackFlag();
       if (flag) {
         flag.remove();
       }
@@ -113,6 +113,16 @@ export class AttackManager {
     if (targetInformation) {
       // TODO: decide if we need to boost our creeps
     }
+
+    var flag = getAttackFlag();
+    let boosted = false;
+    if (flag.name.split(":").length >= 3) {
+      var boostTier = Number(flag.name.split(":")[2]);
+      if (boostTier >= 1) {
+        boosted = true;
+      }
+    }
+
     var party = {
       boosted: true,
       count: 4,
@@ -233,7 +243,7 @@ export class AttackManager {
             ? true
             : false
         );
-        if (labNotReady) {
+        /*        if (labNotReady) {
           return {
             ready: false,
             reason: `Lab not ready : ${labNotReady.lab.id} needs ${labNotReady.memory.needsAmount} ${
@@ -242,7 +252,7 @@ export class AttackManager {
           };
         } else {
           console.log("All labs are ready");
-        }
+        } */
       } else {
         console.log("No boost mode in progress");
       }

@@ -39,17 +39,13 @@ export class AttackPartyManager {
 
     if (this.attackParty.status === "forming") {
       this.runFormingParty();
-    }
-    if (this.attackParty.status === "moving") {
+    } else if (this.attackParty.status === "moving") {
       this.runMovingParty();
-    }
-    if (this.attackParty.status === "regrouping") {
+    } else if (this.attackParty.status === "regrouping") {
       this.runRegroupingParty();
-    }
-    if (this.attackParty.status === "attacking") {
+    } else if (this.attackParty.status === "attacking") {
       this.runAttackingParty();
-    }
-    if (this.attackParty.status === "retreating") {
+    } else if (this.attackParty.status === "retreating") {
       this.runRetreatingParty();
     }
 
@@ -91,9 +87,29 @@ export class AttackPartyManager {
     }
   }
 
+  private healSelves(creeps: AttackPartyCreepLoaded[]) {
+    for (const creepInfo of creeps) {
+      if (creepInfo.creep.hits < creepInfo.creep.hitsMax) {
+        creepInfo.creep.heal(creepInfo.creep);
+      }
+    }
+  }
+
+  private attackAround(creeps: AttackPartyCreepLoaded[]) {
+    for (const creep of creeps) {
+      const enemies = creep.creep.pos.findInRange(FIND_HOSTILE_CREEPS, 3);
+      if (enemies.length) {
+        creep.creep.rangedAttack(enemies[0]);
+      }
+    }
+  }
+
   private runRegroupingParty() {
     const creeps = this.creeps();
     const leader = creeps[0];
+
+    this.healSelves(creeps);
+    this.attackAround(creeps);
 
     var terrain = Game.map.getRoomTerrain(leader.creep.pos.roomName);
 
@@ -238,7 +254,12 @@ export class AttackPartyManager {
       return;
     }
 
-    this.moveAndAttack(creeps, "backward");
+    const regroupResult = this.regroupIfNecessary(creeps);
+    if (regroupResult === "needs-regroup") {
+      this.attackEnemiesAround(creeps);
+    } else {
+      this.moveAndAttack(creeps, "backward");
+    }
   }
 
   private attackObject(creeps: AttackPartyCreepLoaded[], object: Creep | AnyStructure) {
@@ -345,6 +366,7 @@ export class AttackPartyManager {
         parseInt(this.attackParty.attackPath[this.attackParty.currentPositionIndex - 1])
       );
     }
+    console.log("Moving", direction, this.attackParty.currentPositionIndex, nextDirection, leader.creep.pos);
 
     const nextPositions = creeps
       .map(creepInfo => {
@@ -391,6 +413,7 @@ export class AttackPartyManager {
           } else {
             this.attackParty.currentPositionIndex--;
           }
+          console.log("Moved", direction, this.attackParty.currentPositionIndex, nextDirection);
         }
       }
       return undefined;
@@ -406,9 +429,15 @@ export class AttackPartyManager {
     for (let i = 0; i < 50; i++) {
       for (let j = 0; j < 50; j++) {
         const isWall = terrain.get(i, j) === TERRAIN_MASK_WALL;
+        const isSwamp = terrain.get(i, j) === TERRAIN_MASK_SWAMP;
         if (isWall) {
           for (const creep of creeps) {
             matrix.set(i - creep.x, j - creep.y, 0xff);
+          }
+        }
+        if (isSwamp) {
+          for (const creep of creeps) {
+            matrix.set(i - creep.x, j - creep.y, 0x05);
           }
         }
       }
@@ -509,6 +538,9 @@ export class AttackPartyManager {
     const creeps = this.creeps();
     const leader = creeps[0];
     const otherCreeps = _.tail(creeps);
+
+    this.healSelves(creeps);
+    this.attackAround(creeps);
 
     leader.creep.goTo(new RoomPosition(25, 25, this.attack.toRoom));
     if (!this.attackParty.distance) {

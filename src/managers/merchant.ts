@@ -24,7 +24,7 @@ export class Merchant {
       i =>
         i !== "energy" &&
         sellableElements.indexOf(i) >= 0 &&
-        this.getResource(terminal.store, i) > this.getResource(desiredStocks, i) * 15 &&
+        this.getResource(terminal.store, i) > this.getResource(desiredStocks, i) * 10 &&
         this.getResource(terminal.store, i) > 300
     ) as ResourceConstant | undefined;
 
@@ -150,7 +150,7 @@ export class Merchant {
       const lowest = orderedLowest[0];
       const highest = orderedHighest[0];
 
-      if (highest.amount > lowest.amount * 2) {
+      if (highest.amount > lowest.amount * 1.5) {
         const sourceTerminal = highest.room.terminal as StructureTerminal;
         const amountToSend = Math.min((highest.amount - lowest.amount) / 4, maxTransferSize);
         console.log("Sending", amountToSend, resourceType, "from", highest.room.name, "to", lowest.room.name);
