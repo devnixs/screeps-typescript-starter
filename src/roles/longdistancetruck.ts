@@ -4,6 +4,7 @@ import { findHostile, findNonEmptyResourceInStore, findNonEmptyResourcesInStore 
 import { IRemoteDefenderMemory } from "./remote-defender";
 import { flee, runFromTimeToTime } from "utils/misc-utils";
 import { Cartographer } from "utils/cartographer";
+import { roleUpgrader } from "./upgrader";
 
 function measureCpu() {}
 
@@ -13,6 +14,7 @@ export interface ILongDistanceTruckMemory extends CreepMemory {
   homeSpawnPosition: { x: number; y: number };
   targetContainer: string | undefined;
   energyRetrieved: number | undefined;
+  runAsUpgrader: boolean;
 }
 
 class RoleLongDistanceTruck implements IRole {
@@ -35,6 +37,7 @@ class RoleLongDistanceTruck implements IRole {
       memory.depositing = false;
       delete memory.energyRetrieved;
       delete memory.targetContainer;
+      memory.runAsUpgrader = false;
     }
     // if creep is harvesting energy but is full
     else if (!memory.depositing && totalCargoContent == creep.carryCapacity) {
@@ -44,6 +47,11 @@ class RoleLongDistanceTruck implements IRole {
 
     if (memory.depositing && !memory.energyRetrieved && creep.carry.energy) {
       memory.energyRetrieved = creep.carry.energy;
+    }
+
+    if (memory.runAsUpgrader) {
+      creep.say("🌌");
+      roleUpgrader.run(creep);
     }
 
     // if creep is supposed to transfer energy to a structure
@@ -66,7 +74,11 @@ class RoleLongDistanceTruck implements IRole {
         if (creep.room.energyAvailable < creep.room.energyCapacityAvailable / 2) {
           sourceManager.store(creep);
         } else {
-          sourceManager.storeInStorageIfPossible(creep);
+          const res = sourceManager.storeInStorageIfPossible(creep);
+          // if it's not possible to store our energy, pump it into the controller
+          if (res !== OK) {
+            memory.runAsUpgrader = true;
+          }
         }
       } else {
         // if not in home room...

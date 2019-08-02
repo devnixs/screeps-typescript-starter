@@ -288,7 +288,7 @@ export class ExplorationManager {
     }
     const distanceWithClosestRoom = travelPath.path.length;
 
-    const distanceScore = distanceWithClosestRoom < 300 ? 0 : Math.pow(distanceWithClosestRoom - 400, 2) / 100;
+    const distanceScore = distanceWithClosestRoom < 400 ? 0 : Math.pow(distanceWithClosestRoom - 400, 2) / 100;
 
     const finalScore = topPlace.total + topPlace.wallsCount * 4 + distanceScore;
 

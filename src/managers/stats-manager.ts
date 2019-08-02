@@ -1,12 +1,15 @@
 import { getMyRooms } from "utils/misc-utils";
+import { measureCpuAverage } from "utils/cpu";
 
 export class StatsManager {
   static runForAllRooms() {
     if (Game.time % 13 > 0) {
       return;
     }
-
     var cpu = Game.cpu.getUsed();
+
+    measureCpuAverage(cpu);
+
     var myRooms = getMyRooms();
     var allCreeps = Object.keys(Game.creeps).map(i => Game.creeps[i]);
 
@@ -62,7 +65,7 @@ export class StatsManager {
       gclProgress: Game.gcl.progress,
       gclProgressTotal: Game.gcl.progressTotal,
       creeps: Object.keys(Game.creeps).length,
-      cpu: Game.cpu.getUsed(),
+      cpu: cpu,
       cpuMax: Game.cpu.limit,
       cpuPercent: cpu / Game.cpu.limit,
       bucket: Game.cpu.bucket,

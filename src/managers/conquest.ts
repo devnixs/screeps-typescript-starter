@@ -12,6 +12,11 @@ export class ConquestManager {
       return;
     }
 
+    // disable on screeps plus
+    if ("E13S15" in Game.rooms && "E16S17" in Game.rooms) {
+      return;
+    }
+
     Memory.lastConquestTime = Memory.lastConquestTime || -100000;
 
     const gcl = Game.gcl.level;

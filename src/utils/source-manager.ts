@@ -3,6 +3,7 @@ import { LinkManager } from "./link-manager";
 import { profiler } from "../utils/profiler";
 import { desiredEnergyInTerminal } from "constants/misc";
 import { isInSafeArea } from "./safe-area";
+import { Traveler } from "./Traveler";
 
 class SourceManager {
   harvestEnergyFromSource(creep: Creep) {
@@ -201,6 +202,13 @@ class SourceManager {
       targetStructure = creep.pos.findInRange(FIND_STRUCTURES, 4, {
         filter: i => i.structureType === "container" && i.store.energy > i.storeCapacity / 4
       })[0];
+      // if path is longer than 4, abort
+      if (targetStructure) {
+        const path = Traveler.findTravelPath(creep.pos, targetStructure.pos, { maxOps: 400, range: 1 });
+        if (path.incomplete || path.path.length > 4) {
+          targetStructure = undefined;
+        }
+      }
     }
 
     if (!targetStructure) {
@@ -343,6 +351,7 @@ class SourceManager {
     } else {
       return -1;
     }
+
     return OK;
   }
 
@@ -377,7 +386,7 @@ class SourceManager {
     } else {
       const restSpot = findRestSpot(creep);
       if (restSpot) {
-        creep.goTo(restSpot);
+        creep.goTo(restSpot, { range: 3 });
       }
     }
   }

@@ -104,7 +104,7 @@ class RoleRemoteDefender implements IRole {
           const rest = findRestSpot(creep, { x: 25, y: 25 });
           if (rest) {
             // creep.say("Zzz");
-            creep.goTo(rest);
+            creep.goTo(rest, { range: 3 });
           }
         }
       } else {
@@ -127,7 +127,7 @@ class RoleRemoteDefender implements IRole {
             creep.say("Zzz");
             /* const rest = findRestSpot(creep, { x: 25, y: 25 });
             if (rest) {
-              creep.goTo(rest);
+              creep.goTo(rest, { range: 3 });
             } */
           }
         }

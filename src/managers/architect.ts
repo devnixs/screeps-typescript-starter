@@ -59,17 +59,18 @@ export class Architect {
     _.uniq(Object.keys(Game.constructionSites).concat(Object.keys(constructionSitesProgress)))
       .map(i => ({ id: i, current: Game.constructionSites[i], old: constructionSitesProgress[i] }))
       .forEach(i => {
-        if (i.current) {
-          constructionSitesProgress[i.id] = i.current.progress;
-        }
-
         if (i.old && !i.current) {
           delete constructionSitesProgress[i.id];
         }
 
         if (i.old && i.current && i.old === i.current.progress) {
           // there has been no progress since last time. Delete construction site.
+          console.log("Removing construction site ", i.current.id, "because no progress was made in a long time.");
           i.current.remove();
+        }
+
+        if (i.current) {
+          constructionSitesProgress[i.id] = i.current.progress;
         }
       });
   }

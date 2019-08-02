@@ -14,6 +14,7 @@ import { profiler } from "utils/profiler";
 import { Cartographer } from "utils/cartographer";
 import { IAttackerMemory } from "roles/attacker";
 import { AttackManager } from "managers/attack";
+import { ITransportMemory } from "roles/transport";
 
 export interface RoleRequirement {
   role: roles;
@@ -59,6 +60,10 @@ let builderHelperSource: string | undefined = undefined;
 let remoteDefenderHelperCount = 0;
 let remoteDefenderHelperTarget: string | undefined = undefined;
 let remoteDefenderHelperSource: string | undefined = undefined;
+
+let transportHelperCount = 0;
+let transportHelperTarget: string | undefined = undefined;
+let transportHelperSource: string | undefined = undefined;
 
 let lastInitializationTick: number | undefined;
 function initOneTimeValues() {
@@ -116,6 +121,18 @@ function initOneTimeValues() {
     remoteDefenderHelperSource = findClosestRoom(colonyThatNeedsHelpDefending.name);
     remoteDefenderHelperTarget = colonyThatNeedsHelpDefending.name;
     remoteDefenderHelperCount = 4;
+    const sourceRoom = remoteDefenderHelperSource && Game.rooms[remoteDefenderHelperSource];
+
+    if (
+      colonyThatNeedsHelpDefending.find(FIND_SOURCES).length === 1 &&
+      sourceRoom &&
+      sourceRoom.controller &&
+      sourceRoom.controller.level >= 7
+    ) {
+      transportHelperSource = remoteDefenderHelperSource;
+      transportHelperTarget = colonyThatNeedsHelpDefending.name;
+      transportHelperCount = 4;
+    }
   }
 }
 
@@ -467,15 +484,17 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
       subRole: builderHelperTarget,
       disableIfLowOnCpu: true
     },
-    /*     {
+    {
       percentage: 2,
-      role: "builder",
-      maxCount: 3,
-      bodyTemplate: [MOVE, WORK, CARRY],
-      onlyRooms: ["E8S15"],
-      subRole: "E8S15",
-      disableIfLowOnCpu: true
-    }, */
+      role: "transport",
+      maxCount: transportHelperCount,
+      bodyTemplate: [MOVE, CARRY],
+      onlyRooms: transportHelperSource ? [transportHelperSource] : undefined,
+      disableIfLowOnCpu: true,
+      additionalMemory: {
+        targetRoom: transportHelperTarget
+      } as ITransportMemory
+    },
     {
       percentage: 1,
       role: "claimer",
@@ -492,19 +511,6 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
       disableIfLowOnCpu: true
     },
     {
-      percentage: 20,
-      role: "versatile",
-      maxCount: Game.flags["versatile_attack"] ? 1 : 0,
-      countAllRooms: true,
-      // bodyTemplate: [TOUGH, TOUGH, RANGED_ATTACK, WORK, MOVE, HEAL, HEAL, HEAL, HEAL],
-      bodyTemplate: [TOUGH, RANGED_ATTACK, WORK, WORK, WORK, MOVE, HEAL, HEAL, HEAL],
-      sortBody: [TOUGH, RANGED_ATTACK, WORK, MOVE, HEAL],
-      onlyRooms: ["E22N36"],
-      additionalMemory: {
-        boostable: true
-      } as IDismantlerMemory
-    },
-    {
       percentage: 1,
       role: "fighter",
       maxCount: enemies.length > 0 && towers.length === 0 ? 1 : 0,
@@ -512,7 +518,6 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
       sortBody: [TOUGH, MOVE, ATTACK]
     },
     remoteDefendersHelper,
-    // remoteDefendersSiegeHelper,
     {
       percentage: 1,
       role: "miner",

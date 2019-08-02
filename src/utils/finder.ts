@@ -8,6 +8,11 @@ interface RoomAndExpiration {
 const closestRooms: { [target: string]: RoomAndExpiration } = {};
 
 let findClosestRoom = function(targetRoom: string, filter?: (room: Room) => boolean) {
+  // special case
+  if (targetRoom === "E19S19") {
+    return "E17S19";
+  }
+
   if (closestRooms[targetRoom] && closestRooms[targetRoom].expiration <= Game.time) {
     delete closestRooms[targetRoom];
   }

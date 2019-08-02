@@ -24,7 +24,7 @@ class RoleLongDistanceHarvester implements IRole {
 
     if (totalCargoContent >= creep.carryCapacity / 2 && creep.getActiveBodyparts(CARRY)) {
       if (runFromTimeToTime(5, 10)) {
-        const constructionSite = creep.pos.findInRange(FIND_CONSTRUCTION_SITES, 5, {
+        const constructionSite = creep.pos.findInRange(FIND_CONSTRUCTION_SITES, 2, {
           filter: i => i.structureType === "container"
         })[0];
         if (constructionSite) {

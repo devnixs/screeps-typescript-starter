@@ -47,6 +47,7 @@ import { SegmentManager } from "managers/segments";
 import { CachedPaths } from "utils/cached-paths";
 import { AttackManager } from "managers/attack";
 import { AttackPartyManager } from "managers/attack-party";
+import { roleTransport } from "roles/transport";
 
 // profiler.enable();
 
@@ -73,13 +74,16 @@ export const loop = ErrorMapper.wrapLoop(() => {
       console.log("Bucket almost empty. Skipping tick.");
       return;
     }
-    spawner.run();
+    let error: any = null;
+    try {
+      spawner.run();
+    } catch (e) {
+      error = e;
+    }
     Chemist.runForAllRooms();
     LinkManager.runForAllRooms();
     Merchant.runForAllRooms();
     RemotesManager.runForAllRooms();
-
-    let error: any = null;
 
     for (var name in Game.creeps) {
       var creep = Game.creeps[name];
@@ -161,28 +165,35 @@ export const loop = ErrorMapper.wrapLoop(() => {
         if (memory.role == "scout") {
           roleScout.run(creep);
         }
+        if (memory.role == "transport") {
+          roleTransport.run(creep);
+        }
       } catch (e) {
         console.log(e, creep.name);
         error = e;
       }
     }
 
-    roleTower.runAllTowers();
+    try {
+      roleTower.runAllTowers();
 
-    Architect.runForAllRooms();
-    DefenseManager.runForAllRooms();
-    Observer.runAllObservers();
-    ExplorationManager.runForAllRooms();
-    RolePestControl.checkReconstruction();
-    SafeModeActivator.activeSafeModeIfNecessary();
-    UpgradeManager.runForAllRooms();
-    // ConquestManager.run();
-    RoomPlanner.runForAllRooms();
-    CachedPaths.run();
-    SegmentManager.run();
-    AttackManager.run();
-    AttackPartyManager.runForAllAttackParties();
-
+      Architect.runForAllRooms();
+      DefenseManager.runForAllRooms();
+      Observer.runAllObservers();
+      ExplorationManager.runForAllRooms();
+      RolePestControl.checkReconstruction();
+      SafeModeActivator.activeSafeModeIfNecessary();
+      UpgradeManager.runForAllRooms();
+      ConquestManager.run();
+      RoomPlanner.runForAllRooms();
+      CachedPaths.run();
+      SegmentManager.run();
+      AttackManager.run();
+      AttackPartyManager.runForAllAttackParties();
+    } catch (e) {
+      console.log("Failed to run managers.", e);
+      error = e;
+    }
     // Automatically delete memory of missing creeps
     for (const name in Memory.creeps) {
       if (!(name in Game.creeps)) {
@@ -200,35 +211,9 @@ export const loop = ErrorMapper.wrapLoop(() => {
 
     Memory.rooms = Memory.rooms || {};
 
-    if (Game.cpu.getUsed() > 150) {
+    if (Game.cpu.getUsed() > Game.cpu.limit * 2) {
       console.log("Used a lot of cpu : ", Game.cpu.getUsed(), Game.time);
     }
-
-    measureCpuAverage();
-
-    // shutdown attack
-    /*
-    if (Game.flags["versatile_attack"] && Game.time > 7084587 + 3000) {
-      Game.flags["versatile_attack"].remove();
-      Game.flags["boostmode_5"].remove();
-    } */
-    /*     if (
-      Game.flags["dismantler_attack"] &&
-      !Game.getObjectById("5c1cbb97e38b1f6a4735759e") &&
-      Game.getObjectById("5c1cbb95c219895c92dfdb3d")
-    ) {
-      Game.flags["dismantler_attack"].remove();
-    } */
-
-    /*
-    // shutdown attack
-    if (Game.time >= 4536722 && Game.flags["boostmode_1"]) {
-      Game.flags["boostmode_1"].remove();
-    }
-
-    if (Game.time >= 4536722 + 3000 && Game.flags["dismantler_attack"]) {
-      Game.flags["dismantler_attack"].remove();
-    } */
 
     StatsManager.runForAllRooms();
 

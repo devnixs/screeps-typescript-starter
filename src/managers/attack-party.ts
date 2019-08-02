@@ -622,7 +622,7 @@ export class AttackPartyManager {
     } else {
       const restSpot = findRestSpot(creep);
       if (restSpot) {
-        creep.goTo(restSpot);
+        creep.goTo(restSpot, { range: 3 });
       }
     }
   }

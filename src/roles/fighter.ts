@@ -74,7 +74,7 @@ class RoleFighter implements IRole {
 
       const restSpot = findRestSpot(creep);
       if (restSpot) {
-        creep.goTo(restSpot);
+        creep.goTo(restSpot, { range: 3 });
       }
     }
   }

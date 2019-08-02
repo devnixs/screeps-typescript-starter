@@ -68,7 +68,7 @@ class RoleHealer implements IRole {
       }
       if (restSpot) {
         // console.log("Healer:going to rest spot : ", JSON.stringify(restSpot));
-        creep.goTo(restSpot);
+        creep.goTo(restSpot, { range: 3 });
       }
     }
   }

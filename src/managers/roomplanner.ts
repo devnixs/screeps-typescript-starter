@@ -36,7 +36,7 @@ export class RoomPlanner {
     this.showVisuals();
     this.findRestSpot();
 
-    if (Game.time % 37 > 0) {
+    if (Game.time % 17 > 0) {
       return;
     }
 
@@ -116,6 +116,11 @@ export class RoomPlanner {
   }
 
   addRampartToCriticalStructures() {
+    // needs level 4 at lease
+    if (this.room.controller && this.room.controller.level < 4) {
+      return;
+    }
+
     let criticalStructures: AnyOwnedStructure[] = this.room.find(FIND_MY_STRUCTURES, {
       filter: s =>
         s.structureType === "spawn" ||
@@ -141,6 +146,9 @@ export class RoomPlanner {
       return;
     }
     const spawn = this.room.spawns[0];
+    if (!spawn) {
+      return;
+    }
     const restSpot = findEmptySpotCloseTo(
       spawn.pos,
       this.room,
@@ -225,13 +233,13 @@ export class RoomPlanner {
     RoomPlanner.buildContainersAroundSources(planner, room);
     RoomPlanner.buildRoadsToMineral(planner, room, sectors);
 
+    RoomPlanner.buildRoadsAroundStructures(planner, room, sectors);
     RoomPlanner.reserveLabs(planner, sectors);
+    RoomPlanner.buildRoadsAroundStructures(planner, room, sectors, 6);
     RoomPlanner.buildWalls(planner, room, sectors);
 
-    RoomPlanner.buildRoadsAroundStructures(planner, room, sectors);
-
-    RoomPlanner.buildRoadsAroundStructures(planner, room, sectors);
     RoomPlanner.buildExtractor(planner, room);
+    RoomPlanner.buildRoadsAroundStructures(planner, room, sectors, 6);
 
     for (let i = 0; i < sectors.length / 5; i++) {
       const coords = RoomPlanner.getPositionFromTotalIndex(i, sectors);

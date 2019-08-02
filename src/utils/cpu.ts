@@ -1,13 +1,12 @@
 let cpuAverage = 0;
 let lastRetrievalDate = Game.time;
 
-export function measureCpuAverage() {
-  if (Game.time % 51 === 0) {
-    Memory.cpuUsages = Memory.cpuUsages || [];
-    Memory.cpuUsages.push(Game.cpu.getUsed());
-    if (Memory.cpuUsages.length > 100) {
-      Memory.cpuUsages.shift();
-    }
+export function measureCpuAverage(used?: number) {
+  const cpuUsed = used || Game.cpu.getUsed();
+  Memory.cpuUsages = Memory.cpuUsages || [];
+  Memory.cpuUsages.push(cpuUsed);
+  if (Memory.cpuUsages.length > 100) {
+    Memory.cpuUsages.shift();
   }
 }
 

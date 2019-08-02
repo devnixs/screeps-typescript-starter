@@ -24,6 +24,7 @@ type roles =
   | "pestcontrol"
   | "reserver"
   | "scout"
+  | "transport"
   | "dismantler";
 
 // memory extension samples

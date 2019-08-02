@@ -47,12 +47,15 @@ export class RoleBuilder implements IRole {
     var minRampartsHp = rampartMinHp(controllerLevel);
 
     var walls = room.find(FIND_STRUCTURES, {
-      filter: i => i.structureType === "constructedWall" && i.hits > 0 && (i.hits < minWallsHp || forceFind)
+      filter: i =>
+        i.structureType === "constructedWall" && i.hits > 0 && (i.hits < minWallsHp || forceFind) && i.hits < i.hitsMax
     }) as (StructureWall | StructureRampart)[];
 
     var rampart = room.find(FIND_STRUCTURES, {
       filter: i =>
-        i.structureType === "rampart" && (i.hits - getNukeDamageAtLocation(i.pos) < minRampartsHp || forceFind)
+        i.structureType === "rampart" &&
+        (i.hits - getNukeDamageAtLocation(i.pos) < minRampartsHp || forceFind) &&
+        i.hits < i.hitsMax
     }) as (StructureWall | StructureRampart)[];
 
     var rampartAndWalls = walls
@@ -160,7 +163,7 @@ export class RoleBuilder implements IRole {
   goToRest(creep: Creep) {
     const restSpot = findRestSpot(creep);
     if (restSpot) {
-      creep.goTo(restSpot);
+      creep.goTo(restSpot, { range: 3 });
     }
   }
 }

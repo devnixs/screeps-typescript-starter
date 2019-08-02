@@ -5,7 +5,6 @@ import { roleUpgrader } from "./upgrader";
 export interface IHarvesterMemory extends CreepMemory {
   isDepositing?: boolean;
   targetContainerId?: string;
-  isSittingOnTargetContainer: string;
 }
 
 class RoleHarvester implements IRole {
@@ -20,6 +19,14 @@ class RoleHarvester implements IRole {
 
     if (!memory.isDepositing && totalCargoContent === creep.carryCapacity) {
       memory.isDepositing = true;
+    }
+
+    // if on top of container and there's a static harvester nearby waiting, suicide
+    const container = creep.pos.lookFor(LOOK_STRUCTURES).find(i => i.structureType === "container");
+    if (container && creep.pos.findInRange(FIND_MY_CREEPS, 1, { filter: i => i.memory.role === "static-harvester" })) {
+      console.log("Static harvester is ready, suiciding", creep.name);
+      creep.suicide();
+      return;
     }
 
     if (!memory.isDepositing) {

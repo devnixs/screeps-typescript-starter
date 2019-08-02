@@ -290,3 +290,14 @@ export function getObstaclesToAvoidRangedEnemies(creep: Creep) {
 
   return positions;
 }
+
+export function repeatArray<T>(array: T[], times: number) {
+  // returns an array with element elem repeated n times.
+  var arr: T[] = [];
+
+  for (var i = 0; i <= times; i++) {
+    arr = arr.concat(array);
+  }
+
+  return arr;
+}

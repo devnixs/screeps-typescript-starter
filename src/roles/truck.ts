@@ -129,7 +129,9 @@ class RoleTruck implements IRole {
               memory.sources.shift();
               memory.isDepositing = memory.sources.length === 0;
             } else if (withdrawResult === ERR_FULL) {
-              this.restartJob(creep, { forceEmptying: true });
+              memory.sources.shift();
+              memory.isDepositing = memory.sources.length === 0;
+              // this.restartJob(creep, { forceEmptying: true });
             } else {
               // if it fails but we're in range, abort the job.
               this.restartJob(creep);
@@ -153,6 +155,8 @@ class RoleTruck implements IRole {
           // periodically check for jobs
           this.setJob(creep);
         }
+      } else {
+        creep.say("💡");
       }
     }
   }
@@ -160,7 +164,7 @@ class RoleTruck implements IRole {
   goToRestSpot(creep: Creep) {
     var restSpot = findRestSpot(creep);
     if (restSpot) {
-      creep.goTo(restSpot);
+      creep.goTo(restSpot, { range: 3 });
       return OK;
     } else {
       return -1;
@@ -199,7 +203,8 @@ class RoleTruck implements IRole {
       if (creep.pos.isNearTo(structureThatNeedsEnergy)) {
         return creep.transfer(structureThatNeedsEnergy, RESOURCE_ENERGY);
       } else {
-        return creep.goTo(structureThatNeedsEnergy);
+        creep.goTo(structureThatNeedsEnergy);
+        return OK;
       }
     } else {
       return sourceManager.getEnergyFromStorageIfPossible(creep);
@@ -250,11 +255,17 @@ class RoleTruck implements IRole {
     resource: ResourceConstant;
     emoji?: string;
   }) {
-    let target: StructureTerminal | StructureStorage | undefined = undefined;
+    let target: StructureTerminal | StructureStorage | StructureContainer | undefined = undefined;
     if (params.resource === "energy") {
       target = params.creep.room.storage;
     } else {
       target = params.creep.room.terminal;
+    }
+
+    if (!target && !params.creep.room.storage) {
+      target = params.creep.room.find(FIND_STRUCTURES, {
+        filter: i => i.structureType === "container" && _.sum(i.store) < i.storeCapacity
+      })[0] as StructureContainer;
     }
 
     if (target) {
@@ -262,14 +273,14 @@ class RoleTruck implements IRole {
         targetSource: params.sourceId,
         targetDestination: target.id,
         jobResource: params.resource,
-        jobNeededAmount: params.amount,
+        jobNeededAmount: Math.min(params.amount, target.storeCapacity - _.sum(target.store)) as any,
         jobTag: params.tag,
         emoji: params.emoji
       };
     }
 
     if (params.resource === "energy") {
-      const structureThatNeedsEnergy = sourceManager.getStructureThatNeedsEnergy(params.creep) as StructureExtension;
+      let structureThatNeedsEnergy = sourceManager.getStructureThatNeedsEnergy(params.creep) as StructureExtension;
 
       if (structureThatNeedsEnergy) {
         return {
