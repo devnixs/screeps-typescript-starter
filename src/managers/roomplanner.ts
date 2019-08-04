@@ -1,7 +1,7 @@
 import { buildRangeFromRoomLimit } from "constants/misc";
 import { findEmptySpotCloseTo } from "utils/finder";
 import { mincutHelper } from "utils/mincut-walls";
-import { getMyRooms } from "utils/misc-utils";
+import { getMyRooms, hasRoomBeenAttacked } from "utils/misc-utils";
 import { profiler } from "utils/profiler";
 
 const structureColors: any = {
@@ -70,6 +70,14 @@ export class RoomPlanner {
       if (structure.l && structure.l > ctrl.level) {
         continue;
       }
+      if (structure.type === "rampart") {
+        // let's not build walls before rcl 4 or safe mode activated
+
+        if (this.room.controller && (this.room.controller.level < 6 && !hasRoomBeenAttacked(this.room))) {
+          continue;
+        }
+      }
+
       const result = this.room.createConstructionSite(structure.x, structure.y, structure.type);
       if (result === OK) {
         break;
@@ -84,6 +92,11 @@ export class RoomPlanner {
           const roadUnderneath = buildingsUnderneath.find(i => i.structureType === "road");
           if (roadUnderneath && buildingsUnderneath.length === 1) {
             roadUnderneath.destroy();
+          }
+
+          const containerUnderneath = buildingsUnderneath.find(i => i.structureType === "container");
+          if (structure.type === "link" && containerUnderneath) {
+            containerUnderneath.destroy();
           }
         }
       }
@@ -204,15 +217,13 @@ export class RoomPlanner {
       .sortBy(s => new RoomPosition(s.x, s.y, room.name).getRangeTo(ctrl))
       .first();
 
-    RoomPlanner.reserveSpot(storageSector.x, storageSector.y, STRUCTURE_STORAGE, planner);
-    RoomPlanner.reserveSpot(storageSector.x - 1, storageSector.y, STRUCTURE_LINK, planner);
-    RoomPlanner.reserveSpot(storageSector.x + 1, storageSector.y, STRUCTURE_TERMINAL, planner);
+    RoomPlanner.reserveSpot(storageSector.x, storageSector.y, STRUCTURE_STORAGE, planner, 4);
+    RoomPlanner.reserveSpot(storageSector.x - 1, storageSector.y, STRUCTURE_LINK, planner, 5);
+    RoomPlanner.reserveSpot(storageSector.x + 1, storageSector.y, STRUCTURE_TERMINAL, planner, 6);
     RoomPlanner.reserveSpot(storageSector.x, storageSector.y + 1, STRUCTURE_ROAD, planner, 4);
     RoomPlanner.reserveSpot(storageSector.x, storageSector.y - 1, STRUCTURE_ROAD, planner, 4);
 
-    RoomPlanner.buildRoadsToSources(planner, room, sectors);
-
-    RoomPlanner.buildRoadsAroundStructures(planner, room, sectors, null);
+    RoomPlanner.buildRoadsAroundStructures(planner, room, sectors, 2);
 
     for (let level = 2; level <= 8; level++) {
       const buildable = RoomPlanner.getNewlyAvailableStructuresAtLevel(level);
@@ -228,9 +239,11 @@ export class RoomPlanner {
       RoomPlanner.buildRoadsAroundStructures(planner, room, sectors, level);
     }
 
-    RoomPlanner.buildControllerLink(planner, room);
+    RoomPlanner.buildRoadsToSources(planner, room, sectors);
 
     RoomPlanner.buildContainersAroundSources(planner, room);
+
+    RoomPlanner.buildControllerLink(planner, room);
     RoomPlanner.buildRoadsToMineral(planner, room, sectors);
 
     RoomPlanner.buildRoadsAroundStructures(planner, room, sectors);
@@ -274,16 +287,17 @@ export class RoomPlanner {
   static buildControllerLink(planner: RoomPlannerData, room: Room) {
     const storagePos = planner.structures.find(i => i.type === "storage") as StructurePlanning;
     var ctrl = room.controller as StructureController;
-    if (ctrl.pos.getRangeTo(new RoomPosition(storagePos.x, storagePos.y, room.name)) > 4) {
-      const linkLocation = PathFinder.search(ctrl.pos, new RoomPosition(storagePos.x, storagePos.y, room.name)).path[2];
+    if (ctrl.pos.getRangeTo(new RoomPosition(storagePos.x, storagePos.y, room.name)) > 3) {
+      const linkLocation = PathFinder.search(ctrl.pos, new RoomPosition(storagePos.x, storagePos.y, room.name)).path[1];
       if (linkLocation) {
-        const positions = [[-1, 0], [0, -1], [1, 0], [0, 1]];
+        const positions = [[0, 0], [-1, 0], [0, -1], [1, 0], [0, 1]];
         for (let i in positions) {
           const dir = positions[i];
           const pos = { x: linkLocation.x + dir[0], y: linkLocation.y + dir[1] };
           const structureExistsHere = planner.structures.find(i => i.x === pos.x && i.y == pos.y);
-          if (!structureExistsHere) {
-            RoomPlanner.reserveSpot(pos.x, pos.y, STRUCTURE_LINK, planner);
+          if (!structureExistsHere || structureExistsHere.type === "road") {
+            RoomPlanner.reserveSpot(pos.x, pos.y, STRUCTURE_CONTAINER, planner, 2);
+            RoomPlanner.reserveSpot(pos.x, pos.y, STRUCTURE_LINK, planner, 5);
             return;
           }
         }

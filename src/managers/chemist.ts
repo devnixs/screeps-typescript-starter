@@ -1,4 +1,4 @@
-import { REAGENTS, RESOURCE_IMPORTANCE, boostResources } from "constants/resources";
+import { REAGENTS, RESOURCE_IMPORTANCE, boostResources, boostParts } from "constants/resources";
 import { minMax, getFirstValueOfObject } from "../utils/misc-utils";
 import { desiredStocks, boostsLimitations } from "constants/misc";
 import { profiler } from "../utils/profiler";
@@ -111,6 +111,16 @@ export class Chemist {
 
   assignBoosts() {
     const boostedParts = this.room.memory.boostMode && this.room.memory.boostMode.parts;
+    const boostMinerals = this.room.memory.boostMode && this.room.memory.boostMode.minerals;
+    if (boostedParts) {
+      this.assignBoostsWithParts();
+    } else if (boostMinerals) {
+      this.assignboostsWithMinerals();
+    }
+  }
+
+  assignBoostsWithParts() {
+    const boostedParts = this.room.memory.boostMode && this.room.memory.boostMode.parts;
     const spawn = this.room.spawns[0];
     if (!boostedParts) {
       return;
@@ -157,6 +167,39 @@ export class Chemist {
           lab.needsAmount = 0;
           lab.boostBodyType = undefined;
         }
+      }
+    }
+  }
+
+  assignboostsWithMinerals() {
+    const minerals = this.room.memory.boostMode && this.room.memory.boostMode.minerals;
+    const spawn = this.room.spawns[0];
+    if (!minerals) {
+      return;
+    }
+
+    const labs = _.sortBy(this.labs, lab => (Game.getObjectById(lab.id) as StructureLab).pos.getRangeTo(spawn));
+    const mineralsToDistribute = minerals.map(i => ({ mineral: i.mineral, leftToDistribute: i.requiredAmount }));
+    for (let labIndex in labs) {
+      const lab = labs[labIndex];
+      const mineralNeed =
+        mineralsToDistribute[labIndex] && mineralsToDistribute[labIndex].leftToDistribute > 0
+          ? mineralsToDistribute[labIndex]
+          : mineralsToDistribute.find(i => i.leftToDistribute > 0);
+
+      if (mineralNeed && mineralNeed.leftToDistribute > 0) {
+        lab.boostResource = mineralNeed.mineral;
+        lab.needsResource = mineralNeed.mineral;
+        lab.needsAmount = Math.min(mineralNeed.leftToDistribute, LAB_MINERAL_CAPACITY);
+        lab.boostBodyType = boostParts[mineralNeed.mineral];
+        mineralNeed.leftToDistribute -= lab.needsAmount;
+      } else {
+        // this lab is not useful
+        lab.state = "needs-emptying";
+        lab.boostResource = undefined;
+        lab.needsResource = "energy";
+        lab.needsAmount = 0;
+        lab.boostBodyType = undefined;
       }
     }
   }

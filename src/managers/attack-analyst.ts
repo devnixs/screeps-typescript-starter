@@ -5,6 +5,7 @@ import { repeatArray } from "utils/misc-utils";
 interface GenerateAttackCreepsInfos {
   fromRoom: string;
   targetRoom: string;
+  force: boolean;
 }
 
 interface PartyDefinition {
@@ -27,7 +28,7 @@ const t0Rcl5: PartyDefinition = {
     }
   ],
   repeat: 4,
-  canCounterRcl: 4,
+  canCounterRcl: 2,
   requiresBoostsTier: 0,
   requiresRcl: 6
 };
@@ -41,7 +42,7 @@ const t0Rcl6: PartyDefinition = {
     }
   ],
   repeat: 4,
-  canCounterRcl: 4,
+  canCounterRcl: 2,
   requiresBoostsTier: 0,
   requiresRcl: 6
 };
@@ -65,7 +66,7 @@ const t1Rcl7: PartyDefinition = {
     {
       [MOVE]: 9,
       [TOUGH]: 13,
-      [HEAL]: 28
+      [HEAL]: 19
     },
     {
       [MOVE]: 9,
@@ -75,8 +76,28 @@ const t1Rcl7: PartyDefinition = {
     }
   ],
   repeat: 2,
-  canCounterRcl: 7,
+  canCounterRcl: 4,
   requiresBoostsTier: 1,
+  requiresRcl: 7
+};
+
+const t2Rcl7: PartyDefinition = {
+  creeps: [
+    {
+      [MOVE]: 7,
+      [TOUGH]: 13,
+      [HEAL]: 20
+    },
+    {
+      [MOVE]: 8,
+      [TOUGH]: 10,
+      [WORK]: 16,
+      [RANGED_ATTACK]: 14
+    }
+  ],
+  repeat: 2,
+  canCounterRcl: 7,
+  requiresBoostsTier: 2,
   requiresRcl: 7
 };
 
@@ -120,7 +141,7 @@ const t3rcl8: PartyDefinition = {
   requiresRcl: 8
 };
 
-const definitions = [t3rcl8, t2rcl8, t1Rcl7, t1Rcl6, t0Rcl6, t0Rcl5];
+const definitions = [t3rcl8, t2rcl8, t2Rcl7, t1Rcl7, t1Rcl6, t0Rcl6, t0Rcl5];
 
 export function generateAttackCreeps(infos: GenerateAttackCreepsInfos) {
   const fromRoom = Game.rooms[infos.fromRoom];
@@ -137,25 +158,18 @@ export function generateAttackCreeps(infos: GenerateAttackCreepsInfos) {
   const targetRcl = targetRoomInfos ? targetRoomInfos.el : undefined;
 
   const resourcesAvailable: any = fromRoom.terminal ? fromRoom.terminal.store : {};
-  const allUsedParts = _.uniq(_.flatten(definitions.map(def => Object.keys(def.creeps))));
-
-  const boostsAvailableByLevel = [1, 2, 3].map(level => {
-    const availabilities = {} as { [partName: string]: number };
-    for (const part in allUsedParts) {
-      availabilities[part] = resourcesAvailable[boostResources[part][level]] || 0;
-    }
-    return availabilities;
-  });
 
   for (const def of definitions) {
     const parts = def.creeps.reduce((acc, creep) => _.merge(acc, creep, (i, j) => (i || 0) + (j || 0)), {});
 
-    let needsBoostResources: { mineral: string; requiredAmount: number }[] = [];
+    let needsBoostResources: MineralNeed[] = [];
     if (def.requiresBoostsTier > 0) {
-      needsBoostResources = Object.keys(parts).map(part => ({
-        mineral: boostResources[part][def.requiresBoostsTier],
-        requiredAmount: parts[part] * LAB_BOOST_MINERAL
-      }));
+      needsBoostResources = Object.keys(parts).map(part => {
+        return {
+          mineral: boostResources[part][def.requiresBoostsTier],
+          requiredAmount: parts[part] * LAB_BOOST_MINERAL
+        };
+      });
     }
 
     let hasEnoughBoosts = false;
@@ -169,9 +183,9 @@ export function generateAttackCreeps(infos: GenerateAttackCreepsInfos) {
       hasEnoughBoosts = !resourceUnavailable;
     }
 
-    hasEnoughRcl = fromRoom.controller ? fromRoom.controller.level > def.requiresRcl : false;
+    hasEnoughRcl = fromRoom.controller ? fromRoom.controller.level >= def.requiresRcl : false;
 
-    if (hasEnoughBoosts && hasEnoughRcl) {
+    if (hasEnoughBoosts && hasEnoughRcl && (targetRcl === undefined || infos.force || targetRcl <= def.canCounterRcl)) {
       return {
         creeps: repeatArray(def.creeps, def.repeat),
         minerals: needsBoostResources
@@ -181,3 +195,5 @@ export function generateAttackCreeps(infos: GenerateAttackCreepsInfos) {
 
   return null;
 }
+
+(global as any).generateAttackCreeps = generateAttackCreeps;

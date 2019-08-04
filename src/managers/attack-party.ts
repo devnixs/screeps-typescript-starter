@@ -90,7 +90,9 @@ export class AttackPartyManager {
   private healSelves(creeps: AttackPartyCreepLoaded[]) {
     for (const creepInfo of creeps) {
       if (creepInfo.creep.hits < creepInfo.creep.hitsMax) {
-        creepInfo.creep.heal(creepInfo.creep);
+        if (creepInfo.creep.getActiveBodyparts(HEAL)) {
+          creepInfo.creep.heal(creepInfo.creep);
+        }
       }
     }
   }
@@ -203,7 +205,9 @@ export class AttackPartyManager {
     // heal most damaged creep
 
     for (const creepInfo of creeps) {
-      creepInfo.creep.heal(creepsAndDamage[0].creepInfo.creep);
+      if (creepInfo.creep.getActiveBodyparts(HEAL)) {
+        creepInfo.creep.heal(creepsAndDamage[0].creepInfo.creep);
+      }
     }
 
     // are creeps too badly damaged?
@@ -263,10 +267,17 @@ export class AttackPartyManager {
   }
 
   private attackObject(creeps: AttackPartyCreepLoaded[], object: Creep | AnyStructure) {
+    console.log("Attacking object", object);
     for (const creepInfo of creeps) {
       if (creepInfo.creep.pos.isNearTo(object)) {
+        console.log(creepInfo.creep, "doing close attack against", object);
+        if (creepInfo.creep.getActiveBodyparts(WORK)) {
+          console.log("Dismantling", object);
+          creepInfo.creep.dismantle(object as any);
+        }
         creepInfo.creep.rangedMassAttack();
       } else {
+        console.log(creepInfo.creep, "doing ranged attack against", object);
         creepInfo.creep.rangedAttack(object);
       }
     }
@@ -276,6 +287,11 @@ export class AttackPartyManager {
     const leader = creeps[0];
     const attackResult = this.attackEnemiesAround(creeps);
     const blockingObject = this.moveParty(creeps, direction);
+    if (blockingObject) {
+      this.swapPositionsIfNecassary(creeps, blockingObject);
+    }
+    console.log("Attack result:", attackResult);
+
     if (attackResult === "OK") {
       if (blockingObject) {
         this.attackObject(creeps, blockingObject);
@@ -283,13 +299,60 @@ export class AttackPartyManager {
     }
   }
 
+  private swapPositionsIfNecassary(creeps: AttackPartyCreepLoaded[], blocking: AnyStructure | Creep) {
+    // we want the dismantlers to be facing the blocking object
+    const inRangeCreepsNotDismantler = creeps.filter(
+      i => i.creep.pos.isNearTo(blocking) && !i.creep.body.find(i => i.type === "work")
+    );
+    const dismantlersNotInRange = creeps.filter(
+      i => !i.creep.pos.isNearTo(blocking) && i.creep.body.find(i => i.type === "work")
+    );
+
+    for (let i = 0; i < Math.min(inRangeCreepsNotDismantler.length, dismantlersNotInRange.length); i++) {
+      const inRangeCreep = inRangeCreepsNotDismantler[i];
+      const inRangeCreepIndex = this.attackParty.creeps.findIndex(i => i.name === inRangeCreep.name);
+      const dismantler = dismantlersNotInRange[i];
+      const dismantlerIndex = this.attackParty.creeps.findIndex(i => i.name === dismantler.name);
+
+      // swap them
+      if (inRangeCreep.creep.pos.isNearTo(dismantler.creep.pos)) {
+        const direction1 = inRangeCreep.creep.pos.getDirectionTo(dismantler.creep.pos);
+        inRangeCreep.creep.move(direction1);
+        const direction2 = dismantler.creep.pos.getDirectionTo(inRangeCreep.creep.pos);
+        dismantler.creep.move(direction2);
+      } else {
+        inRangeCreep.creep.goTo(dismantler.creep.pos);
+        dismantler.creep.goTo(inRangeCreep.creep.pos);
+      }
+      console.log("Swapped:", dismantler.creep, "with", inRangeCreep.creep);
+      console.log("Which is:", inRangeCreepIndex, "with", dismantlerIndex);
+      var tmp = this.attackParty.creeps[inRangeCreepIndex];
+      var tmpx = tmp.x;
+      var tmpy = tmp.y;
+      this.attackParty.creeps[inRangeCreepIndex] = this.attackParty.creeps[dismantlerIndex];
+      this.attackParty.creeps[inRangeCreepIndex].x = this.attackParty.creeps[dismantlerIndex].x;
+      this.attackParty.creeps[inRangeCreepIndex].y = this.attackParty.creeps[dismantlerIndex].y;
+
+      this.attackParty.creeps[dismantlerIndex] = tmp;
+      this.attackParty.creeps[dismantlerIndex].x = tmpx;
+      this.attackParty.creeps[dismantlerIndex].y = tmpy;
+    }
+  }
+
   private attackEnemiesAround(creeps: AttackPartyCreepLoaded[]): "attacked" | "OK" {
-    const leader = creeps[0];
-    const enemyInRange = leader.creep.pos.findInRange(FIND_HOSTILE_CREEPS, 4);
+    const enemyInRange = _.flatten(
+      creeps.map(creepInfos =>
+        creepInfos.creep.getActiveBodyparts("ranged_attack")
+          ? creepInfos.creep.pos.findInRange(FIND_HOSTILE_CREEPS, 3)
+          : []
+      )
+    );
+
     const creepsNotUnderRamparts = enemyInRange.filter(
       i => !i.pos.lookFor(LOOK_STRUCTURES).find(i => i.structureType === "rampart")
     );
     if (creepsNotUnderRamparts.length) {
+      console.log("Attack target : ", creepsNotUnderRamparts[0]);
       this.attackObject(creeps, creepsNotUnderRamparts[0]);
       return "attacked";
     } else {
@@ -319,7 +382,8 @@ export class AttackPartyManager {
       delete this.attackParty.blocker;
     }
 
-    if (!!creeps.find(i => i.creep.fatigue > 0)) {
+    const tiredCreep = creeps.find(i => i.creep.fatigue > 0);
+    if (tiredCreep) {
       // creeps are tired. wait.
       return undefined;
     }
@@ -381,7 +445,7 @@ export class AttackPartyManager {
         if (rampart) {
           return rampart;
         }
-        const creep = pos.lookFor(LOOK_CREEPS).find(i => i.owner.username !== getUsername());
+        const creep = pos.lookFor(LOOK_CREEPS).find(i => i.owner && i.owner.username !== getUsername());
         return creep;
       })
       .filter(i => i);
@@ -404,6 +468,16 @@ export class AttackPartyManager {
       return firstObstacle as AnyStructure | Creep;
     } else {
       delete this.attackParty.blocker;
+
+      // make sure all creeps are not going in an exit tile wall
+      for (const creepInfo of creeps) {
+        const nextPos = Traveler.positionAtDirection(creepInfo.creep.pos, nextDirection);
+        if (!nextPos) {
+          console.log("Creep", creepInfo.creep, "cannot move into a wall. Waiting.");
+          return undefined;
+        }
+      }
+
       for (const creepInfo of creeps) {
         const result = creepInfo.creep.move(nextDirection as DirectionConstant);
         if (result === OK && creepInfo === creeps[0]) {
@@ -551,8 +625,6 @@ export class AttackPartyManager {
     for (const creep of otherCreeps) {
       creep.creep.goTo(leader.creep, { movingTarget: true });
     }
-
-    // TODO: handle case when we are attacked on the way
 
     const rightRoomIsTarget =
       Cartographer.findRelativeRoomName(leader.creep.pos.roomName, 1, 0) === this.attack.toRoom &&

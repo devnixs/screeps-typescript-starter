@@ -26,9 +26,25 @@ class RoleLocalDefender implements IRole {
           }));
         }
       }
+      const enemies = creep.room.find(FIND_HOSTILE_CREEPS);
 
       moveOptions = {
         obstacles: safeAreaBoundaries[creep.room.name],
+        roomCallback: (room, matrix) => {
+          // avoid walking on areas that are in range of enemies
+          for (const enemy of enemies) {
+            const isRanged = enemy.getActiveBodyparts(RANGED_ATTACK) > 0;
+            const isCac = enemy.getActiveBodyparts(ATTACK) > 0;
+            const range = isRanged ? 3 : isCac ? 1 : 0;
+            for (let i = -range; i <= range; i++) {
+              for (let j = -range; j <= range; j++) {
+                matrix.set(enemy.pos.x + i, enemy.pos.y + j, 200);
+              }
+            }
+          }
+
+          return matrix;
+        },
         stuckValue: 1
       };
     }

@@ -358,3 +358,5 @@ export class ExplorationManager {
 }
 
 profiler.registerClass(ExplorationManager, "ExplorationManager");
+
+(global as any).ExplorationManager = ExplorationManager;

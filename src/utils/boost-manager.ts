@@ -1,3 +1,5 @@
+import { boostParts } from "constants/resources";
+
 export function boostCreep(creep: Creep) {
   if (!creep.room.name) {
     return -1;
@@ -19,7 +21,14 @@ export function boostCreep(creep: Creep) {
   if (creep.room.name !== creep.memory.homeRoom) {
     return -1;
   }
-  const bodyPartsThatNeedBoosts = creep.room.memory.boostMode.parts;
+
+  const parts = creep.room.memory.boostMode.parts;
+  const minerals = creep.room.memory.boostMode.minerals as MineralNeed[];
+  if (!parts && !minerals) {
+    return -1;
+  }
+
+  const bodyPartsThatNeedBoosts = parts || minerals.map(i => boostParts[i.mineral]);
   const nonBoostedBodyPartsThatNeedBoosts = creep.body
     .filter(i => !i.boost)
     .map(i => i.type)

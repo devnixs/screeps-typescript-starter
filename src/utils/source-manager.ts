@@ -228,6 +228,8 @@ class SourceManager {
         {
           filter: (structure: StructureContainer) => {
             return (
+              // trucks cannot pull from the container controller
+              (creep.memory.role !== "truck" || structure.id !== creep.room.memory.controllerContainer) &&
               structure.structureType == STRUCTURE_CONTAINER &&
               structure.store.energy >= structure.storeCapacity * minContainerCapacityPercent
             );
@@ -258,8 +260,12 @@ class SourceManager {
 
     const hasEnoughEnergyInRoom = structure.room.energyAvailable === structure.room.energyCapacityAvailable;
 
+    const isControllerContainer = structure.room.memory.controllerContainer === structure.id;
+    const container = (structure as any) as StructureContainer;
+
     return (
       (isExtOrSpawn && structure.energy < structure.energyCapacity) ||
+      (isControllerContainer && container.store.energy < container.storeCapacity * 0.75) ||
       (hasEnoughEnergyInRoom && isTowerOrLab && structure.energy < structure.energyCapacity * 0.5) // we don't want to keep filling towers. Or the creep would keep doing this as the energy goes down every tick
     );
   };
@@ -270,6 +276,8 @@ class SourceManager {
       "deposit_structure_id",
       FIND_STRUCTURES,
       (targetStructure: any) =>
+        (targetStructure.id === creep.room.memory.controllerContainer &&
+          targetStructure.store.energy < targetStructure.storeCapacity * 0.75) ||
         (targetStructure.structureType != "tower" && targetStructure.energy < targetStructure.energyCapacity) ||
         (targetStructure.structureType === "tower" && targetStructure.energy < targetStructure.energyCapacity - 100),
       {
@@ -303,7 +311,6 @@ class SourceManager {
   }
 
   storeEnergy(creep: Creep) {
-    let initialCpu = Game.cpu.getUsed();
     let targetStructure: AnyStructure | undefined = undefined;
     const inputLink = LinkManager.getInputLinkThatCanReceiveEnergy(creep.pos);
 

@@ -248,11 +248,11 @@ export class RemotesManager {
 
     if (totalSpent > 0) {
       const ratio = totalRetrieved / totalSpent;
-      if (totalSpent > 50000 && ratio < 1.4) {
+      if (totalSpent > 65000 && ratio < 1.3) {
         // disable this room;
         return false;
       }
-      if (totalSpent > 25000 && ratio < 1) {
+      if (totalSpent > 25000 && ratio < 0.5) {
         // disable this room;
         return false;
       }

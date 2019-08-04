@@ -5,6 +5,7 @@ import { IRemoteDefenderMemory } from "./remote-defender";
 import { flee, runFromTimeToTime } from "utils/misc-utils";
 import { Cartographer } from "utils/cartographer";
 import { roleUpgrader } from "./upgrader";
+import { getUsedPercentage } from "utils/cpu";
 
 function measureCpu() {}
 
@@ -71,7 +72,7 @@ class RoleLongDistanceTruck implements IRole {
 
       // if in home room
       if (creep.room.name == memory.home) {
-        if (creep.room.energyAvailable < creep.room.energyCapacityAvailable / 2) {
+        if (creep.room.energyAvailable < creep.room.energyCapacityAvailable / 2 || getUsedPercentage() < 0.6) {
           sourceManager.store(creep);
         } else {
           const res = sourceManager.storeInStorageIfPossible(creep);

@@ -137,6 +137,11 @@ export const boostResources: { [actionName: string]: { [boostLevel: number]: _Re
     2: "KH2O",
     3: "XKH2O"
   },
+  work: {
+    1: "ZH",
+    2: "ZH2O",
+    3: "XZH2O"
+  },
   ranged_attack: {
     1: "KO",
     2: "KHO2",

@@ -295,9 +295,13 @@ export function repeatArray<T>(array: T[], times: number) {
   // returns an array with element elem repeated n times.
   var arr: T[] = [];
 
-  for (var i = 0; i <= times; i++) {
+  for (var i = 0; i < times; i++) {
     arr = arr.concat(array);
   }
 
   return arr;
+}
+
+export function hasRoomBeenAttacked(room: Room) {
+  return room.controller && room.controller.safeModeAvailable < room.controller.level - 1;
 }

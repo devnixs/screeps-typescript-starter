@@ -184,7 +184,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
       RolePestControl.checkReconstruction();
       SafeModeActivator.activeSafeModeIfNecessary();
       UpgradeManager.runForAllRooms();
-      ConquestManager.run();
+      // ConquestManager.run();
       RoomPlanner.runForAllRooms();
       CachedPaths.run();
       SegmentManager.run();

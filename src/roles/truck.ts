@@ -328,7 +328,9 @@ class RoleTruck implements IRole {
     if (params.resource === "energy") {
       const containerWithEnergy: StructureContainer | undefined = params.creep.room.find(FIND_STRUCTURES, {
         filter: structure =>
-          structure.structureType == STRUCTURE_CONTAINER && structure.store.energy >= structure.storeCapacity / 4
+          structure.structureType == STRUCTURE_CONTAINER &&
+          structure.store.energy >= structure.storeCapacity / 4 &&
+          structure.id !== params.creep.room.memory.controllerContainer
       })[0] as any;
 
       if (containerWithEnergy) {
@@ -373,7 +375,10 @@ class RoleTruck implements IRole {
     }
 
     const filledContainers: StructureContainer[] = creep.room.find(FIND_STRUCTURES, {
-      filter: i => i.structureType === "container" && _.sum(i.store) >= i.storeCapacity / 2
+      filter: i =>
+        i.structureType === "container" &&
+        _.sum(i.store) >= i.storeCapacity / 2 &&
+        i.id !== creep.room.memory.controllerContainer
     }) as StructureContainer[];
 
     for (let filledContainerIndex in filledContainers) {
@@ -407,6 +412,24 @@ class RoleTruck implements IRole {
           targetDestination: tower.id,
           emoji: "📡"
         };
+      }
+    }
+
+    // refill controller container
+    const controllerContainer = Game.getObjectById(creep.room.memory.controllerContainer) as
+      | StructureContainer
+      | undefined;
+    if (controllerContainer && _.sum(controllerContainer.store) < controllerContainer.storeCapacity * 0.75) {
+      const job = this.createRefillJob({
+        amount: controllerContainer.storeCapacity - _.sum(controllerContainer.store),
+        creep: creep,
+        tag: "ctrl-container",
+        resource: "energy",
+        targetId: controllerContainer.id,
+        emoji: "👃🏻"
+      });
+      if (job) {
+        yield job;
       }
     }
 
@@ -496,13 +519,6 @@ class RoleTruck implements IRole {
     }
 
     if (storage && terminal) {
-      var assets = storage.store;
-
-      let terminalOversupply: string | undefined;
-      let terminalUndersupply: string | undefined;
-
-      const wantsToKeepForThisRoom = this.getWantsToKeepForThisRoom(creep.room.name);
-
       const terminal = creep.room.terminal;
 
       if (
@@ -554,21 +570,6 @@ class RoleTruck implements IRole {
             emoji: "⬜️"
           };
         }
-      }
-
-      if (terminal) {
-        const resources = _.uniq(Object.keys(wantsToKeepForThisRoom).concat(Object.keys(terminal.store)));
-
-        terminalOversupply = resources.filter(
-          i =>
-            i !== "energy" &&
-            this.getResource(terminal.store, i) > 0 &&
-            this.getResource(storage.store, i) < this.getResource(wantsToKeepForThisRoom, i)
-        )[0];
-
-        terminalUndersupply = resources.filter(
-          i => i !== "energy" && this.getResource(storage.store, i) > this.getResource(wantsToKeepForThisRoom, i)
-        )[0];
       }
 
       if (creep.room.controller && creep.room.controller.level === 8 && terminal) {
@@ -645,7 +646,8 @@ class RoleTruck implements IRole {
     }
 
     const nonEmptyContainers: StructureContainer[] = creep.room.find(FIND_STRUCTURES, {
-      filter: i => i.structureType === "container" && _.sum(i.store) > 500
+      filter: i =>
+        i.structureType === "container" && _.sum(i.store) > 500 && i.id !== creep.room.memory.controllerContainer
     }) as StructureContainer[];
 
     for (var nonEmptyContainersIndex in nonEmptyContainers) {

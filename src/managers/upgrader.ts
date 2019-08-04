@@ -12,7 +12,12 @@ export class UpgradeManager {
   }
 
   run() {
-    if (Game.time % 13 > 0) {
+    this.findUpgraderContainer();
+    this.computeRatios();
+  }
+
+  computeRatios() {
+    if (Game.time % 23 > 0) {
       return;
     }
 
@@ -29,6 +34,7 @@ export class UpgradeManager {
     }
 
     const storage = this.room.storage;
+    // const container = Game.getObjectById(this.room.memory.controllerContainer) as StructureContainer | undefined;
 
     if (storage) {
       const closestLink = this.room.controller.pos.findClosestByRange(FIND_MY_STRUCTURES, {
@@ -56,7 +62,7 @@ export class UpgradeManager {
         }
       } else {
         const points = storage.store.energy / 100000;
-        this.room.memory.upgraderRatio = Math.ceil(Math.pow(points, 2) * 2);
+        this.room.memory.upgraderRatio = Math.ceil(Math.pow(points, 2) * 4);
       }
     } else {
       const containers = this.room.containers;
@@ -82,6 +88,27 @@ export class UpgradeManager {
       }
 
       this.room.memory.upgraderType = "mobile";
+    }
+  }
+
+  findUpgraderContainer() {
+    if (Game.time % 104 > 0) {
+      return;
+    }
+
+    var controller = this.room.controller as StructureController;
+    if (!controller) {
+      return;
+    }
+
+    let container = Game.getObjectById(this.room.memory.controllerContainer) as StructureContainer | undefined;
+    if (!container) {
+      delete this.room.memory.controllerContainer;
+      container = this.room.containers.find(i => i.pos.inRangeTo(controller.pos, 2));
+
+      if (container) {
+        this.room.memory.controllerContainer = container.id;
+      }
     }
   }
 }

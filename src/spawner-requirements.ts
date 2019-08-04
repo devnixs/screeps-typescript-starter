@@ -8,7 +8,7 @@ import { RoleBuilder } from "roles/builder";
 import { IReserverMemory } from "roles/reserver";
 import { ILongDistanceTruckMemory } from "roles/longdistancetruck";
 import { IRemoteDefenderMemory } from "roles/remote-defender";
-import { getMyRooms, runFromTimeToTime } from "utils/misc-utils";
+import { getMyRooms, runFromTimeToTime, hasRoomBeenAttacked } from "utils/misc-utils";
 import { isInSafeArea } from "utils/safe-area";
 import { profiler } from "utils/profiler";
 import { Cartographer } from "utils/cartographer";
@@ -117,7 +117,7 @@ function initOneTimeValues() {
     .map(i => Game.rooms[i])
     .filter(i => i.controller && i.controller.my && i.controller.level <= 5)[0];
 
-  if (colonyThatNeedsHelpDefending && myRooms.length > 1) {
+  if (colonyThatNeedsHelpDefending && myRooms.length > 1 && hasRoomBeenAttacked(colonyThatNeedsHelpDefending)) {
     remoteDefenderHelperSource = findClosestRoom(colonyThatNeedsHelpDefending.name);
     remoteDefenderHelperTarget = colonyThatNeedsHelpDefending.name;
     remoteDefenderHelperCount = 4;
@@ -155,6 +155,12 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
 
   const hasStorageOrContainers = !!spawn.room.storage || !!spawn.room.containers.length;
 
+  // while forming an attack, stop spawning those as they occupy all the trucks
+  const isStartingAttack =
+    Memory.attack &&
+    Memory.attack.fromRoom === spawn.pos.roomName &&
+    Memory.attack.parties.find(i => i.status === "forming");
+
   // OPTIMIZATION POSSIBLE
   var needsBuilder = hasStorageOrContainers && !!RoleBuilder.findTargetStructure(spawn.room, false);
 
@@ -170,7 +176,7 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
  */
 
   const upgraders: RoleRequirement[] = [];
-  if (spawn.room.memory.upgraderRatio > 0 && !spawn.room.memory.isUnderSiege) {
+  if (spawn.room.memory.upgraderRatio > 0 && !spawn.room.memory.isUnderSiege && !isStartingAttack) {
     if (spawn.room.memory.upgraderType === "mobile") {
       upgraders.push({
         percentage: 1,
@@ -257,7 +263,7 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
 
   const remoteHarvesters = (spawn.room.memory.remotes || [])
     .filter(i => !i.disabled)
-    .filter(i => !spawn.room.memory.isUnderSiege)
+    .filter(i => !spawn.room.memory.isUnderSiege && !isStartingAttack)
     .map(remote => {
       return {
         percentage: 4,
@@ -424,16 +430,14 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
         role: "attacker",
         subRole: Game.time.toString(), // this will cound each attackers are individuals, and for it to be high priority
         maxCount: spawn.room.memory.needsAttackers.count,
-        bodyTemplate: [MOVE, MOVE, RANGED_ATTACK, HEAL],
-        sortBody: [RANGED_ATTACK, MOVE, HEAL],
-        maxRepeat: spawn.room.spawns.length * 5,
+        exactBody: spawn.room.memory.needsAttackers.parts,
+        sortBody: [TOUGH, WORK, RANGED_ATTACK, MOVE, HEAL],
         onSpawn: (a, b, name) => {
           AttackManager.assignToAttackParty(
             name,
             (spawn.room.memory.needsAttackers && spawn.room.memory.needsAttackers.partyId) || 0
           );
         },
-        disableIfLowOnCpu: true,
         additionalMemory: {
           home: spawn.pos.roomName,
           ready: false,
@@ -443,9 +447,6 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
     : null;
 
   let trucksCount = 2;
-  if (controllerLevel === 2) {
-    trucksCount = 1;
-  }
   if (controllerLevel === 1) {
     trucksCount = 0;
   }
@@ -548,7 +549,9 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
       percentage: 4,
       role: "long-distance-truck",
       maxRepatAccrossAll:
-        isStorageAlmostFull || hasIdleLongDistanceTrucks || spawn.room.memory.isUnderSiege ? 0 : totalTruckRepetitions,
+        isStorageAlmostFull || hasIdleLongDistanceTrucks || spawn.room.memory.isUnderSiege || isStartingAttack
+          ? 0
+          : totalTruckRepetitions,
       bodyTemplate: [MOVE, CARRY, CARRY],
       disableIfLowOnCpu: true,
       bodyTemplatePrepend: [WORK, CARRY, MOVE],

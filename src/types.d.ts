@@ -52,6 +52,7 @@ interface PlannedLocation {
 }
 
 interface RoomMemory {
+  controllerContainer?: string;
   boostModeIsSetup: boolean;
   useNewRoomPlanner: any;
   walls: number[] | undefined;
@@ -103,11 +104,13 @@ interface AttackerNeed {
   boosted: boolean;
   count: number;
   partyId: number;
+  parts: BodyPartConstant[];
 }
 
 interface AttackSetup {
   fromRoom: string;
   toRoom: string;
+  lastUpdateDate: number;
 
   parties: AttackParty[];
 }
@@ -117,6 +120,8 @@ interface AttackParty {
   isApproxPath: boolean;
   id: number;
   creeps: AttackPartyCreep[];
+  needs: BodyPartConstant[][];
+  mineralsNeeded: MineralNeed[];
   status: "forming" | "moving" | "regrouping" | "attacking" | "retreating" | "complete" | "dead";
   boosted: boolean;
   count: number;
@@ -126,6 +131,11 @@ interface AttackParty {
   ttl: number;
   distance?: number;
   blocker?: Blocker;
+}
+
+interface MineralNeed {
+  mineral: ResourceConstant;
+  requiredAmount: number;
 }
 
 interface Blocker {
@@ -140,7 +150,8 @@ interface AttackPartyCreep {
 }
 
 interface BoostMode {
-  parts: BodyPartConstant[];
+  parts?: BodyPartConstant[];
+  minerals?: MineralNeed[];
   reason: "siege" | "remote" | "attack";
 }
 

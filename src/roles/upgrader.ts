@@ -31,7 +31,27 @@ class RoleUpgrader implements IRole {
         creep.memory.s = Game.time;
       }
     } else {
-      sourceManager.getEnergy(creep);
+      // use container or link in priority
+      const container = Game.getObjectById(creep.room.memory.controllerContainer) as StructureContainer | undefined;
+      const outputLink = creep.room.memory.links && creep.room.memory.links.find(i => i.type === "output");
+      const outputLinkObj = outputLink && (Game.getObjectById(outputLink.id) as StructureLink | undefined);
+      if (container && container.pos.inRangeTo(creep, 3) && container.store.energy > 0) {
+        if (container.pos.isNearTo(creep)) {
+          creep.withdraw(container, "energy");
+          memory.upgrading = true;
+        } else {
+          creep.goTo(container);
+        }
+      } else if (outputLinkObj && outputLinkObj.pos.inRangeTo(creep, 3) && outputLinkObj.energy > 0) {
+        if (outputLinkObj.pos.isNearTo(creep)) {
+          creep.withdraw(outputLinkObj, "energy");
+          memory.upgrading = true;
+        } else {
+          creep.goTo(outputLinkObj);
+        }
+      } else {
+        sourceManager.getEnergy(creep);
+      }
     }
   }
 }

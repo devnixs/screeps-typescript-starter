@@ -238,6 +238,11 @@ class Spawner {
     let repeats = 1;
     if (role.exactBody) {
       body = role.exactBody;
+
+      const sortOrder = role.sortBody;
+      if (sortOrder) {
+        body = _.sortBy(body, bodyPart => sortOrder.indexOf(bodyPart));
+      }
       if (debug) {
         console.log("Spawning exact body : ", role.exactBody);
       }

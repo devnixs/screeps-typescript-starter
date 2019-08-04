@@ -1,6 +1,7 @@
 import { findClosestRoom, getAttackFlag } from "utils/finder";
 import { ExplorationManager } from "./exploration";
 import { getMyRooms } from "utils/misc-utils";
+import { generateAttackCreeps } from "./attack-analyst";
 
 // This makes a quad
 const attackPartyPositions = [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 }, { x: 2, y: 0 }];
@@ -53,6 +54,7 @@ export class AttackManager {
           ...currentPosition
         });
       }
+      Memory.attack.lastUpdateDate = Game.time;
     }
     this.setNeeds(true);
   }
@@ -66,6 +68,22 @@ export class AttackManager {
     if (attack.parties.filter(i => i.failed).length >= 3) {
       // stop attack
       console.log("Too many attack failed. Stopping attack");
+      const flag = getAttackFlag();
+      if (flag) {
+        flag.remove();
+      }
+    }
+  }
+
+  static stopAttackIfIdle() {
+    const attack = Memory.attack;
+    if (!attack || Game.time % 5 > 0) {
+      return;
+    }
+
+    if (attack.lastUpdateDate < Game.time - 3000) {
+      // stop attack
+      console.log("Attack is idle. Stopping");
       const flag = getAttackFlag();
       if (flag) {
         flag.remove();
@@ -103,30 +121,32 @@ export class AttackManager {
       return;
     }
 
-    var ready = AttackManager.isRoomReadyToStartAttack(attack.fromRoom);
-    if (!ready.ready) {
-      console.log("Cannot create party: ", ready.reason);
-      return;
-    }
-
-    const targetInformation = ExplorationManager.getExploration(attack.toRoom);
-    if (targetInformation) {
-      // TODO: decide if we need to boost our creeps
-    }
-
-    var flag = getAttackFlag();
-    let boosted = false;
-    if (flag.name.split(":").length >= 3) {
-      var boostTier = Number(flag.name.split(":")[2]);
-      if (boostTier >= 1) {
-        boosted = true;
+    let partyInfo = generateAttackCreeps({
+      fromRoom: attack.fromRoom,
+      targetRoom: attack.toRoom,
+      force: false
+    });
+    if (!partyInfo) {
+      // stop attack
+      console.log("WARNING: Cannot defeat this room. Trying anyway.");
+      partyInfo = generateAttackCreeps({
+        fromRoom: attack.fromRoom,
+        targetRoom: attack.toRoom,
+        force: true
+      });
+      if (!partyInfo) {
+        console.log("I was not able to generate an attack party. aborting attack");
+        this.stopAttack();
+        return;
       }
     }
 
     var party = {
       boosted: true,
-      count: 4,
+      count: partyInfo.creeps.length,
       creeps: [],
+      mineralsNeeded: partyInfo.minerals,
+      needs: partyInfo.creeps.map(creep => _.flatten(Object.keys(creep).map(part => _.fill(Array(creep[part]), part)))),
       id: Game.time,
       status: "forming",
       isApproxPath: true,
@@ -135,11 +155,30 @@ export class AttackManager {
     } as AttackParty;
 
     console.log("Creating attack party ", JSON.stringify(party));
+
+    if (partyInfo.minerals.length) {
+      Game.rooms[attack.fromRoom].memory.boostMode = {
+        minerals: partyInfo.minerals,
+        reason: "attack"
+      };
+    }
+
     attack.parties.push(party);
   }
 
   static startAttack(fromRoom: string, toRoom: string) {
     console.log("Starting attack from ", fromRoom, "to", toRoom);
+
+    const exploration = ExplorationManager.getExploration(toRoom);
+    if (exploration) {
+      if (exploration.eb) {
+        console.log("Exploration Report: Enemy base level ", exploration.el);
+      } else {
+        console.log("Exploration Report: This room doesn't appear to be an enemy base");
+      }
+    } else {
+      console.log("Exploration Report: We no nothing of this room.");
+    }
 
     if (Memory.attack) {
       console.log("ERROR: attack already in progress");
@@ -149,12 +188,8 @@ export class AttackManager {
     Memory.attack = {
       fromRoom,
       toRoom,
-      parties: []
-    };
-
-    Game.rooms[fromRoom].memory.boostMode = {
-      reason: "attack",
-      parts: [HEAL, RANGED_ATTACK]
+      parties: [],
+      lastUpdateDate: Game.time
     };
   }
 
@@ -163,7 +198,10 @@ export class AttackManager {
 
     const attack = Memory.attack;
     if (attack) {
-      Game.rooms[attack.fromRoom].memory.boostMode = undefined;
+      const boostMode = Game.rooms[attack.fromRoom].memory.boostMode;
+      if (boostMode && boostMode.reason === "attack") {
+        Game.rooms[attack.fromRoom].memory.boostMode = undefined;
+      }
       Memory.attack = undefined;
     } else {
       console.log("ERROR: attack was already stopped");
@@ -174,25 +212,66 @@ export class AttackManager {
     if (Game.time % 5 > 0 && !force) {
       return;
     }
+    const attack = Memory.attack;
 
     var myRooms = getMyRooms();
     for (let room of myRooms) {
-      room.memory.needsAttackers = undefined;
+      if (!attack || room.name !== attack.fromRoom) {
+        // this room has no reason to have attackers
+        room.memory.needsAttackers = undefined;
+      }
     }
 
-    const attack = Memory.attack;
     if (attack) {
       const sourceRoom = myRooms.find(i => i.name === attack.fromRoom);
+      if (!sourceRoom) {
+        return;
+      }
+
       var formingParty = attack.parties.find(i => i.status === "forming");
       if (formingParty) {
         const attackersNeeded = formingParty.count - formingParty.creeps.length;
         if (sourceRoom && attackersNeeded > 0) {
+          // if the attack hasn't started yet, make sure we can do it
+          var readyness = AttackManager.isRoomReadyToStartAttack(attack.fromRoom);
+          if (!sourceRoom.memory.needsAttackers && !readyness.ready) {
+            console.log("Cannot create party: ", readyness.reason);
+            return;
+          }
+²
+          const currentCreepNeeded = formingParty.needs[formingParty.creeps.length];
+          const mineralsNeeded = formingParty.mineralsNeeded;
+
+          const labs = AttackManager.getLabs(Game.rooms[attack.fromRoom]);
+          const mineralNotReady = mineralsNeeded.find(
+            i =>
+              !labs.find(
+                j =>
+                  j.lab.mineralType === i.mineral &&
+                  j.lab.mineralAmount >= Math.min(i.requiredAmount, LAB_MINERAL_CAPACITY)
+              )
+          );
+
+          if (mineralNotReady) {
+            console.log("Cannot start attackers as we lack mineral ", mineralNotReady.mineral, "in labs");
+            return;
+          }
+
+          console.log("Asking for spawn of creep #" + formingParty.creeps.length, JSON.stringify(currentCreepNeeded));
+
           sourceRoom.memory.needsAttackers = {
-            boosted: formingParty.boosted,
-            count: formingParty.count,
+            boosted: mineralsNeeded.length > 0,
+            count: 1,
+            parts: currentCreepNeeded,
             partyId: formingParty.id
           };
         }
+      } else {
+        if (sourceRoom.memory.needsAttackers) {
+          console.log("All creeps have been spawned");
+        }
+        // we have all the creeps we need
+        sourceRoom.memory.needsAttackers = undefined;
       }
     }
   }
@@ -229,33 +308,6 @@ export class AttackManager {
         ready: false,
         reason: `Truck ${trucksThatNeedsToBeRenewedSoon} will die soon`
       };
-    }
-
-    const attack = Memory.attack;
-    if (attack) {
-      const boostMode = Game.rooms[attack.fromRoom].memory.boostMode;
-      console.log("Checking attack creation status: ");
-      if (boostMode && boostMode.reason === "attack") {
-        // check that boosts have been dispatched
-        const labs = AttackManager.getLabs(Game.rooms[attack.fromRoom]);
-        const labNotReady = labs.find(i =>
-          i.memory.boostBodyType && (i.memory.needsResource !== i.lab.mineralType || i.lab.mineralAmount < 2000)
-            ? true
-            : false
-        );
-        /*        if (labNotReady) {
-          return {
-            ready: false,
-            reason: `Lab not ready : ${labNotReady.lab.id} needs ${labNotReady.memory.needsAmount} ${
-              labNotReady.memory.needsResource
-            }`
-          };
-        } else {
-          console.log("All labs are ready");
-        } */
-      } else {
-        console.log("No boost mode in progress");
-      }
     }
 
     /*     var storage = room.storage;
