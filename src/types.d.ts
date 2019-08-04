@@ -25,6 +25,7 @@ type roles =
   | "reserver"
   | "scout"
   | "transport"
+  | "poker"
   | "dismantler";
 
 // memory extension samples
@@ -52,6 +53,7 @@ interface PlannedLocation {
 }
 
 interface RoomMemory {
+  poker: string;
   controllerContainer?: string;
   boostModeIsSetup: boolean;
   useNewRoomPlanner: any;

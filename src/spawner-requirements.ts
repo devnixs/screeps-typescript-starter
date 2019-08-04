@@ -15,6 +15,8 @@ import { Cartographer } from "utils/cartographer";
 import { IAttackerMemory } from "roles/attacker";
 import { AttackManager } from "managers/attack";
 import { ITransportMemory } from "roles/transport";
+import { IPokerMemory, rolePoker } from "roles/poker";
+import { getAverageCpu, getUsedPercentage } from "utils/cpu";
 
 export interface RoleRequirement {
   role: roles;
@@ -540,7 +542,10 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
       percentage: 1,
       role: "scout",
       maxCount:
-        runFromTimeToTime(1500, 4500) && !spawn.room.memory.isUnderSiege && controllerLevel >= 3 && controllerLevel < 8
+        (getUsedPercentage() > 0.5 ? runFromTimeToTime(1500, 4500) : true) &&
+        !spawn.room.memory.isUnderSiege &&
+        controllerLevel >= 3 &&
+        controllerLevel < 8
           ? 1
           : 0
     },
@@ -560,7 +565,16 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
         home: spawn.pos.roomName
       } as Partial<ILongDistanceTruckMemory>
     },
-    ...reservers
+    ...reservers,
+    {
+      percentage: 2,
+      role: "poker",
+      exactBody: [MOVE, ATTACK],
+      maxCount: spawn.room.memory.poker ? 1 : 0,
+      additionalMemory: {
+        targetRoom: spawn.room.memory.poker
+      } as Partial<IPokerMemory>
+    }
   ] as (RoleRequirement | null)[])
     .filter(i => i)
     .map(i => i as RoleRequirement);

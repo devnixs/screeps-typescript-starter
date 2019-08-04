@@ -7,7 +7,7 @@ import { Traveler } from "utils/Traveler";
 const isSimulation = "sim" in Game.rooms;
 const delay = isSimulation ? 1 : 40;
 
-const constructionSitesProgress: { [id: string]: number } = {};
+const constructionSitesProgress: { [id: string]: { progress: number; time: number } } = {};
 
 export class Architect {
   emptySpot: Vector | undefined;
@@ -63,14 +63,19 @@ export class Architect {
           delete constructionSitesProgress[i.id];
         }
 
-        if (i.old && i.current && i.old === i.current.progress) {
+        if (i.old && i.current && i.old.progress === i.current.progress && i.old.time < Game.time - 1000) {
           // there has been no progress since last time. Delete construction site.
-          console.log("Removing construction site ", i.current.id, "because no progress was made in a long time.");
+          console.log(
+            "Removing construction site ",
+            i.current.structureType,
+            i.current.pos,
+            "because no progress was made in a long time."
+          );
           i.current.remove();
         }
 
         if (i.current) {
-          constructionSitesProgress[i.id] = i.current.progress;
+          constructionSitesProgress[i.id] = { progress: i.current.progress, time: Game.time };
         }
       });
   }

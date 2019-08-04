@@ -305,3 +305,8 @@ export function repeatArray<T>(array: T[], times: number) {
 export function hasRoomBeenAttacked(room: Room) {
   return room.controller && room.controller.safeModeAvailable < room.controller.level - 1;
 }
+
+export function sing(creep: Creep, words: string[]) {
+  var word = words[Game.time % words.length];
+  creep.say(word, true);
+}

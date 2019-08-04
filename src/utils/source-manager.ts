@@ -200,7 +200,11 @@ class SourceManager {
 
     if (!targetStructure && creep.getActiveBodyparts(MOVE) >= 4) {
       targetStructure = creep.pos.findInRange(FIND_STRUCTURES, 4, {
-        filter: i => i.structureType === "container" && i.store.energy > i.storeCapacity / 4
+        filter: i =>
+          i.structureType === "container" &&
+          i.store.energy > i.storeCapacity / 4 &&
+          // trucks cannot withdraw from controller containers
+          (creep.memory.role !== "truck" || i.id !== creep.room.memory.controllerContainer)
       })[0];
       // if path is longer than 4, abort
       if (targetStructure) {

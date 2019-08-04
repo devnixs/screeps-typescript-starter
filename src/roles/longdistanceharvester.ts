@@ -19,6 +19,7 @@ class RoleLongDistanceHarvester implements IRole {
     const totalCargoContent = _.sum(creep.carry);
 
     if (flee(creep) === OK) {
+      memory.sittingOnContainer = false;
       return;
     }
 

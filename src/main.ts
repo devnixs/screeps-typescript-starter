@@ -48,6 +48,8 @@ import { CachedPaths } from "utils/cached-paths";
 import { AttackManager } from "managers/attack";
 import { AttackPartyManager } from "managers/attack-party";
 import { roleTransport } from "roles/transport";
+import { rolePoker } from "roles/poker";
+import { PokingManager } from "managers/poking";
 
 // profiler.enable();
 
@@ -168,6 +170,9 @@ export const loop = ErrorMapper.wrapLoop(() => {
         if (memory.role == "transport") {
           roleTransport.run(creep);
         }
+        if (memory.role == "poker") {
+          rolePoker.run(creep);
+        }
       } catch (e) {
         console.log(e, creep.name);
         error = e;
@@ -190,6 +195,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
       SegmentManager.run();
       AttackManager.run();
       AttackPartyManager.runForAllAttackParties();
+      PokingManager.runForAllRooms();
     } catch (e) {
       console.log("Failed to run managers.", e);
       error = e;

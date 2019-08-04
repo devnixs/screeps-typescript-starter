@@ -32,13 +32,23 @@ class RoleLocalDefender implements IRole {
         obstacles: safeAreaBoundaries[creep.room.name],
         roomCallback: (room, matrix) => {
           // avoid walking on areas that are in range of enemies
-          for (const enemy of enemies) {
-            const isRanged = enemy.getActiveBodyparts(RANGED_ATTACK) > 0;
-            const isCac = enemy.getActiveBodyparts(ATTACK) > 0;
-            const range = isRanged ? 3 : isCac ? 1 : 0;
-            for (let i = -range; i <= range; i++) {
-              for (let j = -range; j <= range; j++) {
-                matrix.set(enemy.pos.x + i, enemy.pos.y + j, 200);
+          // if there's a rampart, it's safe to walk on
+          if ((room = creep.room.name)) {
+            var ramparts = Game.rooms[room] ? Game.rooms[room].ramparts : [];
+
+            for (const enemy of enemies) {
+              const isRanged = enemy.getActiveBodyparts(RANGED_ATTACK) > 0;
+              const isCac = enemy.getActiveBodyparts(ATTACK) > 0;
+              const range = isRanged ? 3 : isCac ? 1 : 0;
+              for (let i = -range; i <= range; i++) {
+                for (let j = -range; j <= range; j++) {
+                  const x = enemy.pos.x + i;
+                  const y = enemy.pos.y + j;
+                  const rampartHere = ramparts.find(i => i.pos.x === x && i.pos.y === y);
+                  if (!rampartHere) {
+                    matrix.set(x, y, 200);
+                  }
+                }
               }
             }
           }

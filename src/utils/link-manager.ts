@@ -184,14 +184,14 @@ export class LinkManager {
 
   createLink(link: StructureLink): LinkMemory {
     const controller = this.room.controller;
-    const storagesInRange = link.pos.findInRange(FIND_MY_STRUCTURES, 4, { filter: i => i.structureType === "storage" });
+    const storagesInRange = link.pos.findInRange(FIND_MY_STRUCTURES, 1, { filter: i => i.structureType === "storage" });
     if (storagesInRange.length > 0) {
       return {
         id: link.id,
         type: "input-output",
         state: "idle"
       };
-    } else if (controller && link.pos.inRangeTo(controller.pos.x, controller.pos.y, 4)) {
+    } else if (controller && link.pos.inRangeTo(controller.pos.x, controller.pos.y, 3)) {
       return {
         id: link.id,
         type: "output",
