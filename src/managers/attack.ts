@@ -238,7 +238,6 @@ export class AttackManager {
             console.log("Cannot create party: ", readyness.reason);
             return;
           }
-²
           const currentCreepNeeded = formingParty.needs[formingParty.creeps.length];
           const mineralsNeeded = formingParty.mineralsNeeded;
 
