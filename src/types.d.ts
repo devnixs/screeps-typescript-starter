@@ -306,6 +306,8 @@ interface ColonizationEvaluation {
   y: number; // ideal spawn location
   s: number; // score
 
+  m?: string; // mineral
+
   c?: number; //sourceCount
   w?: number; // walls count at spawn location
 
@@ -353,7 +355,7 @@ interface TravelToOptions {
   range?: number;
   obstacles?: { pos: RoomPosition }[];
   roomCallback?: (roomName: string, matrix: CostMatrix) => CostMatrix | boolean;
-  routeCallback?: (roomName: string) => number;
+  routeCallback?: (roomName: string) => number | undefined;
   returnData?: TravelToReturnData;
   restrictDistance?: number;
   useFindRoute?: boolean;

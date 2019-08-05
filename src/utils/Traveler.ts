@@ -1,4 +1,5 @@
 import { CachedPaths } from "./cached-paths";
+import { ExplorationCache } from "./exploration-cache";
 
 /**
  * To start using Traveler, require it in main.js:
@@ -222,7 +223,13 @@ export class Traveler {
     if (!Traveler.isHighway(roomName) && !Game.map.isRoomAvailable(roomName)) {
       return true;
     }
-    return Memory.rooms && Memory.rooms[roomName] && Memory.rooms[roomName].avoid;
+
+    const roomInfo = ExplorationCache.getExploration(roomName);
+    if (roomInfo && roomInfo.eb) {
+      return true;
+    }
+
+    return false;
   }
 
   /**

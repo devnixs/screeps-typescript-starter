@@ -1,7 +1,7 @@
 import { findClosestRoom, getAttackFlag } from "utils/finder";
-import { ExplorationManager } from "./exploration";
 import { getMyRooms } from "utils/misc-utils";
 import { generateAttackCreeps } from "./attack-analyst";
+import { ExplorationCache } from "utils/exploration-cache";
 
 // This makes a quad
 const attackPartyPositions = [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 }, { x: 2, y: 0 }];
@@ -169,7 +169,7 @@ export class AttackManager {
   static startAttack(fromRoom: string, toRoom: string) {
     console.log("Starting attack from ", fromRoom, "to", toRoom);
 
-    const exploration = ExplorationManager.getExploration(toRoom);
+    const exploration = ExplorationCache.getExploration(toRoom);
     if (exploration) {
       if (exploration.eb) {
         console.log("Exploration Report: Enemy base level ", exploration.el);

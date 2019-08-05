@@ -1,6 +1,6 @@
-import { ExplorationManager } from "./exploration";
 import { boostResources } from "constants/resources";
 import { repeatArray } from "utils/misc-utils";
+import { ExplorationCache } from "utils/exploration-cache";
 
 interface GenerateAttackCreepsInfos {
   fromRoom: string;
@@ -154,7 +154,7 @@ export function generateAttackCreeps(infos: GenerateAttackCreepsInfos) {
     return null;
   }
 
-  const targetRoomInfos = ExplorationManager.getExploration(infos.targetRoom);
+  const targetRoomInfos = ExplorationCache.getExploration(infos.targetRoom);
   const targetRcl = targetRoomInfos ? targetRoomInfos.el : undefined;
 
   const resourcesAvailable: any = fromRoom.terminal ? fromRoom.terminal.store : {};

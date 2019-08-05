@@ -514,12 +514,22 @@ export class Chemist {
     const reactions = resourcesByImportance.map(i => this.getReaction(i.resource, i.neededStock));
     const possibleReactions = reactions.filter(
       i =>
+        this.isMineralCreationAllowed(i.target, i.source1, i.source2) &&
         this.getAssetStock(i.source1) >= i.amount &&
         this.getAssetStock(i.source2) >= i.amount &&
         !this.runningLabGroups.find(l => l.currentTarget === i.target)
     );
 
     return possibleReactions;
+  }
+
+  isMineralCreationAllowed(target: ResourceConstant, source1: ResourceConstant, source2: ResourceConstant) {
+    // prevent tier 3 boosts before level 8
+    if (target.startsWith("X") && this.room.controller && this.room.controller.level < 8) {
+      return false;
+    } else {
+      return true;
+    }
   }
 
   isCraftable(mineral: ResourceConstant) {

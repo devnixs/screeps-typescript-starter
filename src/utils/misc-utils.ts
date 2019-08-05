@@ -306,6 +306,10 @@ export function hasRoomBeenAttacked(room: Room) {
   return room.controller && room.controller.safeModeAvailable < room.controller.level - 1;
 }
 
+export function hasSafeModeAvailable(room: Room) {
+  return room.controller && !room.controller.safeModeCooldown;
+}
+
 export function sing(creep: Creep, words: string[]) {
   var word = words[Game.time % words.length];
   creep.say(word, true);

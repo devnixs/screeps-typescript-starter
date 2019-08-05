@@ -5,116 +5,34 @@ import { Traveler } from "utils/Traveler";
 import { findClosestRoom } from "utils/finder";
 import { explorationConstants } from "constants/memory-constants";
 import { buildRangeFromRoomLimit } from "constants/misc";
-import { SegmentManager, RoomExplorationsSegments } from "./segments";
+import { ExplorationCache } from "../utils/exploration-cache";
 
-let roomExplorations: RoomExplorationReport[] = [];
-let roomsAreLoaded = false;
-let roomsAreLoading = false;
-
-(global as any).getExplorationState = function() {
-  return {
-    roomExplorations,
-    roomsAreLoaded,
-    roomsAreLoading
-  };
-};
-
-export class ExplorationManager {
-  public static runForAllRooms() {
-    if (!roomsAreLoaded) {
-      ExplorationManager.loadExplorationsFromSegment();
-    }
-
-    if (Game.time % 1234 === 0) {
-      ExplorationManager.loadExplorationsFromSegment();
-    }
-
-    if (Game.time % 57 === 0) {
-      ExplorationManager.saveExplorationsInSegments();
-    }
-
-    const oldExplorations = (Memory as any).explorations;
-    if (oldExplorations) {
-      // console.log("Cleaning up old explorations");
-      roomExplorations = roomExplorations.concat(oldExplorations);
-      delete (Memory as any).explorations;
-      ExplorationManager.saveExplorationsInSegments();
-    }
+export class RoomAnalyzer {
+  public static run() {
+    RoomAnalyzer.exploreVisibleRooms();
   }
 
-  static loadExplorationsFromSegment() {
-    if (roomsAreLoading) {
+  static exploreVisibleRooms() {
+    if (Game.time % 29 > 0) {
       return;
     }
+    const myRooms = getMyRooms().map(i => i.name);
+    const rooms = Object.keys(Game.rooms);
+    const otherRooms = _.difference(rooms, myRooms);
 
-    roomsAreLoading = true;
-    let loadedSegments = 0;
-    for (let segmentId of RoomExplorationsSegments) {
-      // console.log("Loading exploration segment", segmentId);
-      SegmentManager.loadSegment(segmentId, (data: RoomExplorationReport[] | null) => {
-        // console.log("Exploration segment", segmentId, "loaded. with data : ", data ? data.length + "elements" : "null");
-        if (data) {
-          roomExplorations = roomExplorations.concat(data);
-          roomExplorations = _.uniq(roomExplorations, i => i.r);
-        }
-        loadedSegments++;
-
-        if (loadedSegments === RoomExplorationsSegments.length) {
-          // console.log("All Exploration segments have been loaded.");
-          roomsAreLoaded = true;
-          roomsAreLoading = false;
-        }
-      });
+    for (const roomName of otherRooms) {
+      RoomAnalyzer.analyzeRoom(Game.rooms[roomName]);
     }
-  }
-
-  static saveExplorationsInSegments() {
-    var buckets: RoomExplorationReport[][] = [];
-    for (let bucketIndex = 0; bucketIndex < RoomExplorationsSegments.length; bucketIndex++) {
-      buckets[bucketIndex] = [];
-    }
-
-    for (let index = 0; index < roomExplorations.length; index++) {
-      var bucketIndex = index % RoomExplorationsSegments.length;
-      buckets[bucketIndex].push(roomExplorations[index]);
-    }
-
-    for (let bucketIndex = 0; bucketIndex < RoomExplorationsSegments.length; bucketIndex++) {
-      const segment = RoomExplorationsSegments[bucketIndex];
-      const bucket = buckets[bucketIndex];
-      SegmentManager.saveSegment(segment, bucket);
-    }
-  }
-
-  static getExploration(roomName: string) {
-    if (roomsAreLoaded) {
-      return roomExplorations.find(i => i.r === roomName);
-    } else {
-      return null;
-    }
-  }
-
-  static getAllExplorations() {
-    if (roomsAreLoaded) {
-      return roomExplorations;
-    } else {
-      return null;
-    }
-  }
-
-  static resetAllExplorations() {
-    roomExplorations = [];
-    ExplorationManager.saveExplorationsInSegments();
   }
 
   static analyzeRoom(room: Room, force = false) {
-    let memory = ExplorationManager.getExploration(room.name);
+    let memory = ExplorationCache.getExploration(room.name);
     if (memory === null) {
       // segments are not loaded yet. aborting.
       return;
     }
 
-    if (memory && memory.t >= Game.time - 5000 && !force) {
+    if (memory && memory.t >= Game.time - 3000 && !force) {
       return;
     }
 
@@ -168,7 +86,7 @@ export class ExplorationManager {
         l: Game.time,
         es: enemySpawns
       };
-      roomExplorations.push(memory);
+      ExplorationCache.setExploration(memory);
     }
 
     memory.t = Game.time;
@@ -192,7 +110,7 @@ export class ExplorationManager {
 
     if (distanceToClosestRoom <= 3) {
       // no need to add remotes if it's too far
-      ExplorationManager.analyzeRemotes(room, closestRoom, closestSpawn);
+      RoomAnalyzer.analyzeRemotes(room, closestRoom, closestSpawn);
     }
   }
 
@@ -292,11 +210,13 @@ export class ExplorationManager {
 
     const finalScore = topPlace.total + topPlace.wallsCount * 4 + distanceScore;
 
+    const mineral = room.find(FIND_MINERALS)[0];
+
     return {
       x: topPlace.x, // ideal spawn location
       y: topPlace.y, // ideal spawn location
-      s: Math.round(finalScore) // score
-
+      s: Math.round(finalScore), // score
+      m: mineral ? mineral.mineralType : undefined
       /*
       w: topPlace.wallsCount, // walls count at spawn location
       c: sourcesCount, //sourceCount
@@ -357,6 +277,6 @@ export class ExplorationManager {
   }
 }
 
-profiler.registerClass(ExplorationManager, "ExplorationManager");
+profiler.registerClass(RoomAnalyzer, "RoomAnalyzer");
 
-(global as any).ExplorationManager = ExplorationManager;
+(global as any).RoomAnalyzer = RoomAnalyzer;

@@ -37,7 +37,7 @@ Creep.prototype.goTo = function(destination: RoomPosition | { pos: RoomPosition 
 
   try {
     // let before = Game.cpu.getUsed();
-    const ret = creep.travelTo(target, { preferHighway: true, ...options });
+    const ret = creep.travelTo(target, { preferHighway: false, ...options });
     // let diff = Game.cpu.getUsed() - before;
     /*
     if (

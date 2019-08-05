@@ -8,7 +8,7 @@ import { RoleBuilder } from "roles/builder";
 import { IReserverMemory } from "roles/reserver";
 import { ILongDistanceTruckMemory } from "roles/longdistancetruck";
 import { IRemoteDefenderMemory } from "roles/remote-defender";
-import { getMyRooms, runFromTimeToTime, hasRoomBeenAttacked } from "utils/misc-utils";
+import { getMyRooms, runFromTimeToTime, hasRoomBeenAttacked, hasSafeModeAvailable } from "utils/misc-utils";
 import { isInSafeArea } from "utils/safe-area";
 import { profiler } from "utils/profiler";
 import { Cartographer } from "utils/cartographer";
@@ -119,7 +119,7 @@ function initOneTimeValues() {
     .map(i => Game.rooms[i])
     .filter(i => i.controller && i.controller.my && i.controller.level <= 5)[0];
 
-  if (colonyThatNeedsHelpDefending && myRooms.length > 1 && hasRoomBeenAttacked(colonyThatNeedsHelpDefending)) {
+  if (colonyThatNeedsHelpDefending && myRooms.length > 1 && !hasSafeModeAvailable(colonyThatNeedsHelpDefending)) {
     remoteDefenderHelperSource = findClosestRoom(colonyThatNeedsHelpDefending.name);
     remoteDefenderHelperTarget = colonyThatNeedsHelpDefending.name;
     remoteDefenderHelperCount = 4;

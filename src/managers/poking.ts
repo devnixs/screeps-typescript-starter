@@ -1,7 +1,7 @@
 import { getMyRooms } from "utils/misc-utils";
-import { ExplorationManager } from "./exploration";
 import { Cartographer } from "utils/cartographer";
 import { IPokerMemory } from "roles/poker";
+import { ExplorationCache } from "utils/exploration-cache";
 
 export class PokingManager {
   constructor(private room: Room) {}
@@ -21,11 +21,11 @@ export class PokingManager {
 
     // find enemy remotes not too far
 
-    var explorations = ExplorationManager.getAllExplorations();
+    var explorations = ExplorationCache.getAllExplorations();
     if (!explorations) {
       return;
     } else {
-      const remotes = explorations.filter(i => i.er && Cartographer.findRoomDistanceSum(i.r, this.room.name) <= 8);
+      const remotes = explorations.filter(i => i.er && Cartographer.findRoomDistanceSum(i.r, this.room.name) <= 11);
 
       if (remotes.length === 0) {
         return;
@@ -36,7 +36,7 @@ export class PokingManager {
   }
 
   static reassign(creep: Creep) {
-    var explorations = ExplorationManager.getAllExplorations();
+    var explorations = ExplorationCache.getAllExplorations();
     if (!explorations) {
       return;
     } else {

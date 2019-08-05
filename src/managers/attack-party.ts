@@ -1,10 +1,11 @@
 import { findRestSpot, findEmptySpotCloseTo } from "utils/finder";
 import { Cartographer } from "utils/cartographer";
 import { Traveler } from "utils/Traveler";
-import { ExplorationManager } from "./exploration";
 import { isFunction } from "util";
 import { getUsername } from "utils/misc-utils";
 import { IAttackerMemory } from "roles/attacker";
+import { RoomAnalyzer } from "./room-analyzer";
+import { ExplorationCache } from "utils/exploration-cache";
 
 export class AttackPartyManager {
   attack: AttackSetup;
@@ -115,6 +116,15 @@ export class AttackPartyManager {
 
     var terrain = Game.map.getRoomTerrain(leader.creep.pos.roomName);
 
+    const regroupFlag = Game.flags["regroup"];
+    if (!this.attackParty.rallyPoint && regroupFlag) {
+      this.attackParty.rallyPoint = {
+        x: regroupFlag.pos.x,
+        y: regroupFlag.pos.y,
+        roomName: regroupFlag.pos.roomName
+      };
+    }
+
     if (!this.attackParty.rallyPoint) {
       let rallyPoint = findEmptySpotCloseTo(leader.creep.pos, leader.creep.room, false, pos => {
         for (const creepInfo of creeps) {
@@ -178,7 +188,7 @@ export class AttackPartyManager {
       this.findAttackPath();
 
       // since we just entered the room, let's refresh our exploration of it
-      ExplorationManager.analyzeRoom(roomVisibility);
+      RoomAnalyzer.analyzeRoom(roomVisibility);
     }
 
     const healResult = this.healEachOthers(creeps);
@@ -210,8 +220,12 @@ export class AttackPartyManager {
       }
     }
 
+    let targetHealth = 0.7;
+    if (this.attackParty.status === "retreating") {
+      targetHealth = 0.9;
+    }
     // are creeps too badly damaged?
-    if (creepsAndDamage[0] && creepsAndDamage[0].health <= 0.7) {
+    if (creepsAndDamage[0] && creepsAndDamage[0].health <= targetHealth) {
       return "NeedsRetreat";
     } else {
       return "OK";
@@ -351,9 +365,11 @@ export class AttackPartyManager {
     const creepsNotUnderRamparts = enemyInRange.filter(
       i => !i.pos.lookFor(LOOK_STRUCTURES).find(i => i.structureType === "rampart")
     );
-    if (creepsNotUnderRamparts.length) {
-      console.log("Attack target : ", creepsNotUnderRamparts[0]);
-      this.attackObject(creeps, creepsNotUnderRamparts[0]);
+    const closest = _.sortBy(creepsNotUnderRamparts, i => _.sum(creeps.map(c => i.pos.getRangeTo(c.creep.pos))));
+
+    if (closest.length) {
+      console.log("Attack target : ", closest[0]);
+      this.attackObject(creeps, closest[0]);
       return "attacked";
     } else {
       return "OK";
@@ -366,6 +382,8 @@ export class AttackPartyManager {
     targets = targets.concat([room.terminal]);
     targets = targets.concat([room.storage]);
     targets = targets.concat(room.towers);
+    targets = targets.concat(room.extensions);
+    targets = targets.concat(room.containers);
 
     return targets.filter(i => i).map(i => (i as AnyStructure).pos);
   }
@@ -441,7 +459,9 @@ export class AttackPartyManager {
 
     const obstacles = nextPositions
       .map(pos => {
-        const rampart = pos.lookFor(LOOK_STRUCTURES).find(i => i.structureType !== "road");
+        const rampart = pos
+          .lookFor(LOOK_STRUCTURES)
+          .find(i => i.structureType !== "road" && i.structureType !== "container");
         if (rampart) {
           return rampart;
         }
@@ -570,7 +590,7 @@ export class AttackPartyManager {
       }
     } else {
       let targetLocation: SimplePos;
-      const roomInformations = ExplorationManager.getExploration(this.attack.toRoom);
+      const roomInformations = ExplorationCache.getExploration(this.attack.toRoom);
       targetLocation =
         roomInformations && roomInformations.es && roomInformations.es.length
           ? roomInformations.es[0]
@@ -616,7 +636,10 @@ export class AttackPartyManager {
     this.healSelves(creeps);
     this.attackAround(creeps);
 
-    leader.creep.goTo(new RoomPosition(25, 25, this.attack.toRoom));
+    const regroupFlag = Game.flags["regroup"];
+    const defaultPos = new RoomPosition(25, 25, this.attack.toRoom);
+
+    leader.creep.goTo(regroupFlag ? regroupFlag.pos : defaultPos);
     if (!this.attackParty.distance) {
       this.attackParty.distance =
         leader.creep.memory._trav && leader.creep.memory._trav.path ? leader.creep.memory._trav.path.length : 0;
@@ -626,21 +649,27 @@ export class AttackPartyManager {
       creep.creep.goTo(leader.creep, { movingTarget: true });
     }
 
-    const rightRoomIsTarget =
-      Cartographer.findRelativeRoomName(leader.creep.pos.roomName, 1, 0) === this.attack.toRoom &&
-      leader.creep.pos.x >= 45;
-    const leftRoomIsTarget =
-      Cartographer.findRelativeRoomName(leader.creep.pos.roomName, -1, 0) === this.attack.toRoom &&
-      leader.creep.pos.x <= 5;
-    const topRoomIsTarget =
-      Cartographer.findRelativeRoomName(leader.creep.pos.roomName, 0, -1) === this.attack.toRoom &&
-      leader.creep.pos.y <= 5;
-    const bottomRoomIsTarget =
-      Cartographer.findRelativeRoomName(leader.creep.pos.roomName, 0, 1) === this.attack.toRoom &&
-      leader.creep.pos.y >= 45;
+    if (regroupFlag) {
+      if (leader.creep.pos.inRangeTo(regroupFlag.pos, 4)) {
+        this.attackParty.status = "regrouping";
+      }
+    } else {
+      const rightRoomIsTarget =
+        Cartographer.findRelativeRoomName(leader.creep.pos.roomName, 1, 0) === this.attack.toRoom &&
+        leader.creep.pos.x >= 45;
+      const leftRoomIsTarget =
+        Cartographer.findRelativeRoomName(leader.creep.pos.roomName, -1, 0) === this.attack.toRoom &&
+        leader.creep.pos.x <= 5;
+      const topRoomIsTarget =
+        Cartographer.findRelativeRoomName(leader.creep.pos.roomName, 0, -1) === this.attack.toRoom &&
+        leader.creep.pos.y <= 5;
+      const bottomRoomIsTarget =
+        Cartographer.findRelativeRoomName(leader.creep.pos.roomName, 0, 1) === this.attack.toRoom &&
+        leader.creep.pos.y >= 45;
 
-    if (rightRoomIsTarget || leftRoomIsTarget || topRoomIsTarget || bottomRoomIsTarget) {
-      this.attackParty.status = "regrouping";
+      if (rightRoomIsTarget || leftRoomIsTarget || topRoomIsTarget || bottomRoomIsTarget) {
+        this.attackParty.status = "regrouping";
+      }
     }
   }
 

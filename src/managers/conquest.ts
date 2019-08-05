@@ -1,6 +1,6 @@
 import { getMyRooms, getUsername } from "utils/misc-utils";
 import { profiler } from "utils/profiler";
-import { ExplorationManager } from "./exploration";
+import { ExplorationCache } from "utils/exploration-cache";
 
 const exploreTimeout = 10000;
 
@@ -32,7 +32,7 @@ export class ConquestManager {
     if (rooms < gcl && !flag) {
       console.log("Colonizing new room");
 
-      const explorations = ExplorationManager.getAllExplorations();
+      const explorations = ExplorationCache.getAllExplorations();
       if (explorations === null) {
         // explorations are not loaded yet. aborting.
         return;
@@ -65,14 +65,14 @@ export class ConquestManager {
   static onNewRoom(room: Room) {
     console.log("Successfuly claimed room", room.name);
     // recompute all explorations, as they might be closer to this room
-    ExplorationManager.resetAllExplorations();
+    ExplorationCache.resetAllExplorations();
     Memory.closestRooms = {};
   }
 
   static onRoomLost() {
     console.log("Lost a room");
     // recompute all explorations, as they might be further to this room
-    ExplorationManager.resetAllExplorations();
+    ExplorationCache.resetAllExplorations();
     Memory.closestRooms = {};
   }
 }

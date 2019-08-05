@@ -3,8 +3,9 @@ import { findRestSpot, findHostile } from "utils/finder";
 import { boostCreep } from "utils/boost-manager";
 import { hasMinerals, getMyRooms, getUsername } from "utils/misc-utils";
 import { profiler } from "utils/profiler";
-import { ExplorationManager } from "managers/exploration";
+import { ExplorationCache } from "../utils/exploration-cache";
 import { Cartographer } from "utils/cartographer";
+import { RoomAnalyzer } from "managers/room-analyzer";
 
 export interface IScoutMemory extends CreepMemory {
   targetRoom: string | undefined;
@@ -39,8 +40,8 @@ class RoleScout implements IRole {
     if (creep.room.name === memory.targetRoom || !memory.targetRoom || !memory.targetExitDir) {
       const myRooms = getMyRooms();
       if (!myRooms.find(i => i === creep.room)) {
-        ExplorationManager.analyzeRoom(creep.room);
-        const roomMemory = ExplorationManager.getExploration(creep.room.name);
+        RoomAnalyzer.analyzeRoom(creep.room);
+        const roomMemory = ExplorationCache.getExploration(creep.room.name);
         if (roomMemory) {
           roomMemory.l = Game.time;
         }
@@ -50,7 +51,7 @@ class RoleScout implements IRole {
 
       const removedEnemyRooms = neighboorRooms.filter(pair => {
         const room = pair[1];
-        const roomMemory = ExplorationManager.getExploration(room);
+        const roomMemory = ExplorationCache.getExploration(room);
 
         const isEnemy = roomMemory && roomMemory.eb;
 
@@ -74,7 +75,7 @@ class RoleScout implements IRole {
       const lastCheckedFirst = _.sortBy(avoidMyRooms, pair => {
         const room = pair[1];
 
-        const roomMemory = ExplorationManager.getExploration(room);
+        const roomMemory = ExplorationCache.getExploration(room);
 
         if (myRooms.find(i => i.name === room)) {
           return Infinity;
@@ -111,7 +112,7 @@ class RoleScout implements IRole {
       (currentSignUser !== getUsername() || (currentSign && !currentSign.endsWith(signature)))
     ) {
       creep.goTo(creep.room.controller);
-      const hasExplorationMemory = ExplorationManager.getExploration(creep.room.name);
+      const hasExplorationMemory = ExplorationCache.getExploration(creep.room.name);
       if (hasExplorationMemory && hasExplorationMemory.c) {
         creep.signController(creep.room.controller, hasExplorationMemory.c.s + " " + signature);
       } else {

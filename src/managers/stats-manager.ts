@@ -1,6 +1,35 @@
 import { getMyRooms } from "utils/misc-utils";
 import { measureCpuAverage } from "utils/cpu";
 
+const roles: roles[] = [
+  "harvester",
+  "static-harvester",
+  "upgrader",
+  "builder",
+  "ranged",
+  "reparator",
+  "fighter",
+  "explorer",
+  "long-distance-harvester",
+  "long-distance-truck",
+  "remote-defender",
+  "remote-defender-helper",
+  "local-defender",
+  "pickaboo",
+  "healer",
+  "claimer",
+  "miner",
+  "truck",
+  "versatile",
+  "attacker",
+  "pestcontrol",
+  "reserver",
+  "scout",
+  "transport",
+  "poker",
+  "dismantler"
+];
+
 export class StatsManager {
   static runForAllRooms() {
     if (Game.time % 13 > 0) {
@@ -40,6 +69,12 @@ export class StatsManager {
       var storedEnergy = room.storage ? room.storage.store.energy : 0;
       var progressPercent = ctrl.progressTotal ? ctrl.progress / ctrl.progressTotal : 0;
 
+      const counts = _.countBy(allCreeps.filter(i => i.memory.homeRoom === room.name), c => c.memory.role);
+
+      for (const role of roles) {
+        counts[role] = counts[role] || 0;
+      }
+
       return {
         name: room.name,
         rcl: ctrl.level,
@@ -54,9 +89,14 @@ export class StatsManager {
         spawnsUsage,
         storedEnergy,
         nukes: room.find(FIND_NUKES).length,
-        creepsCount: _.countBy(allCreeps.filter(i => i.memory.homeRoom === room.name), c => c.memory.role)
+        creepsCount: counts
       };
     });
+
+    const resources = getMyRooms()
+      .filter(i => i.terminal)
+      .map(i => i.terminal && i.terminal.store)
+      .reduce((acc, store) => _.merge(acc, _.omit(store as any, "energy"), (a, b) => (a || 0) + (b || 0)), {});
 
     Memory.stats = {
       tick: Game.time,
@@ -70,7 +110,8 @@ export class StatsManager {
       cpuPercent: cpu / Game.cpu.limit,
       bucket: Game.cpu.bucket,
       siegedRooms: myRooms.filter(i => i.memory.isUnderSiege).length,
-      rooms: _.mapValues(_.groupBy(roomStats, i => i.name), i => i[0])
+      rooms: _.mapValues(_.groupBy(roomStats, i => i.name), i => i[0]),
+      resources
     };
   }
 }
