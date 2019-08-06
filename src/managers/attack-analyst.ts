@@ -50,8 +50,8 @@ const t0Rcl6: PartyDefinition = {
 const t1Rcl6: PartyDefinition = {
   creeps: [
     {
-      [MOVE]: 4,
-      [RANGED_ATTACK]: 7,
+      [MOVE]: 5,
+      [RANGED_ATTACK]: 6,
       [HEAL]: 4
     }
   ],
@@ -64,15 +64,15 @@ const t1Rcl6: PartyDefinition = {
 const t1Rcl7: PartyDefinition = {
   creeps: [
     {
-      [MOVE]: 9,
-      [TOUGH]: 13,
+      [MOVE]: 15,
+      [TOUGH]: 10,
       [HEAL]: 19
     },
     {
-      [MOVE]: 9,
-      [TOUGH]: 6,
+      [MOVE]: 14,
+      [TOUGH]: 5,
       [WORK]: 12,
-      [RANGED_ATTACK]: 9
+      [RANGED_ATTACK]: 11
     }
   ],
   repeat: 2,
@@ -84,15 +84,15 @@ const t1Rcl7: PartyDefinition = {
 const t2Rcl7: PartyDefinition = {
   creeps: [
     {
-      [MOVE]: 7,
-      [TOUGH]: 13,
-      [HEAL]: 20
+      [MOVE]: 11,
+      [TOUGH]: 14,
+      [HEAL]: 19
     },
     {
-      [MOVE]: 8,
+      [MOVE]: 11,
       [TOUGH]: 10,
-      [WORK]: 16,
-      [RANGED_ATTACK]: 14
+      [WORK]: 11,
+      [RANGED_ATTACK]: 12
     }
   ],
   repeat: 2,
@@ -102,18 +102,18 @@ const t2Rcl7: PartyDefinition = {
 };
 
 const t2rcl8: PartyDefinition = {
-  canCounterRcl: 8,
+  canCounterRcl: 7,
   creeps: [
     {
-      [MOVE]: 9,
-      [TOUGH]: 13,
-      [HEAL]: 28
+      [MOVE]: 13,
+      [TOUGH]: 11,
+      [HEAL]: 26
     },
     {
-      [MOVE]: 9,
-      [TOUGH]: 16,
-      [WORK]: 16,
-      [RANGED_ATTACK]: 9
+      [MOVE]: 13,
+      [TOUGH]: 15,
+      [WORK]: 14,
+      [RANGED_ATTACK]: 8
     }
   ],
   repeat: 2,
@@ -125,15 +125,15 @@ const t3rcl8: PartyDefinition = {
   canCounterRcl: 8,
   creeps: [
     {
-      [MOVE]: 7,
-      [TOUGH]: 13,
-      [HEAL]: 30
+      [MOVE]: 11,
+      [TOUGH]: 11,
+      [HEAL]: 28
     },
     {
-      [MOVE]: 7,
+      [MOVE]: 10,
       [TOUGH]: 18,
-      [WORK]: 16,
-      [RANGED_ATTACK]: 9
+      [WORK]: 14,
+      [RANGED_ATTACK]: 8
     }
   ],
   repeat: 2,

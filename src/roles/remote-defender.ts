@@ -113,12 +113,16 @@ class RoleRemoteDefender implements IRole {
           if (room) {
             const hostile = room.find(FIND_HOSTILE_CREEPS)[0];
             if (hostile) {
+              // console.log("Creep", creep.name, "Going to hostile ", hostile.pos);
               creep.goTo(hostile);
             } else {
+              // console.log("Creep", creep.name, " no hostile found, going home");
               room.controller && creep.goTo(room.controller);
             }
           } else {
-            creep.goTo(new RoomPosition(25, 25, memory.subRole));
+            const target = new RoomPosition(25, 25, memory.subRole);
+            // console.log("Creep", creep.name, "Going to ", target);
+            creep.goTo(target);
           }
           return;
         } else {

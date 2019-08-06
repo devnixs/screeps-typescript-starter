@@ -8,7 +8,13 @@ import { RoleBuilder } from "roles/builder";
 import { IReserverMemory } from "roles/reserver";
 import { ILongDistanceTruckMemory } from "roles/longdistancetruck";
 import { IRemoteDefenderMemory } from "roles/remote-defender";
-import { getMyRooms, runFromTimeToTime, hasRoomBeenAttacked, hasSafeModeAvailable } from "utils/misc-utils";
+import {
+  getMyRooms,
+  runFromTimeToTime,
+  hasRoomBeenAttacked,
+  hasSafeModeAvailable,
+  hasSafeModeActivated
+} from "utils/misc-utils";
 import { isInSafeArea } from "utils/safe-area";
 import { profiler } from "utils/profiler";
 import { Cartographer } from "utils/cartographer";
@@ -61,7 +67,7 @@ let builderHelperSource: string | undefined = undefined;
 
 let remoteDefenderHelperCount = 0;
 let remoteDefenderHelperTarget: string | undefined = undefined;
-let remoteDefenderHelperSource: string | undefined = undefined;
+let remoteDefenderHelperSources: string[] | undefined = undefined;
 
 let transportHelperCount = 0;
 let transportHelperTarget: string | undefined = undefined;
@@ -119,12 +125,24 @@ function initOneTimeValues() {
     .map(i => Game.rooms[i])
     .filter(i => i.controller && i.controller.my && i.controller.level <= 5)[0];
 
-  if (colonyThatNeedsHelpDefending && myRooms.length > 1 && !hasSafeModeAvailable(colonyThatNeedsHelpDefending)) {
-    remoteDefenderHelperSource = findClosestRoom(colonyThatNeedsHelpDefending.name);
-    remoteDefenderHelperTarget = colonyThatNeedsHelpDefending.name;
-    remoteDefenderHelperCount = 4;
-    const sourceRoom = remoteDefenderHelperSource && Game.rooms[remoteDefenderHelperSource];
+  if (
+    colonyThatNeedsHelpDefending &&
+    myRooms.length > 1 &&
+    !hasSafeModeAvailable(colonyThatNeedsHelpDefending) &&
+    !hasSafeModeActivated(colonyThatNeedsHelpDefending)
+  ) {
+    const inRangeRooms = getMyRooms().filter(
+      i => Cartographer.findRoomDistanceSum(i.name, colonyThatNeedsHelpDefending.name) < 12
+    );
 
+    remoteDefenderHelperSources = inRangeRooms.map(i => i.name);
+    remoteDefenderHelperTarget = colonyThatNeedsHelpDefending.name;
+    remoteDefenderHelperCount = 3;
+
+    console.log("remoteDefenderHelperSource : ", remoteDefenderHelperSources);
+    console.log("remoteDefenderHelperTarget : ", remoteDefenderHelperTarget);
+    console.log("remoteDefenderHelperCount : ", remoteDefenderHelperCount);
+    /*
     if (
       colonyThatNeedsHelpDefending.find(FIND_SOURCES).length === 1 &&
       sourceRoom &&
@@ -134,7 +152,7 @@ function initOneTimeValues() {
       transportHelperSource = remoteDefenderHelperSource;
       transportHelperTarget = colonyThatNeedsHelpDefending.name;
       transportHelperCount = 4;
-    }
+    } */
   }
 }
 
@@ -324,7 +342,7 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
         maxCount: remoteDefenderHelperCount,
         bodyTemplate: [MOVE, MOVE, MOVE, RANGED_ATTACK, RANGED_ATTACK, HEAL],
         sortBody: [TOUGH, MOVE, ATTACK, RANGED_ATTACK, HEAL],
-        onlyRooms: [remoteDefenderHelperSource],
+        onlyRooms: remoteDefenderHelperSources,
         additionalMemory: {
           roomTarget: remoteDefenderHelperTarget
         } as Partial<IRemoteDefenderMemory>

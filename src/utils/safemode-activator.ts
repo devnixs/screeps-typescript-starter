@@ -1,5 +1,6 @@
 import { profiler } from "./profiler";
 import { isInSafeArea } from "./safe-area";
+import { DefenseManager } from "managers/defense";
 
 export class SafeModeActivator {
   static activeSafeModeIfNecessary() {
@@ -28,10 +29,15 @@ export class SafeModeActivator {
       return;
     }
 
-    var spawns = room.find(FIND_MY_STRUCTURES, { filter: i => i.structureType === "spawn" });
+    const spawns = room.find(FIND_MY_STRUCTURES, { filter: i => i.structureType === "spawn" });
     if (spawns.length !== 1) {
       return;
     }
+
+    const towers = room.find(FIND_MY_STRUCTURES, { filter: i => i.structureType === "tower" });
+    const towerPoints = towers.length * 10;
+    const enemyPoints = DefenseManager.getCreepThreatLevel(enemies);
+    console.log("Found threat level ", enemyPoints);
 
     enemies.forEach(enemy => {
       if (!enemy.owner) {
@@ -50,7 +56,7 @@ export class SafeModeActivator {
             Game.notify("Enemy in safe area, activating safe mode on room " + room.name);
           }
         }
-        if (inSafeArea === undefined) {
+        if (inSafeArea === undefined && enemyPoints > towerPoints) {
           const result = room.controller && room.controller.activateSafeMode();
           if (result === OK) {
             Game.notify("Enemy present, but no safe area defined. Activating safe mode on room " + room.name);

@@ -46,6 +46,14 @@ class RoleLocalDefender implements IRole {
                   const y = enemy.pos.y + j;
                   const rampartHere = ramparts.find(i => i.pos.x === x && i.pos.y === y);
                   if (!rampartHere) {
+                    creep.room.visual.circle(x, y, {
+                      radius: 0.2,
+                      opacity: 0.8,
+                      fill: "transparent",
+                      lineStyle: "solid",
+                      stroke: "blue",
+                      strokeWidth: 0.1
+                    });
                     matrix.set(x, y, 200);
                   }
                 }

@@ -174,36 +174,8 @@ export class DefenseManager {
       : [];
 
     if (enemies.length) {
-      const threatValues = _.flatten(
-        enemies.map(enemy =>
-          enemy.body.map(i => {
-            if (i.hits === 0) {
-              return 0.1;
-            }
-            let threat = 0;
-            if (i.type === "attack") {
-              threat = 1;
-            }
-            if (i.type === "ranged_attack") {
-              threat = 1;
-            }
-            if (i.type === "heal") {
-              threat = 1;
-            }
-            if (i.type === "tough") {
-              threat = 1;
-            }
-            if (i.type === "work") {
-              threat = 0.1;
-            }
-            if (i.boost) {
-              threat = threat * 2;
-            }
-            return threat;
-          })
-        )
-      );
-      threatLevel += _.sum(threatValues);
+      const threatValues = DefenseManager.getCreepThreatLevel(enemies);
+      threatLevel += threatValues;
     }
 
     if (threatLevel > 0) {
@@ -221,5 +193,41 @@ export class DefenseManager {
     }
 
     return threatLevel;
+  }
+
+  static getCreepThreatLevel(creeps: Creep[]) {
+    return _.sum(
+      _.flatten(
+        creeps
+          .filter(i => !i.my)
+          .map(enemy =>
+            enemy.body.map(i => {
+              if (i.hits === 0) {
+                return 0.1;
+              }
+              let threat = 0;
+              if (i.type === "attack") {
+                threat = 1;
+              }
+              if (i.type === "ranged_attack") {
+                threat = 1;
+              }
+              if (i.type === "heal") {
+                threat = 1;
+              }
+              if (i.type === "tough") {
+                threat = 1;
+              }
+              if (i.type === "work") {
+                threat = 0.1;
+              }
+              if (i.boost) {
+                threat = threat * 2;
+              }
+              return threat;
+            })
+          )
+      )
+    );
   }
 }

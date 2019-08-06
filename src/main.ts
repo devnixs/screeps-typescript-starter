@@ -51,6 +51,7 @@ import { AttackPartyManager } from "managers/attack-party";
 import { roleTransport } from "roles/transport";
 import { rolePoker } from "roles/poker";
 import { PokingManager } from "managers/poking";
+import { runTimeout } from "utils/set-timeout";
 
 // profiler.enable();
 
@@ -198,6 +199,8 @@ export const loop = ErrorMapper.wrapLoop(() => {
       AttackManager.run();
       AttackPartyManager.runForAllAttackParties();
       PokingManager.runForAllRooms();
+
+      runTimeout();
     } catch (e) {
       console.log("Failed to run managers.", e);
       error = e;

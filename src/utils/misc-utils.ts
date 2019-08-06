@@ -310,6 +310,10 @@ export function hasSafeModeAvailable(room: Room) {
   return room.controller && !room.controller.safeModeCooldown;
 }
 
+export function hasSafeModeActivated(room: Room) {
+  return room.controller && room.controller.safeMode;
+}
+
 export function sing(creep: Creep, words: string[]) {
   var word = words[Game.time % words.length];
   creep.say(word, true);

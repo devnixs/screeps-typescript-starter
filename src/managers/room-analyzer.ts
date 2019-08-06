@@ -32,7 +32,7 @@ export class RoomAnalyzer {
       return;
     }
 
-    if (memory && memory.t >= Game.time - 3000 && !force) {
+    if (memory && memory.t >= Game.time - 2000 && !force) {
       return;
     }
 

@@ -3,6 +3,7 @@ import { findEmptySpotCloseTo } from "utils/finder";
 import { mincutHelper } from "utils/mincut-walls";
 import { getMyRooms, hasRoomBeenAttacked } from "utils/misc-utils";
 import { profiler } from "utils/profiler";
+import { setTimeout } from "utils/set-timeout";
 
 const structureColors: any = {
   [STRUCTURE_EXTENSION]: "yellow",
@@ -92,11 +93,17 @@ export class RoomPlanner {
           const roadUnderneath = buildingsUnderneath.find(i => i.structureType === "road");
           if (roadUnderneath && buildingsUnderneath.length === 1) {
             roadUnderneath.destroy();
+            setTimeout(() => {
+              Game.rooms[this.room.name].createConstructionSite(structure.x, structure.y, structure.type);
+            }, 1);
           }
 
           const containerUnderneath = buildingsUnderneath.find(i => i.structureType === "container");
           if (structure.type === "link" && containerUnderneath) {
             containerUnderneath.destroy();
+            setTimeout(() => {
+              Game.rooms[this.room.name].createConstructionSite(structure.x, structure.y, structure.type);
+            }, 1);
           }
         }
       }
@@ -247,11 +254,11 @@ export class RoomPlanner {
     RoomPlanner.buildRoadsToMineral(planner, room, sectors);
 
     RoomPlanner.buildRoadsAroundStructures(planner, room, sectors);
+    RoomPlanner.buildExtractor(planner, room);
     RoomPlanner.reserveLabs(planner, sectors);
     RoomPlanner.buildRoadsAroundStructures(planner, room, sectors, 6);
     RoomPlanner.buildWalls(planner, room, sectors);
 
-    RoomPlanner.buildExtractor(planner, room);
     RoomPlanner.buildRoadsAroundStructures(planner, room, sectors, 6);
 
     for (let i = 0; i < sectors.length / 5; i++) {

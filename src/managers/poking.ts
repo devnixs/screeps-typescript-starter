@@ -50,15 +50,15 @@ export class PokingManager {
         }));
 
       if (remotes.length === 0) {
-        memory.needsReassignment = false;
+        memory.targetRoom = null;
         return;
       } else {
         const closest = _.sortBy(remotes, i => i.distance)[0];
         console.log("Poker", creep, "reassigned to", closest.room);
         memory.targetRoom = closest.room;
       }
-
-      memory.needsReassignment = false;
     }
   }
 }
+
+(global as any).PokingManager = PokingManager;

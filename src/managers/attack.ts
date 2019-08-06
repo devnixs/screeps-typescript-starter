@@ -234,14 +234,21 @@ export class AttackManager {
         if (sourceRoom && attackersNeeded > 0) {
           // if the attack hasn't started yet, make sure we can do it
           var readyness = AttackManager.isRoomReadyToStartAttack(attack.fromRoom);
-          if (!sourceRoom.memory.needsAttackers && !readyness.ready) {
-            console.log("Cannot create party: ", readyness.reason);
+          const labs = AttackManager.getLabs(Game.rooms[attack.fromRoom]);
+          const labNotReady = labs.find(i =>
+            i.memory.boostBodyType ? i.lab.mineralAmount < i.memory.needsAmount : false
+          );
+          if (!sourceRoom.memory.needsAttackers && (!readyness.ready || labNotReady)) {
+            console.log(
+              "Cannot create party: ",
+              readyness && readyness.reason,
+              labNotReady ? "lab not ready " + labNotReady.memory.boostResource : ""
+            );
             return;
           }
           const currentCreepNeeded = formingParty.needs[formingParty.creeps.length];
           const mineralsNeeded = formingParty.mineralsNeeded;
 
-          const labs = AttackManager.getLabs(Game.rooms[attack.fromRoom]);
           const mineralNotReady = mineralsNeeded.find(
             i =>
               !labs.find(
@@ -264,6 +271,12 @@ export class AttackManager {
             parts: currentCreepNeeded,
             partyId: formingParty.id
           };
+        } else {
+          if (sourceRoom.memory.needsAttackers) {
+            console.log("All creeps have been spawned");
+          }
+          // we have all the creeps we need
+          sourceRoom.memory.needsAttackers = undefined;
         }
       } else {
         if (sourceRoom.memory.needsAttackers) {

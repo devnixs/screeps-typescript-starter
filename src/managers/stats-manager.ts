@@ -89,7 +89,8 @@ export class StatsManager {
         spawnsUsage,
         storedEnergy,
         nukes: room.find(FIND_NUKES).length,
-        creepsCount: counts
+        creepsCount: counts,
+        lacksEnergy: room.energyAvailable < room.energyCapacityAvailable && room.spawns.find(i => !i.spawning) ? 1 : 0
       };
     });
 
@@ -111,7 +112,8 @@ export class StatsManager {
       bucket: Game.cpu.bucket,
       siegedRooms: myRooms.filter(i => i.memory.isUnderSiege).length,
       rooms: _.mapValues(_.groupBy(roomStats, i => i.name), i => i[0]),
-      resources
+      resources,
+      heap: Game.cpu.getHeapStatistics && Game.cpu.getHeapStatistics()
     };
   }
 }

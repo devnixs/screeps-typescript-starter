@@ -23,12 +23,10 @@ export class ExplorationCache {
       ExplorationCache.loadExplorationsFromSegment();
     }
 
-    if (Game.time % 57 === 0) {
+    if (Game.time % 57 === 0 && roomsAreLoaded && !roomsAreLoading) {
       ExplorationCache.saveExplorationsInSegments();
     }
   }
-
-  static exploreVisibleRooms() {}
 
   static loadExplorationsFromSegment() {
     if (roomsAreLoading) {

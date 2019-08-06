@@ -146,7 +146,7 @@ export class RemotesManager {
     }
 
     const spawns = this.room.find(FIND_MY_SPAWNS).length;
-    let maxTravelAllowed = Math.min(spawns, 2) * 400 + 100;
+    let maxTravelAllowed = Math.min(spawns, 2) * 400 + 120;
     let maxRemotesAllowed = Math.min(spawns, 2) * 4 + 2;
 
     maxTravelAllowed = getReduceUsageRatio() * maxTravelAllowed;

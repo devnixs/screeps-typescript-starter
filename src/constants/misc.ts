@@ -15,13 +15,22 @@ result:
 export const wallsMinHp = (roomLevel: number) => {
   // level 8 = 15M
   const power = 9;
-  return Math.pow(roomLevel, power) * (25000000 / Math.pow(8, power));
+  let value = Math.pow(roomLevel, power) * (25000000 / Math.pow(8, power));
+
+  if (roomLevel < 7) {
+    // limit to 300k under level 7
+    value = Math.min(value, 300000);
+  }
+
+  if (roomLevel < 8) {
+    // limit to 1M under level 7
+    value = Math.min(value, 1000000);
+  }
+  return value;
 };
 
 export const rampartMinHp = (roomLevel: number) => {
-  // level 8 = 15M
-  const power = 9;
-  return Math.pow(roomLevel, power) * (25000000 / Math.pow(8, power));
+  return wallsMinHp(roomLevel);
 };
 
 // How much we should store in the terminal
@@ -110,7 +119,7 @@ export const desiredStocks: StoreDefinitionWithoutEnergy = {
   [RESOURCE_CATALYZED_ZYNTHIUM_ACID]: 10000,
   [RESOURCE_CATALYZED_ZYNTHIUM_ALKALIDE]: 5000,
   [RESOURCE_CATALYZED_GHODIUM_ACID]: 0,
-  [RESOURCE_CATALYZED_GHODIUM_ALKALIDE]: 0
+  [RESOURCE_CATALYZED_GHODIUM_ALKALIDE]: 5000
 };
 
 export const signature = "(V)  (°,,,,°)  (V)";

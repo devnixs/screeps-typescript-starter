@@ -99,6 +99,9 @@ export class Traveler {
 
     if (options.repath && Math.random() < options.repath) {
       // add some chance that you will find a new path randomly
+      if (creep.memory.role === "poker" && (creep.memory as any).fleeing) {
+        ////         console.log(creep.name, "Repathing");
+      }
       delete travelData.path;
     }
 
@@ -116,11 +119,17 @@ export class Traveler {
         state.destination = destination;
         travelData.path = path;
         usedCachedPath = true;
+        if (creep.memory.role === "poker" && (creep.memory as any).fleeing) {
+          //// console.log(creep.name, "Using cached path");
+        }
       }
     }
 
     // pathfinding
     if (!travelData.path) {
+      if (creep.memory.role === "poker" && (creep.memory as any).fleeing) {
+        //// console.log(creep.name, "Computing path");
+      }
       newPath = true;
 
       state.destination = destination;
@@ -159,6 +168,10 @@ export class Traveler {
       state.stuckCount = 0;
     }
 
+    if (creep.memory.role === "poker" && (creep.memory as any).fleeing) {
+      //console.log("Stuck", state.stuckCount);
+    }
+
     this.serializeState(creep, destination, state, travelData);
 
     if (!travelData.path || travelData.path.length === 0) {
@@ -168,6 +181,9 @@ export class Traveler {
     // consume path
     if (state.stuckCount === 0 && !newPath) {
       try {
+        if (creep.memory.role === "poker" && (creep.memory as any).fleeing) {
+          //console.log("Consumed path", travelData.path.length);
+        }
         travelData.path = travelData.path.substr(1);
       } catch (e) {
         console.log("Error with creep " + creep.name);
@@ -176,6 +192,9 @@ export class Traveler {
     }
 
     let nextDirection = parseInt(travelData.path[0], 10);
+    if (creep.memory.role === "poker" && (creep.memory as any).fleeing) {
+      //console.log("Next direction is", nextDirection);
+    }
 
     if (nextDirection) {
       let nextPos = Traveler.positionAtDirection(creep.pos, nextDirection);
@@ -195,6 +214,9 @@ export class Traveler {
         options.returnData.state = state;
         options.returnData.path = travelData.path;
       }
+    }
+    if (creep.memory.role === "poker" && (creep.memory as any).fleeing) {
+      //console.log("Moving", nextDirection);
     }
 
     return creep.move(nextDirection as DirectionConstant);
@@ -332,6 +354,7 @@ export class Traveler {
     let allowedRooms = options.route;
     if (!allowedRooms && (options.useFindRoute || (options.useFindRoute === undefined && roomDistance > 2))) {
       let route = this.findRoute(origin.roomName, destination.roomName, options);
+      // console.log(origin, destination, "found route", route ? JSON.stringify(Object.keys(route)) : "void");
       if (route) {
         allowedRooms = route;
       }
