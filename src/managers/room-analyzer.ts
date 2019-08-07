@@ -32,7 +32,7 @@ export class RoomAnalyzer {
       return;
     }
 
-    if (memory && memory.t >= Game.time - 2000 && !force) {
+    if (memory && memory.t >= Game.time - 500 && !force) {
       return;
     }
 
@@ -63,6 +63,18 @@ export class RoomAnalyzer {
         (room.controller && room.controller.reservation && room.controller.reservation.username !== getUsername())) ||
       false;
 
+    const enemyRemoteContainers = isEnemyRemote
+      ? room
+          .find(FIND_STRUCTURES, { filter: i => i.structureType === "container" })
+          .map(i => ({ x: i.pos.x, y: i.pos.y }))
+      : [];
+
+    const enemyDroppedEnergy = isEnemyRemote
+      ? room
+          .find(FIND_DROPPED_RESOURCES, { filter: i => i.resourceType === "energy" && i.amount > 1000 })
+          .map(i => ({ x: i.pos.x, y: i.pos.y }))
+      : [];
+
     const distanceToClosestRoom = Cartographer.findRoomDistanceSum(closestRoom.name, room.name);
     if (distanceToClosestRoom > 12) {
       return;
@@ -84,7 +96,8 @@ export class RoomAnalyzer {
         cr: closestRoomName,
         c: report,
         l: Game.time,
-        es: enemySpawns
+        es: enemySpawns,
+        erc: enemyRemoteContainers.concat(enemyDroppedEnergy)
       };
       ExplorationCache.setExploration(memory);
     }
@@ -101,6 +114,9 @@ export class RoomAnalyzer {
 
     // register if enemy
     memory.er = isEnemyRemote;
+    memory.erc = enemyRemoteContainers.concat(enemyDroppedEnergy);
+
+    ExplorationCache.setExploration(memory);
 
     if (memory.eb || memory.er) {
       // delete existing remotes in this room

@@ -52,6 +52,10 @@ import { roleTransport } from "roles/transport";
 import { rolePoker } from "roles/poker";
 import { PokingManager } from "managers/poking";
 import { runTimeout } from "utils/set-timeout";
+import { StealingManager } from "managers/stealing";
+import { roleStealer } from "roles/stealer";
+
+console.log("Code has been loaded");
 
 // profiler.enable();
 
@@ -175,6 +179,9 @@ export const loop = ErrorMapper.wrapLoop(() => {
         if (memory.role == "poker") {
           rolePoker.run(creep);
         }
+        if (memory.role == "stealer") {
+          roleStealer.run(creep);
+        }
       } catch (e) {
         console.log(e, creep.name);
         error = e;
@@ -199,6 +206,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
       AttackManager.run();
       AttackPartyManager.runForAllAttackParties();
       PokingManager.runForAllRooms();
+      StealingManager.runForAllRooms();
 
       runTimeout();
     } catch (e) {

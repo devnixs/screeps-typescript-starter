@@ -14,6 +14,7 @@ interface PartyDefinition {
   requiresBoostsTier: number;
   creeps: BodyDefinition[];
   repeat: number;
+  boostedParts?: string[];
 }
 interface BodyDefinition {
   [bodyPart: string]: number;
@@ -61,6 +62,50 @@ const t1Rcl6: PartyDefinition = {
   requiresRcl: 6
 };
 
+const t2Rcl6: PartyDefinition = {
+  creeps: [
+    {
+      [MOVE]: 4,
+      [RANGED_ATTACK]: 7,
+      [HEAL]: 4
+    }
+  ],
+  repeat: 4,
+  canCounterRcl: 6,
+  requiresBoostsTier: 1,
+  requiresRcl: 6
+};
+
+const t1Rcl6NoMoveBoosts: PartyDefinition = {
+  creeps: [
+    {
+      [MOVE]: 9,
+      [RANGED_ATTACK]: 5,
+      [HEAL]: 4
+    }
+  ],
+  boostedParts: [RANGED_ATTACK, HEAL],
+  repeat: 4,
+  canCounterRcl: 6,
+  requiresBoostsTier: 1,
+  requiresRcl: 6
+};
+
+const t2Rcl6NoMoveBoosts: PartyDefinition = {
+  creeps: [
+    {
+      [MOVE]: 9,
+      [RANGED_ATTACK]: 5,
+      [HEAL]: 4
+    }
+  ],
+  boostedParts: [RANGED_ATTACK, HEAL],
+  repeat: 4,
+  canCounterRcl: 6,
+  requiresBoostsTier: 2,
+  requiresRcl: 6
+};
+
 const t1Rcl7: PartyDefinition = {
   creeps: [
     {
@@ -93,6 +138,26 @@ const t2Rcl7: PartyDefinition = {
       [TOUGH]: 10,
       [WORK]: 11,
       [RANGED_ATTACK]: 12
+    }
+  ],
+  repeat: 2,
+  canCounterRcl: 7,
+  requiresBoostsTier: 2,
+  requiresRcl: 7
+};
+
+const t3Rcl7: PartyDefinition = {
+  creeps: [
+    {
+      [MOVE]: 9,
+      [TOUGH]: 14,
+      [HEAL]: 20
+    },
+    {
+      [TOUGH]: 10,
+      [MOVE]: 10,
+      [WORK]: 15,
+      [RANGED_ATTACK]: 15
     }
   ],
   repeat: 2,
@@ -141,7 +206,19 @@ const t3rcl8: PartyDefinition = {
   requiresRcl: 8
 };
 
-const definitions = [t3rcl8, t2rcl8, t2Rcl7, t1Rcl7, t1Rcl6, t0Rcl6, t0Rcl5];
+const definitions = [
+  t3rcl8,
+  t2rcl8,
+  t3Rcl7,
+  t2Rcl7,
+  t1Rcl7,
+  t2Rcl6,
+  t2Rcl6NoMoveBoosts,
+  t1Rcl6NoMoveBoosts,
+  t1Rcl6,
+  t0Rcl6,
+  t0Rcl5
+];
 
 export function generateAttackCreeps(infos: GenerateAttackCreepsInfos) {
   const fromRoom = Game.rooms[infos.fromRoom];
@@ -164,12 +241,14 @@ export function generateAttackCreeps(infos: GenerateAttackCreepsInfos) {
 
     let needsBoostResources: MineralNeed[] = [];
     if (def.requiresBoostsTier > 0) {
-      needsBoostResources = Object.keys(parts).map(part => {
-        return {
-          mineral: boostResources[part][def.requiresBoostsTier],
-          requiredAmount: parts[part] * LAB_BOOST_MINERAL
-        };
-      });
+      needsBoostResources = Object.keys(parts)
+        .filter(i => !def.boostedParts || def.boostedParts.indexOf(i) >= 0)
+        .map(part => {
+          return {
+            mineral: boostResources[part][def.requiresBoostsTier],
+            requiredAmount: parts[part] * LAB_BOOST_MINERAL * def.repeat
+          };
+        });
     }
 
     let hasEnoughBoosts = false;

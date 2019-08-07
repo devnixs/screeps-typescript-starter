@@ -2,6 +2,7 @@ import { findClosestRoom, getAttackFlag } from "utils/finder";
 import { getMyRooms } from "utils/misc-utils";
 import { generateAttackCreeps } from "./attack-analyst";
 import { ExplorationCache } from "utils/exploration-cache";
+import { Cartographer } from "utils/cartographer";
 
 // This makes a quad
 const attackPartyPositions = [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 }, { x: 2, y: 0 }];
@@ -21,7 +22,17 @@ export class AttackManager {
     }
     const flag = getAttackFlag();
     if (!Memory.attack && flag) {
-      var closestRoom = findClosestRoom(flag.pos.roomName, i => (i.controller ? i.controller.level >= 6 : false));
+      const roomsInRange = getMyRooms()
+        .map(i => ({
+          range: Cartographer.findRoomDistanceSum(i.name, flag.pos.roomName),
+          room: i,
+          lvl: i.controller ? i.controller.level : 0
+        }))
+        .filter(i => i.range <= 12);
+
+      const highestLevelRoomInRange = _.sortBy(_.sortBy(roomsInRange, i => i.range), i => -1 * i.lvl)[0];
+
+      var closestRoom = highestLevelRoomInRange && highestLevelRoomInRange.room.name;
       if (closestRoom) {
         const isRoomReady = this.isRoomReadyToStartAttack(closestRoom);
 
@@ -36,6 +47,9 @@ export class AttackManager {
             flag.pos.roomName
           );
         }
+      } else {
+        console.log("Cannot find room in range for attack to ", flag.pos.roomName);
+        flag.remove();
       }
     }
 
@@ -249,18 +263,21 @@ export class AttackManager {
           const currentCreepNeeded = formingParty.needs[formingParty.creeps.length];
           const mineralsNeeded = formingParty.mineralsNeeded;
 
-          const mineralNotReady = mineralsNeeded.find(
-            i =>
-              !labs.find(
-                j =>
-                  j.lab.mineralType === i.mineral &&
-                  j.lab.mineralAmount >= Math.min(i.requiredAmount, LAB_MINERAL_CAPACITY)
-              )
-          );
+          if (formingParty.creeps.length === 0) {
+            // only check at the beggining of the sequence.
+            const mineralNotReady = mineralsNeeded.find(
+              i =>
+                !labs.find(
+                  j =>
+                    j.lab.mineralType === i.mineral &&
+                    j.lab.mineralAmount >= Math.min(i.requiredAmount, LAB_MINERAL_CAPACITY)
+                )
+            );
 
-          if (mineralNotReady) {
-            console.log("Cannot start attackers as we lack mineral ", mineralNotReady.mineral, "in labs");
-            return;
+            if (mineralNotReady) {
+              console.log("Cannot start attackers as we lack mineral ", mineralNotReady.mineral, "in labs");
+              return;
+            }
           }
 
           console.log("Asking for spawn of creep #" + formingParty.creeps.length, JSON.stringify(currentCreepNeeded));

@@ -210,7 +210,7 @@ class Spawner {
     existingRoles: _.Dictionary<number>,
     existingTemplateRepeats: number
   ) {
-    let creepsCounter = 1;
+    let creepsCounter = 0;
 
     const willTheSpawnRefill =
       this.doesRoleExist("harvester", existingRoles) ||

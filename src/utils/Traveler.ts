@@ -201,8 +201,12 @@ export class Traveler {
       if (nextPos && state.stuckCount === 1) {
         const creepThere = nextPos.lookFor(LOOK_CREEPS)[0];
         if (creepThere && creepThere.memory && creepThere.memory.s && creepThere.memory.s >= Game.time - 1) {
-          // swap with him
-          creepThere.move(Traveler.invertDirection(nextDirection) as DirectionConstant);
+          if (options.pushCreeps) {
+            creepThere.move(nextDirection as DirectionConstant);
+          } else {
+            // swap with him
+            creepThere.move(Traveler.invertDirection(nextDirection) as DirectionConstant);
+          }
         }
       }
       if (options.returnData) {

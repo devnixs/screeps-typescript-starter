@@ -26,6 +26,7 @@ type roles =
   | "scout"
   | "transport"
   | "poker"
+  | "stealer"
   | "dismantler";
 
 // memory extension samples
@@ -51,8 +52,15 @@ interface PlannedLocation {
   y: number;
   setupTime: number;
 }
+interface StealingStat {
+  pos: SimplePosWithRoomName;
+  cost: number;
+  brought: number;
+}
 
 interface RoomMemory {
+  stealingStats: StealingStat[];
+  needsStealers: SimplePosWithRoomName[];
   poker: string;
   controllerContainer?: string;
   boostModeIsSetup: boolean;
@@ -261,6 +269,12 @@ interface SimplePos {
   y: number;
 }
 
+interface SimplePosWithRoomName {
+  x: number;
+  y: number;
+  roomName: string;
+}
+
 interface RoomExplorationReport {
   /**
    * Last Analyzed
@@ -299,6 +313,11 @@ interface RoomExplorationReport {
    * Colonizable
    */
   c?: ColonizationEvaluation | undefined | null;
+
+  /**
+   * Enemy remote container locations
+   */
+  erc: SimplePos[] | null;
 }
 
 interface ColonizationEvaluation {
@@ -370,6 +389,7 @@ interface TravelToOptions {
   ensurePath?: boolean;
 
   disableCaching?: boolean;
+  pushCreeps?: boolean;
 }
 
 interface TravelData {

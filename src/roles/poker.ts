@@ -84,14 +84,14 @@ class RolePoker implements IRole {
                   const t = terrain.get(x, y);
                   const isWall = t === TERRAIN_MASK_WALL;
                   const isSwamp = t === TERRAIN_MASK_SWAMP;
-                  creep.room.visual.circle(x, y, {
+                  /*                   creep.room.visual.circle(x, y, {
                     radius: 0.2,
                     opacity: danger / dangerMax,
                     fill: "transparent",
                     lineStyle: "solid",
                     stroke: "red",
                     strokeWidth: 0.1
-                  });
+                  }); */
                   if (isWall) {
                     matrix.set(x, y, 0xff);
                   } else {

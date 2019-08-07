@@ -26,7 +26,7 @@ interface ISaveQueue {
 }
 
 export class SegmentManager {
-  private static lastRunTick = Game.time;
+  private static lastRunTick: Number | null = null;
 
   private static loadQueue: ILoadQueue[] = [];
   private static saveQueue: ISaveQueue[] = [];

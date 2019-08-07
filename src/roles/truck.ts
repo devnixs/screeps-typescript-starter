@@ -4,6 +4,7 @@ import { wantsToSell, desiredStocks, desiredEnergyInTerminal } from "../constant
 import { findRestSpot, findNonEmptyResourceInStore, findNonEmptyResourcesInStore } from "utils/finder";
 import { profiler } from "../utils/profiler";
 import { isInSafeArea } from "utils/safe-area";
+import { getUsedPercentage } from "utils/cpu";
 
 interface ITruckDestination {}
 
@@ -201,7 +202,26 @@ class RoleTruck implements IRole {
 
     if (memory.isDepositingEnergy) {
       if (creep.pos.isNearTo(structureThatNeedsEnergy)) {
-        return creep.transfer(structureThatNeedsEnergy, RESOURCE_ENERGY);
+        const transferResult = creep.transfer(structureThatNeedsEnergy, RESOURCE_ENERGY);
+
+        // if we have enough cpu, move on to the next empty extension to save time
+        if (
+          transferResult === OK &&
+          getUsedPercentage() < 0.7 &&
+          structureThatNeedsEnergy.structureType === "extension"
+        ) {
+          const otherNonFullExtension = creep.pos.findClosestByRange(FIND_MY_STRUCTURES, {
+            filter: i =>
+              structureThatNeedsEnergy &&
+              i.id !== structureThatNeedsEnergy.id &&
+              i.structureType === "extension" &&
+              i.energy < i.energyCapacity
+          });
+          if (otherNonFullExtension && !creep.pos.isNearTo(otherNonFullExtension.pos)) {
+            creep.goTo(otherNonFullExtension);
+          }
+        }
+        return transferResult;
       } else {
         creep.goTo(structureThatNeedsEnergy);
         return OK;

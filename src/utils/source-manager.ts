@@ -4,6 +4,7 @@ import { profiler } from "../utils/profiler";
 import { desiredEnergyInTerminal } from "constants/misc";
 import { isInSafeArea } from "./safe-area";
 import { Traveler } from "./Traveler";
+import { getUsedPercentage } from "./cpu";
 
 class SourceManager {
   harvestEnergyFromSource(creep: Creep) {
@@ -355,7 +356,7 @@ class SourceManager {
 
     if (targetStructure) {
       if (creep.pos.isNearTo(targetStructure)) {
-        creep.transfer(targetStructure, RESOURCE_ENERGY);
+        const transferResult = creep.transfer(targetStructure, RESOURCE_ENERGY);
       } else {
         creep.goTo(targetStructure);
       }

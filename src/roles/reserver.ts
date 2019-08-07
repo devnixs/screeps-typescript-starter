@@ -25,15 +25,23 @@ class RoleReserver implements IRole {
       var ctrl = creep.room.controller;
 
       if (ctrl) {
-        const reserveResult = creep.reserveController(ctrl);
-        if (reserveResult === ERR_NOT_IN_RANGE) {
-          creep.goTo(ctrl);
-        }
-        if (Game.time % 1242 === 0) {
-          // We're in range
-          if (reserveResult === OK) {
+        if (ctrl.pos.isNearTo(creep)) {
+          let reserveResult: ScreepsReturnCode;
+          if (ctrl.reservation && ctrl.reservation.username !== getUsername()) {
+            reserveResult = creep.attackController(ctrl);
+          } else {
+            reserveResult = creep.reserveController(ctrl);
+          }
+          if (reserveResult !== OK) {
+            console.log(creep.name, "reserve result", reserveResult);
+          }
+
+          if (Game.time % 1242 === 0) {
+            // We're in range
             creep.signController(ctrl, signature);
           }
+        } else {
+          creep.goTo(ctrl);
         }
       }
     }

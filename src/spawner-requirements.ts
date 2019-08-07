@@ -23,6 +23,7 @@ import { AttackManager } from "managers/attack";
 import { ITransportMemory } from "roles/transport";
 import { IPokerMemory, rolePoker } from "roles/poker";
 import { getAverageCpu, getUsedPercentage } from "utils/cpu";
+import { IStealerMemory } from "roles/stealer";
 
 export interface RoleRequirement {
   role: roles;
@@ -114,10 +115,10 @@ function initOneTimeValues() {
     builderHelperTarget = colonyThatNeedsHelpBuilding.name;
     builderHelperCount = 2;
     if (Game.time % 100 === 0) {
-      console.log("Found colonyThatNeedsHelpBuilding : ", colonyThatNeedsHelpBuilding.name);
+      /*       console.log("Found colonyThatNeedsHelpBuilding : ", colonyThatNeedsHelpBuilding.name);
       console.log("builderHelperTarget : ", colonyThatNeedsHelpBuilding.name);
       console.log("builderHelperSource : ", builderHelperSource);
-      console.log("builderHelperCount : ", builderHelperCount);
+      console.log("builderHelperCount : ", builderHelperCount); */
     }
   }
 
@@ -139,9 +140,9 @@ function initOneTimeValues() {
     remoteDefenderHelperTarget = colonyThatNeedsHelpDefending.name;
     remoteDefenderHelperCount = 3;
 
-    console.log("remoteDefenderHelperSource : ", remoteDefenderHelperSources);
+    /*     console.log("remoteDefenderHelperSource : ", remoteDefenderHelperSources);
     console.log("remoteDefenderHelperTarget : ", remoteDefenderHelperTarget);
-    console.log("remoteDefenderHelperCount : ", remoteDefenderHelperCount);
+    console.log("remoteDefenderHelperCount : ", remoteDefenderHelperCount); */
     /*
     if (
       colonyThatNeedsHelpDefending.find(FIND_SOURCES).length === 1 &&
@@ -466,6 +467,40 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
       } as RoleRequirement)
     : null;
 
+  const stealers = spawn.room.memory.needsStealers
+    ? spawn.room.memory.needsStealers.map(
+        stealer =>
+          ({
+            percentage: 1,
+            role: "stealer",
+            subRole: stealer.roomName + ":" + stealer.x + "-" + stealer.y,
+            maxCount: 1,
+            bodyTemplate: [MOVE, CARRY],
+            sortBody: [CARRY, MOVE, ATTACK],
+            bodyTemplatePrepend: [MOVE, ATTACK],
+            maxRepeat: 15,
+            onSpawn: (a, b, name) => {
+              let costMemory = spawn.room.memory.stealingStats.find(
+                i => i.pos.x === stealer.x && i.pos.y === stealer.y && i.pos.roomName === stealer.roomName
+              );
+              if (!costMemory) {
+                costMemory = {
+                  brought: 0,
+                  cost: 0,
+                  pos: stealer
+                };
+                spawn.room.memory.stealingStats.push(costMemory);
+              }
+              costMemory.cost += a;
+            },
+            additionalMemory: {
+              homeSpawnPosition: { x: spawn.pos.x, y: spawn.pos.y, roomName: spawn.pos },
+              targetPos: stealer
+            } as Partial<IStealerMemory>
+          } as RoleRequirement)
+      )
+    : [];
+
   let trucksCount = 2;
   if (controllerLevel === 1) {
     trucksCount = 0;
@@ -476,7 +511,7 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
     .find(i => i.memory.role === "long-distance-truck" && !(i.memory as ILongDistanceTruckMemory).targetContainer);
 
   const totalTruckRepetitions = Math.ceil(
-    _.sum(spawn.room.memory.remotes.filter(i => i.energy > 0 && !i.disabled).map(i => i.distance / 4)) // 1 truck template repetition for every 4 distance
+    _.sum(spawn.room.memory.remotes.filter(i => i.energy > 0 && !i.disabled).map(i => i.distance * 0.3)) // 1 truck template repetition for every 3 distance
   );
 
   const requirements = ([
@@ -579,16 +614,17 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
       disableIfLowOnCpu: true,
       bodyTemplatePrepend: [WORK, CARRY, MOVE],
       additionalMemory: {
-        homeSpawnPosition: spawn.pos,
+        homeSpawnPosition: { x: spawn.pos.x, y: spawn.pos.y, roomName: spawn.pos },
         home: spawn.pos.roomName
       } as Partial<ILongDistanceTruckMemory>
     },
     ...reservers,
+    ...stealers,
     {
       percentage: 2,
       role: "poker",
       exactBody: [MOVE, ATTACK],
-      maxCount: spawn.room.memory.poker ? 1 : 0,
+      maxCount: spawn.room.memory.poker && runFromTimeToTime(1500, 4500) ? 1 : 0,
       additionalMemory: {
         targetRoom: spawn.room.memory.poker
       } as Partial<IPokerMemory>

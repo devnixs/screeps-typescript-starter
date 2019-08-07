@@ -226,8 +226,9 @@ export function flee(creep: Creep) {
   let fleeing = false;
   fleeing = fleeing || creep.memory.flee ? creep.memory.flee > Game.time - 10 : false;
   if (!fleeing) {
-    const enemy = findHostile(creep);
-    fleeing = enemy ? enemy.pos.getRangeTo(creep.pos.x, creep.pos.y) < 10 : false;
+    let enemy = findHostile(creep);
+    const enemyIsDangerous = enemy && (enemy.getActiveBodyparts(ATTACK) || enemy.getActiveBodyparts(RANGED_ATTACK));
+    fleeing = enemy && enemyIsDangerous ? enemy.pos.getRangeTo(creep.pos.x, creep.pos.y) < 10 : false;
     if (fleeing) {
       creep.memory.flee = Game.time;
     }
@@ -318,3 +319,14 @@ export function sing(creep: Creep, words: string[]) {
   var word = words[Game.time % words.length];
   creep.say(word, true);
 }
+
+export function getTowerDamage(distance: number) {
+  const distanceFar = TOWER_FALLOFF_RANGE;
+  const distanceClose = TOWER_OPTIMAL_RANGE;
+  const damageMax = TOWER_POWER_ATTACK;
+  const damageMin = TOWER_POWER_ATTACK * (1 - TOWER_FALLOFF);
+  const distanceCapped = minMax(distance, distanceClose, distanceFar);
+  return ((distanceFar - distanceCapped) / (distanceFar - distanceClose)) * (damageMax - damageMin) + damageMin;
+}
+
+(global as any).getTowerDamage = getTowerDamage;

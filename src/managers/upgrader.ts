@@ -34,7 +34,7 @@ export class UpgradeManager {
     }
 
     const storage = this.room.storage;
-    // const container = Game.getObjectById(this.room.memory.controllerContainer) as StructureContainer | undefined;
+    const container = Game.getObjectById(this.room.memory.controllerContainer) as StructureContainer | undefined;
 
     if (storage) {
       const closestLink = this.room.controller.pos.findClosestByRange(FIND_MY_STRUCTURES, {
@@ -44,10 +44,11 @@ export class UpgradeManager {
 
       const linkDistance = closestLink ? closestLink.pos.getRangeTo(controller) : 10000;
       const storageDistance = storage.pos.getRangeTo(controller);
+      const containerDistance = container ? container.pos.getRangeTo(controller) : 10000;
 
-      const distance = Math.min(linkDistance, storageDistance);
+      const distance = Math.min(Math.min(linkDistance, storageDistance), containerDistance);
 
-      if (distance >= 6) {
+      if (distance >= 5) {
         this.room.memory.upgraderType = "mobile";
       } else {
         this.room.memory.upgraderType = "static";

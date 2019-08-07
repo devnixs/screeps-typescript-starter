@@ -1,5 +1,6 @@
 import { getMyRooms } from "utils/misc-utils";
 import { measureCpuAverage } from "utils/cpu";
+import { RoomExplorationsSegments } from "./segments";
 
 const roles: roles[] = [
   "harvester",
@@ -27,8 +28,16 @@ const roles: roles[] = [
   "scout",
   "transport",
   "poker",
+  "stealer",
   "dismantler"
 ];
+
+if (typeof Game.cpu.getHeapStatistics === "function") {
+  let heapStats = Game.cpu.getHeapStatistics();
+  let heapPercent = Math.round(
+    ((heapStats.total_heap_size + heapStats.externally_allocated_size) / heapStats.heap_size_limit) * 100
+  );
+}
 
 export class StatsManager {
   static runForAllRooms() {
@@ -90,7 +99,11 @@ export class StatsManager {
         storedEnergy,
         nukes: room.find(FIND_NUKES).length,
         creepsCount: counts,
-        lacksEnergy: room.energyAvailable < room.energyCapacityAvailable && room.spawns.find(i => !i.spawning) ? 1 : 0
+        lacksEnergy: room.energyAvailable < room.energyCapacityAvailable && room.spawns.find(i => !i.spawning) ? 1 : 0,
+        stealingBenefits:
+          room.memory.stealingStats && room.memory.stealingStats.length
+            ? _.sum(room.memory.stealingStats.map(i => i.brought - i.cost))
+            : 0
       };
     });
 
