@@ -103,9 +103,10 @@ export class UpgradeManager {
     }
 
     let container = Game.getObjectById(this.room.memory.controllerContainer) as StructureContainer | undefined;
-    if (!container) {
+    let mineral = this.room.find(FIND_MINERALS)[0];
+    if (!container && mineral) {
       delete this.room.memory.controllerContainer;
-      container = this.room.containers.find(i => i.pos.inRangeTo(controller.pos, 2));
+      container = this.room.containers.find(i => i.pos.inRangeTo(controller.pos, 2) && !i.pos.isNearTo(mineral));
 
       if (container) {
         this.room.memory.controllerContainer = container.id;

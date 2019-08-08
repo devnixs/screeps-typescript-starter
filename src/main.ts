@@ -63,6 +63,11 @@ console.log("Code has been loaded");
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
 export const loop = ErrorMapper.wrapLoop(() => {
   profiler.wrap(function() {
+    try {
+      runTimeout();
+    } catch (e) {
+      console.log("Failed to run timeout", e);
+    }
     // console.log("Start tick used", Game.cpu.getUsed());
     // console.log("After memory access", Memory.lastConquestTime ? Game.cpu.getUsed() : Game.cpu.getUsed());
 
@@ -207,8 +212,6 @@ export const loop = ErrorMapper.wrapLoop(() => {
       AttackPartyManager.runForAllAttackParties();
       PokingManager.runForAllRooms();
       StealingManager.runForAllRooms();
-
-      runTimeout();
     } catch (e) {
       console.log("Failed to run managers.", e);
       error = e;
@@ -235,6 +238,12 @@ export const loop = ErrorMapper.wrapLoop(() => {
     }
 
     StatsManager.runForAllRooms();
+
+    // Stop attack
+    // TODO: remove this code
+    if (Game.time > 1669225 + 20000 && "attack" in Game.flags && "E8S15" in Game.rooms) {
+      Game.flags.attack.remove();
+    }
 
     if (error) {
       throw error;

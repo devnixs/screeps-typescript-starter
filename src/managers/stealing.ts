@@ -12,6 +12,26 @@ export class StealingManager {
 
   run() {
     this.assign();
+    this.reduceStats();
+  }
+
+  reduceStats() {
+    if (Game.time % 1009 > 0) {
+      return;
+    }
+
+    const stats = this.room.memory.stealingStats;
+    if (!stats) {
+      return;
+    }
+
+    for (const stat of stats) {
+      if (stat.cost > 50000) {
+        // reduce the stats so they can update over time suddenly it becomes harder to steal
+        stat.brought = stat.brought * 0.8;
+        stat.cost = stat.cost * 0.8;
+      }
+    }
   }
 
   assign() {

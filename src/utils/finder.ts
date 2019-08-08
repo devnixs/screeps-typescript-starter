@@ -173,9 +173,9 @@ let findRestSpot = function findRestSpot(creep: Creep, closeTo?: { x: number; y:
   if (creep.room.memory.restSpot) {
     return new RoomPosition(creep.room.memory.restSpot.x, creep.room.memory.restSpot.y, creep.room.name);
   } else {
-    if (closeTo) {
+    /*     if (closeTo) {
       return new RoomPosition(closeTo.x, closeTo.y, creep.room.name);
-    }
+    } */
     return null;
   }
 };

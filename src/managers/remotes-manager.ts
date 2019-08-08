@@ -42,6 +42,26 @@ export class RemotesManager {
     this.disableNotRentableRooms();
     this.checkRoomLevel();
     this.ensureRemotesAreValid();
+    this.reduceStats();
+  }
+
+  reduceStats() {
+    if (Game.time % 1003 > 0) {
+      return;
+    }
+
+    const remotes = this.room.memory.remotes;
+    if (!remotes) {
+      return;
+    }
+
+    for (const remote of remotes) {
+      if (remote.retrievedEnergy !== undefined && remote.spentEnergy && remote.spentEnergy > 80000) {
+        // reduce the stats so they can update over time if suddenly it becomes harder to mine
+        remote.retrievedEnergy = remote.retrievedEnergy * 0.95;
+        remote.spentEnergy = remote.spentEnergy * 0.95;
+      }
+    }
   }
 
   checkRoomLevel() {
@@ -175,7 +195,7 @@ export class RemotesManager {
 
         if (points.length >= 2) {
           // bonus when there are multiple sources in the same room
-          average = average / (1 + points.length / 20);
+          average = average / (1 + points.length / 30);
         }
 
         if (roomType === "SK") {
@@ -248,7 +268,7 @@ export class RemotesManager {
 
     if (totalSpent > 0) {
       const ratio = totalRetrieved / totalSpent;
-      if (totalSpent > 65000 && ratio < 1.3) {
+      if (totalSpent > 65000 && ratio < 1.2) {
         // disable this room;
         return false;
       }

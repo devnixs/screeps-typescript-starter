@@ -1,6 +1,6 @@
 import { desiredStocks, buyableElements, desiredEnergyInTerminal, sellableElements } from "constants/misc";
 import { profiler } from "../utils/profiler";
-import { getMyRooms } from "utils/misc-utils";
+import { getMyRooms, mergeObjects } from "utils/misc-utils";
 
 const minCredits = 10000;
 const minTradeCreditAmount = 200;
@@ -24,7 +24,7 @@ export class Merchant {
       i =>
         i !== "energy" &&
         sellableElements.indexOf(i) >= 0 &&
-        this.getResource(terminal.store, i) > this.getResource(desiredStocks, i) * 10 &&
+        this.getResource(terminal.store, i) > this.getResource(desiredStocks, i) * 6 &&
         this.getResource(terminal.store, i) > 300
     ) as ResourceConstant | undefined;
 
@@ -135,7 +135,8 @@ export class Merchant {
           resource: res,
           amount: (terminal.store as any)[res as any] || 0,
           room: room,
-          terminalReady: !terminal.cooldown
+          terminalReady: !terminal.cooldown,
+          isBoostMode: room.memory.boostMode // to not export resources when in boost mode, we might need them
         }));
         return resources;
       })
@@ -146,7 +147,7 @@ export class Merchant {
     for (let resourceType in groups) {
       const resources = groups[resourceType];
       const orderedLowest = _.sortBy(resources, i => i.amount);
-      const orderedHighest = _.sortBy(resources.filter(i => i.terminalReady), i => -1 * i.amount);
+      const orderedHighest = _.sortBy(resources.filter(i => i.terminalReady && !i.isBoostMode), i => -1 * i.amount);
       const lowest = orderedLowest[0];
       const highest = orderedHighest[0];
 
@@ -159,6 +160,89 @@ export class Merchant {
       }
     }
     return returns;
+  }
+
+  static transferResourcesToRoomInBoostMode() {
+    let hasSent = false;
+    const myRooms = getMyRooms().filter(i => i.controller && i.terminal);
+
+    let roomsThatCanProvide = myRooms
+      .filter(i => !i.memory.boostMode)
+      .map(i => ({
+        room: i,
+        terminal: i.terminal as StructureTerminal,
+        store: (i.terminal as StructureTerminal).store as any
+      }));
+
+    const roomsWithResourcesNeeded = _.flatten(
+      myRooms
+        .map(room => {
+          const boostMode = room.memory.boostMode;
+          if (!boostMode || !boostMode.minerals) {
+            return null;
+          }
+          const terminalStore = (room.terminal as StructureTerminal).store;
+          const labAssets = mergeObjects(
+            room
+              .find(FIND_MY_STRUCTURES, { filter: i => i.structureType === "lab" })
+              .map(i => i as StructureLab)
+              .filter(i => i.mineralAmount > 0)
+              .map(i => ({ [i.mineralType as any]: i.mineralAmount }))
+          );
+          const available = mergeObjects([terminalStore, labAssets]);
+          // console.log("Available", room.name, JSON.stringify(available));
+
+          const mineralNeeds = boostMode.minerals.map(mineral => ({
+            room: room,
+            mineral: mineral.mineral,
+            neededAmount: mineral.requiredAmount - (available[mineral.mineral] || 0)
+          }));
+
+          return mineralNeeds.filter(i => i.neededAmount > 0);
+        })
+        .filter(i => i)
+        .map(i => i as ({ room: Room; mineral: string; neededAmount: number })[])
+    );
+
+    // console.log("Resources needed", JSON.stringify(roomsWithResourcesNeeded));
+
+    for (const resourceNeeded of roomsWithResourcesNeeded) {
+      const roomThatCanProvide = roomsThatCanProvide.find(i => (i.store[resourceNeeded.mineral] || 0) > 0);
+      // console.log(
+      //   "Found room that can provide",
+      //   resourceNeeded.neededAmount,
+      //   resourceNeeded.mineral,
+      //   "to",
+      //   resourceNeeded.room.name,
+      //   "its:",
+      //   JSON.stringify(roomThatCanProvide)
+      // );
+      if (roomThatCanProvide) {
+        const available = roomThatCanProvide.store[resourceNeeded.mineral];
+        const needed = resourceNeeded.neededAmount;
+        const toSend = Math.min(Math.min(available, needed), 1000);
+        console.log(
+          "Transfering resource to boost mode room ",
+          toSend,
+          resourceNeeded.mineral,
+          roomThatCanProvide.room.name,
+          "->",
+          resourceNeeded.room.name
+        );
+        const ret = roomThatCanProvide.terminal.send(
+          resourceNeeded.mineral as ResourceConstant,
+          toSend,
+          resourceNeeded.room.name
+        );
+        if (ret === OK) {
+          hasSent = true;
+        }
+        // remove this room as it has already been used.
+        roomsThatCanProvide = roomsThatCanProvide.filter(i => i !== roomThatCanProvide);
+      }
+    }
+
+    return hasSent ? OK : -1;
   }
 
   static transferExcessiveEnergy(): number {
@@ -198,7 +282,12 @@ export class Merchant {
       return;
     }
 
-    let transferResult = Merchant.transferExcessiveEnergy();
+    let transferResult = Merchant.transferResourcesToRoomInBoostMode();
+    if (transferResult === OK) {
+      return;
+    }
+
+    transferResult = Merchant.transferExcessiveEnergy();
     if (transferResult === OK) {
       return;
     }

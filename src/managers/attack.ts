@@ -130,7 +130,7 @@ export class AttackManager {
     if (!attack) {
       return;
     }
-    const existingParty = attack.parties.find(i => i.status !== "dead" && (!i.distance || i.distance <= i.ttl - 150));
+    const existingParty = attack.parties.find(i => i.status !== "dead" && (!i.distance || i.distance <= i.ttl - 250));
     if (existingParty) {
       return;
     }

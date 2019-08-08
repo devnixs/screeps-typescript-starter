@@ -185,6 +185,20 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
   // OPTIMIZATION POSSIBLE
   var needsBuilder = hasStorageOrContainers && !!RoleBuilder.findTargetStructure(spawn.room, false);
 
+  const creepsCount = spawn.room.find(FIND_MY_CREEPS).length;
+  if (creepsCount === 0) {
+    // bootstrap
+    return [
+      {
+        percentage: 20,
+        role: "harvester",
+        maxRepatAccrossAll: 12,
+        bodyTemplate: [MOVE, WORK, CARRY],
+        maxCount: 3
+      } as RoleRequirement
+    ];
+  }
+
   /*   if (!spawn.room.memory.nextCheckNeedsBuilder || spawn.room.memory.nextCheckNeedsBuilder < Game.time) {
     var targetStructure = RoleBuilder.findTargetStructure(spawn.room, false);
     if (!targetStructure) {
@@ -212,7 +226,7 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
         percentage: 1,
         role: "upgrader",
         bodyTemplate: [WORK],
-        bodyTemplatePrepend: [MOVE, MOVE, CARRY, CARRY],
+        bodyTemplatePrepend: [MOVE, MOVE, CARRY],
         maxRepatAccrossAll: spawn.room.memory.upgraderRatio,
         disableIfLowOnCpu: true,
         maxCount: 7
@@ -248,7 +262,7 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
           maxCount:
             storageQuantity && spawn.room.storage && storageQuantity >= spawn.room.storage.storeCapacity * 0.96 ? 0 : 1,
           bodyTemplate: [WORK],
-          bodyTemplatePrepend: [MOVE, MOVE, WORK, CARRY],
+          bodyTemplatePrepend: [MOVE, MOVE, CARRY],
           additionalMemory: {
             targetContainerId: closeContainer.id,
             targetLinkId: closeLink.id
@@ -515,13 +529,13 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
   );
 
   const requirements = ([
-    ...harvesterDefinitions,
     {
       percentage: 100,
       role: "truck",
       maxCount: trucksCount,
       bodyTemplate: [MOVE, CARRY, CARRY]
     },
+    ...harvesterDefinitions,
     attackers,
     {
       percentage: 2,

@@ -127,6 +127,8 @@ export class RoleBuilder implements IRole {
         var buildResult = creep.build(targetObject as ConstructionSite);
         if (buildResult == ERR_NOT_IN_RANGE) {
           creep.goTo(targetObject, moveOptions);
+        } else {
+          memory.s = Game.time;
         }
       } else {
         var structureObject = targetObject as AnyStructure;

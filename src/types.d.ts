@@ -44,7 +44,7 @@ interface CreepMemory {
   rest: any;
 
   r?: number; // templateRepeat
-  s?: number; // Last rest time
+  s?: number; // Last rest time. This is used to compute if a creep is "swappable" which means someone wants to move at this creep location, it's ok to swap it with him
 }
 
 interface PlannedLocation {

@@ -211,9 +211,10 @@ class Spawner {
     existingTemplateRepeats: number
   ) {
     let creepsCounter = 0;
+    const rcl = spawn.room.controller ? spawn.room.controller.level : 0;
 
     const willTheSpawnRefill =
-      this.doesRoleExist("harvester", existingRoles) ||
+      (this.doesRoleExist("harvester", existingRoles) && rcl < 4) ||
       (this.doesRoleExist("truck", existingRoles) && this.doesRoleExist("static-harvester", existingRoles));
 
     while (Game.creeps[role.role + (creepsCounter + 1)]) {

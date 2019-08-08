@@ -100,9 +100,9 @@ export class StatsManager {
         nukes: room.find(FIND_NUKES).length,
         creepsCount: counts,
         lacksEnergy: room.energyAvailable < room.energyCapacityAvailable && room.spawns.find(i => !i.spawning) ? 1 : 0,
-        stealingBenefits:
+        stealRatio:
           room.memory.stealingStats && room.memory.stealingStats.length
-            ? _.sum(room.memory.stealingStats.map(i => i.brought - i.cost))
+            ? _.sum(room.memory.stealingStats.map(i => i.brought)) / _.sum(room.memory.stealingStats.map(i => i.cost))
             : 0
       };
     });

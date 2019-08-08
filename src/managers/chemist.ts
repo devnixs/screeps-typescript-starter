@@ -23,7 +23,7 @@ export class Chemist {
   }
 
   static settings = {
-    minBatchSize: 400, // anything less than this wastes time
+    minBatchSize: 250, // anything less than this wastes time
     maxBatchSize: 3000,
     sleepTime: 100 // sleep for this many ticks once you can't make anything
   };
@@ -525,7 +525,7 @@ export class Chemist {
 
   isMineralCreationAllowed(target: ResourceConstant, source1: ResourceConstant, source2: ResourceConstant) {
     // prevent tier 3 boosts before level 8
-    if (target.startsWith("X") && this.room.controller && this.room.controller.level < 8) {
+    if (target.startsWith("X") && this.room.controller && this.room.controller.level < 7) {
       return false;
     } else {
       return true;

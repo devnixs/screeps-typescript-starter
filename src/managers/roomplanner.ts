@@ -36,6 +36,7 @@ export class RoomPlanner {
   run() {
     this.showVisuals();
     this.findRestSpot();
+    this.doManualPlacement();
 
     if (Game.time % 17 > 0) {
       return;
@@ -92,16 +93,20 @@ export class RoomPlanner {
 
           const roadUnderneath = buildingsUnderneath.find(i => i.structureType === "road");
           if (roadUnderneath && buildingsUnderneath.length === 1) {
+            console.log("Destroying road", roadUnderneath, roadUnderneath.pos, Game.time);
             roadUnderneath.destroy();
             setTimeout(() => {
+              console.log("Creating original element", JSON.stringify(structure), Game.time);
               Game.rooms[this.room.name].createConstructionSite(structure.x, structure.y, structure.type);
             }, 1);
           }
 
           const containerUnderneath = buildingsUnderneath.find(i => i.structureType === "container");
           if (structure.type === "link" && containerUnderneath) {
+            console.log("Destroying container", containerUnderneath, containerUnderneath.pos, Game.time);
             containerUnderneath.destroy();
             setTimeout(() => {
+              console.log("Creating original element", JSON.stringify(structure), Game.time);
               Game.rooms[this.room.name].createConstructionSite(structure.x, structure.y, structure.type);
             }, 1);
           }
@@ -110,6 +115,40 @@ export class RoomPlanner {
     }
 
     this.addRampartToCriticalStructures();
+  }
+
+  doManualPlacement() {
+    const deleteFlag = Game.flags.roomplanner_delete;
+    if (deleteFlag && deleteFlag.pos.roomName === this.room.name) {
+      const existing = this.room.memory.roomPlanner.structures.find(
+        i => i.x === deleteFlag.pos.x && i.y === deleteFlag.pos.y
+      );
+      if (existing) {
+        this.room.memory.roomPlanner.structures = this.room.memory.roomPlanner.structures.filter(i => i !== existing);
+      }
+    }
+
+    if (deleteFlag && Game.time % 123 === 0 && deleteFlag.pos.roomName === this.room.name) {
+      const type = "rampart";
+      const ramparts = this.room.find(FIND_MY_STRUCTURES, { filter: i => i.structureType === type }).map(i => i.pos);
+      const rampartsConstructionSites = this.room
+        .find(FIND_CONSTRUCTION_SITES)
+        .filter(i => i.structureType === type)
+        .map(i => i.pos);
+
+      const rampartsNotInPlanner = ramparts
+        .concat(rampartsConstructionSites)
+        .filter(i => !this.room.memory.roomPlanner.structures.find(j => j.x === i.x && j.y === i.y));
+
+      for (let rampart of rampartsNotInPlanner) {
+        this.room.memory.roomPlanner.structures.push({
+          type: type,
+          l: 1,
+          x: rampart.x,
+          y: rampart.y
+        });
+      }
+    }
   }
 
   showVisuals() {
@@ -304,7 +343,7 @@ export class RoomPlanner {
           const structureExistsHere = planner.structures.find(i => i.x === pos.x && i.y == pos.y);
           if (!structureExistsHere || structureExistsHere.type === "road") {
             RoomPlanner.reserveSpot(pos.x, pos.y, STRUCTURE_CONTAINER, planner, 2);
-            RoomPlanner.reserveSpot(pos.x, pos.y, STRUCTURE_LINK, planner, 5);
+            RoomPlanner.reserveSpot(pos.x, pos.y, STRUCTURE_LINK, planner, 6);
             return;
           }
         }
@@ -367,16 +406,24 @@ export class RoomPlanner {
 
   static buildContainersAroundSources(planner: RoomPlannerData, room: Room) {
     const storagePos = planner.structures.find(i => i.type === "storage") as StructurePlanning;
-    room.find(FIND_SOURCES).forEach(source => {
+    const sourcesAndDistances = room.find(FIND_SOURCES).map(source => {
+      return {
+        source,
+        distance: source.pos.getRangeTo(new RoomPosition(storagePos.x, storagePos.y, room.name))
+      };
+    });
+    const farthestSource = _.sortBy(sourcesAndDistances, i => -1 * i.distance)[0].source;
+    sourcesAndDistances.forEach(sourceAndDistance => {
+      const source = sourceAndDistance.source;
       const containerLocation = PathFinder.search(source.pos, new RoomPosition(storagePos.x, storagePos.y, room.name))
         .path[0];
+
       if (containerLocation) {
         RoomPlanner.reserveSpot(containerLocation.x, containerLocation.y, STRUCTURE_CONTAINER, planner);
-        if (source.pos.getRangeTo(new RoomPosition(storagePos.x, storagePos.y, room.name)) > 14) {
-          const linkLocation = findEmptySpotCloseTo(containerLocation, room, true);
-          if (linkLocation) {
-            RoomPlanner.reserveSpot(linkLocation.x, linkLocation.y, STRUCTURE_LINK, planner);
-          }
+        const linkLocation = findEmptySpotCloseTo(containerLocation, room, true);
+        if (linkLocation) {
+          const buildLevel = farthestSource === source ? 5 : 7;
+          RoomPlanner.reserveSpot(linkLocation.x, linkLocation.y, STRUCTURE_LINK, planner, buildLevel);
         }
       }
     });

@@ -183,6 +183,14 @@ export class AttackPartyManager {
       this.findAttackPath();
     }
 
+    const targetFlag = Game.flags.attack_target;
+    if (this.attackParty.attackPath && targetFlag) {
+      // recompute path now that we have vision
+      this.findAttackPath();
+
+      targetFlag.remove();
+    }
+
     if (this.attackParty.attackPath && this.attackParty.isApproxPath && roomVisibility) {
       // recompute path now that we have vision
       this.findAttackPath();
@@ -308,6 +316,7 @@ export class AttackPartyManager {
 
     if (attackResult === "OK") {
       if (blockingObject) {
+        console.log("Blocking object", blockingObject);
         this.attackObject(creeps, blockingObject);
       }
     }
@@ -343,13 +352,14 @@ export class AttackPartyManager {
       var tmp = this.attackParty.creeps[inRangeCreepIndex];
       var tmpx = tmp.x;
       var tmpy = tmp.y;
-      this.attackParty.creeps[inRangeCreepIndex] = this.attackParty.creeps[dismantlerIndex];
+
       this.attackParty.creeps[inRangeCreepIndex].x = this.attackParty.creeps[dismantlerIndex].x;
       this.attackParty.creeps[inRangeCreepIndex].y = this.attackParty.creeps[dismantlerIndex].y;
-
-      this.attackParty.creeps[dismantlerIndex] = tmp;
       this.attackParty.creeps[dismantlerIndex].x = tmpx;
       this.attackParty.creeps[dismantlerIndex].y = tmpy;
+
+      this.attackParty.creeps[inRangeCreepIndex] = this.attackParty.creeps[dismantlerIndex];
+      this.attackParty.creeps[dismantlerIndex] = tmp;
     }
   }
 
@@ -471,6 +481,7 @@ export class AttackPartyManager {
       .filter(i => i);
 
     const firstObstacle = obstacles[0];
+    console.log("Direction", nextDirection);
     if (firstObstacle) {
       leader.creep.room.visual.circle(firstObstacle.pos.x, firstObstacle.pos.y, {
         radius: 0.2,
@@ -545,6 +556,15 @@ export class AttackPartyManager {
       for (const wall of walls) {
         for (const creep of creeps) {
           matrix.set(wall.pos.x - creep.x, wall.pos.y - creep.y, this.wallHitToCost(wall.hits));
+          roomVisibility &&
+            roomVisibility.visual.circle(wall.pos.x - creep.x, wall.pos.y - creep.y, {
+              radius: 0.2,
+              opacity: 0.8,
+              fill: "transparent",
+              lineStyle: "solid",
+              stroke: "yellow",
+              strokeWidth: 0.1
+            });
         }
       }
     }
@@ -625,7 +645,7 @@ export class AttackPartyManager {
   }
 
   private wallHitToCost(hits: number) {
-    return 10 + Math.floor((10 * Math.log(hits + 1)) / Math.LN10);
+    return 100 + Math.floor((10 * Math.log(hits + 1)) / Math.LN10);
   }
 
   private runMovingParty() {

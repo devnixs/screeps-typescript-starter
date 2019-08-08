@@ -28,6 +28,7 @@ class RoleUpgrader implements IRole {
       if (creep.upgradeController(creep.room.controller) === ERR_NOT_IN_RANGE) {
         creep.goTo(creep.room.controller);
       } else {
+        this.withdrawFromProximityStorageIfPossible(creep);
         creep.memory.s = Game.time;
       }
     } else {
@@ -52,6 +53,17 @@ class RoleUpgrader implements IRole {
       } else {
         sourceManager.getEnergy(creep);
       }
+    }
+  }
+
+  withdrawFromProximityStorageIfPossible(creep: Creep) {
+    const container = Game.getObjectById(creep.room.memory.controllerContainer) as StructureContainer | undefined;
+    const outputLink = creep.room.memory.links && creep.room.memory.links.find(i => i.type === "output");
+    const outputLinkObj = outputLink && (Game.getObjectById(outputLink.id) as StructureLink | undefined);
+    if (container && container.pos.isNearTo(creep) && container.store.energy > 0) {
+      creep.withdraw(container, "energy");
+    } else if (outputLinkObj && outputLinkObj.pos.isNearTo(creep) && outputLinkObj.energy > 0) {
+      creep.withdraw(outputLinkObj, "energy");
     }
   }
 }

@@ -105,6 +105,8 @@ class RoleRemoteDefender implements IRole {
           if (rest) {
             creep.say("Zzz");
             creep.goTo(rest, { range: 3 });
+          } else {
+            creep.say("Zzz");
           }
         }
       } else {

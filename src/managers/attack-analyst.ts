@@ -1,5 +1,5 @@
 import { boostResources } from "constants/resources";
-import { repeatArray } from "utils/misc-utils";
+import { repeatArray, mergeObjects, getMyRooms } from "utils/misc-utils";
 import { ExplorationCache } from "utils/exploration-cache";
 
 interface GenerateAttackCreepsInfos {
@@ -166,6 +166,22 @@ const t3Rcl7: PartyDefinition = {
   requiresRcl: 7
 };
 
+const t3Rcl7NoMoveParts: PartyDefinition = {
+  creeps: [
+    {
+      [TOUGH]: 6,
+      [MOVE]: 25,
+      [RANGED_ATTACK]: 9,
+      [HEAL]: 10
+    }
+  ],
+  repeat: 4,
+  canCounterRcl: 6,
+  requiresBoostsTier: 3,
+  boostedParts: [TOUGH, RANGED_ATTACK, HEAL],
+  requiresRcl: 7
+};
+
 const t2rcl8: PartyDefinition = {
   canCounterRcl: 7,
   creeps: [
@@ -210,6 +226,7 @@ const definitions = [
   t3rcl8,
   t2rcl8,
   t3Rcl7,
+  t3Rcl7NoMoveParts,
   t2Rcl7,
   t1Rcl7,
   t2Rcl6,
@@ -234,10 +251,13 @@ export function generateAttackCreeps(infos: GenerateAttackCreepsInfos) {
   const targetRoomInfos = ExplorationCache.getExploration(infos.targetRoom);
   const targetRcl = targetRoomInfos ? targetRoomInfos.el : undefined;
 
-  const resourcesAvailable: any = fromRoom.terminal ? fromRoom.terminal.store : {};
+  const allTerminals = getMyRooms()
+    .map(i => (i.terminal && i.terminal.store) as StoreDefinition)
+    .filter(i => i);
+  const resourcesAvailable: any = mergeObjects(allTerminals);
 
   for (const def of definitions) {
-    const parts = def.creeps.reduce((acc, creep) => _.merge(acc, creep, (i, j) => (i || 0) + (j || 0)), {});
+    const parts = mergeObjects(def.creeps);
 
     let needsBoostResources: MineralNeed[] = [];
     if (def.requiresBoostsTier > 0) {

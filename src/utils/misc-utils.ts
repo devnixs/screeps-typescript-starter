@@ -329,4 +329,9 @@ export function getTowerDamage(distance: number) {
   return ((distanceFar - distanceCapped) / (distanceFar - distanceClose)) * (damageMax - damageMin) + damageMin;
 }
 
+export function mergeObjects(objects: { [key: string]: number }[]) {
+  return objects.reduce((acc, obj) => _.merge(acc, obj, (i, j) => (i || 0) + (j || 0)), {});
+}
+
 (global as any).getTowerDamage = getTowerDamage;
+(global as any).mergeObjects = mergeObjects;

@@ -62,7 +62,8 @@ class RoleLongDistanceTruck implements IRole {
       if (
         constructionSite &&
         constructionSite.pos.inRangeTo(creep, 5) &&
-        constructionSite.structureType !== "rampart"
+        constructionSite.structureType !== "rampart" &&
+        constructionSite.structureType !== "lab"
       ) {
         if (creep.build(constructionSite) === ERR_NOT_IN_RANGE) {
           creep.goTo(constructionSite);
@@ -132,7 +133,7 @@ class RoleLongDistanceTruck implements IRole {
       if (!container) {
         const ctrl = Game.rooms[memory.homeRoom].controller;
         if (ctrl) {
-          creep.goTo(ctrl);
+          creep.goTo(ctrl, { range: 4 });
         }
         return;
       }
@@ -165,7 +166,7 @@ class RoleLongDistanceTruck implements IRole {
           const ctrl = Game.rooms[memory.homeRoom].controller;
           if (ctrl && !ctrl.pos.isNearTo(creep)) {
             creep.say("🐓");
-            creep.goTo(ctrl);
+            creep.goTo(ctrl, { range: 4 });
           }
         } else {
           creep.goTo(container.pos);

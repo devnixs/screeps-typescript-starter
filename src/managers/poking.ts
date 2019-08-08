@@ -25,7 +25,7 @@ export class PokingManager {
     if (!explorations) {
       return;
     } else {
-      const stealTargets = _.flatten(getMyRooms().map(i => i.memory.needsStealers));
+      const stealTargets = _.flatten(getMyRooms().map(i => i.memory.needsStealers || []));
       const remotes = explorations
         .filter(
           i =>
@@ -52,7 +52,7 @@ export class PokingManager {
       const memory = creep.memory as IPokerMemory;
       const remotes = explorations
         .filter(i => i.er)
-        .filter(i => i.r !== memory.targetRoom && !stealTargets.find(s => s.roomName === i.r))
+        .filter(i => i.r !== memory.targetRoom && !stealTargets.find(s => s && s.roomName === i.r))
         .map(i => ({
           room: i.r,
           distance: Cartographer.findRoomDistanceSum(i.r, creep.room.name)
