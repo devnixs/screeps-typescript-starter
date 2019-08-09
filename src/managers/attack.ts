@@ -281,7 +281,10 @@ export class AttackManager {
             }
           }
 
-          console.log("Asking for spawn of creep #" + formingParty.creeps.length, JSON.stringify(currentCreepNeeded));
+          console.log(
+            "Asking for spawn of creep #" + (formingParty.creeps.length + 1),
+            JSON.stringify(currentCreepNeeded)
+          );
 
           sourceRoom.memory.needsAttackers = {
             boosted: mineralsNeeded.length > 0,

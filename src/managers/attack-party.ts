@@ -390,11 +390,13 @@ export class AttackPartyManager {
   private getTarget(room: Room): RoomPosition | undefined {
     let target: AnyStructure | undefined;
     target = target || room.spawns[0];
-    target = target || room.terminal;
     target = target || room.storage;
+    target = target || room.terminal;
     target = target || room.towers;
     target = target || room.extensions;
     target = target || room.containers;
+    target = target || room.extractor;
+    target = target || room.labs[0];
     target = target || room.find(FIND_HOSTILE_CREEPS)[0];
 
     return target && target.pos;
@@ -427,10 +429,6 @@ export class AttackPartyManager {
       return undefined;
     }
 
-    if (!this.attackParty.attackPath || this.attackParty.attackPath.length === 0 || !this.attackParty.currentPos) {
-      return;
-    }
-
     if (this.attackParty.attackPath && "show_visuals" in Game.flags) {
       let currentPos: RoomPosition | void = creeps[0].creep.pos;
       for (let index = 0; index < this.attackParty.attackPath.length; index++) {
@@ -450,6 +448,10 @@ export class AttackPartyManager {
       }
     }
 
+    if (!this.attackParty.attackPath || this.attackParty.attackPath.length === 0 || !this.attackParty.currentPos) {
+      return;
+    }
+
     // consume path
     if (this.attackParty.currentPos.x !== leader.creep.pos.x || this.attackParty.currentPos.y !== leader.creep.pos.y) {
       this.attackParty.attackPath = this.attackParty.attackPath.substr(1);
@@ -458,6 +460,10 @@ export class AttackPartyManager {
         y: leader.creep.pos.y,
         roomName: leader.creep.pos.roomName
       };
+    }
+
+    if (!this.attackParty.attackPath || this.attackParty.attackPath.length === 0 || !this.attackParty.currentPos) {
+      return;
     }
 
     let nextDirection = parseInt(this.attackParty.attackPath[0]);
@@ -606,7 +612,11 @@ export class AttackPartyManager {
       target = this.getTarget(roomVisibility);
       if (!target) {
         // no more target in this room.
-        this.attackParty.status = "complete";
+        console.log("Cannot find target in room ", roomVisibility.name);
+        if (Game.time % 10 === 0) {
+          // we don't want this to happen in the firt shot. I noticed a time where it was triggered but it shouldn't have
+          this.attackParty.status = "complete";
+        }
         return;
       }
     } else {

@@ -220,7 +220,7 @@ export class Merchant {
       if (roomThatCanProvide) {
         const available = roomThatCanProvide.store[resourceNeeded.mineral];
         const needed = resourceNeeded.neededAmount;
-        const toSend = Math.min(Math.min(available, needed), 1000);
+        const toSend = Math.max(Math.min(Math.min(available, needed), 1000), 100);
         console.log(
           "Transfering resource to boost mode room ",
           toSend,
