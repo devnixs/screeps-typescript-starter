@@ -8,16 +8,15 @@ import { RoomAnalyzer } from "./room-analyzer";
 import { ExplorationCache } from "utils/exploration-cache";
 
 export class AttackPartyManager {
-  attack: AttackSetup;
-  constructor(private attackParty: AttackParty) {
-    this.attack = Memory.attack as AttackSetup;
-  }
+  constructor(private attackParty: AttackParty, private attack: AttackSetup) {}
 
   public static runForAllAttackParties() {
+    AttackPartyManager.testAttackPath();
+
     const attack = Memory.attack;
     if (attack) {
       for (const party of attack.parties) {
-        new AttackPartyManager(party).run();
+        new AttackPartyManager(party, attack).run();
       }
     }
   }
@@ -46,8 +45,6 @@ export class AttackPartyManager {
       this.runRegroupingParty();
     } else if (this.attackParty.status === "attacking") {
       this.runAttackingParty();
-    } else if (this.attackParty.status === "retreating") {
-      this.runRetreatingParty();
     }
 
     this.setTimeToLive();
@@ -77,10 +74,11 @@ export class AttackPartyManager {
         leader.creep.say("👬");
       }
       if (this.attackParty.status === "attacking") {
-        leader.creep.say("☠️");
-      }
-      if (this.attackParty.status === "retreating") {
-        leader.creep.say("🦃");
+        if (this.attackParty.retreat) {
+          leader.creep.say("🐔");
+        } else {
+          leader.creep.say("☠️");
+        }
       }
       if (this.attackParty.status === "complete") {
         leader.creep.say("😎");
@@ -94,6 +92,15 @@ export class AttackPartyManager {
         if (creepInfo.creep.getActiveBodyparts(HEAL)) {
           creepInfo.creep.heal(creepInfo.creep);
         }
+      } else {
+        const otherCreepDamaged = creeps.find(
+          i => i.creep.hits < i.creep.hitsMax && i.creep.pos.inRangeTo(creepInfo.creep, 3)
+        );
+        if (otherCreepDamaged) {
+          if (creepInfo.creep.getActiveBodyparts(HEAL)) {
+            creepInfo.creep.rangedHeal(otherCreepDamaged.creep);
+          }
+        }
       }
     }
   }
@@ -101,7 +108,7 @@ export class AttackPartyManager {
   private attackAround(creeps: AttackPartyCreepLoaded[]) {
     for (const creep of creeps) {
       const enemies = creep.creep.pos.findInRange(FIND_HOSTILE_CREEPS, 3);
-      if (enemies.length) {
+      if (enemies.length && creep.creep.getActiveBodyparts(RANGED_ATTACK)) {
         creep.creep.rangedAttack(enemies[0]);
       }
     }
@@ -171,7 +178,6 @@ export class AttackPartyManager {
 
     if (allCreepsAreGrouped) {
       this.attackParty.status = "attacking";
-      this.attackParty.currentPositionIndex = 0;
     }
   }
 
@@ -191,6 +197,16 @@ export class AttackPartyManager {
       targetFlag.remove();
     }
 
+    if (this.attackParty.attackPath && this.attackParty.attackPath.length === 0) {
+      // recompute path because we reached our target.
+      this.findAttackPath();
+
+      // still no targets
+      if (this.attackParty.attackPath.length === 0) {
+        return;
+      }
+    }
+
     if (this.attackParty.attackPath && this.attackParty.isApproxPath && roomVisibility) {
       // recompute path now that we have vision
       this.findAttackPath();
@@ -200,10 +216,21 @@ export class AttackPartyManager {
     }
 
     const healResult = this.healEachOthers(creeps);
-    if (healResult === "NeedsRetreat") {
-      this.attackParty.status = "retreating";
-      this.runRetreatingParty();
-      return;
+    if (!this.attackParty.retreat && healResult === "NeedsRetreat") {
+      this.attackParty.retreat = true;
+      this.findRetreatPath();
+    } else if (this.attackParty.retreat && healResult === "OK") {
+      this.attackParty.retreat = false;
+      this.findAttackPath();
+    }
+
+    if (Game.time % 33 === 0) {
+      // Recompute attack path, just in case.
+      if (this.attackParty.retreat) {
+        this.findRetreatPath();
+      } else {
+        this.findAttackPath();
+      }
     }
 
     const regroupResult = this.regroupIfNecessary(creeps);
@@ -211,7 +238,7 @@ export class AttackPartyManager {
     if (regroupResult === "needs-regroup") {
       this.attackEnemiesAround(creeps);
     } else {
-      this.moveAndAttack(creeps, "forward");
+      this.moveAndAttack(creeps);
     }
   }
 
@@ -229,8 +256,8 @@ export class AttackPartyManager {
     }
 
     let targetHealth = 0.7;
-    if (this.attackParty.status === "retreating") {
-      targetHealth = 0.9;
+    if (this.attackParty.retreat) {
+      targetHealth = 1;
     }
     // are creeps too badly damaged?
     if (creepsAndDamage[0] && creepsAndDamage[0].health <= targetHealth) {
@@ -264,30 +291,6 @@ export class AttackPartyManager {
     }
   }
 
-  private runRetreatingParty() {
-    const creeps = this.creeps();
-
-    // check death
-    if (creeps.length === 0) {
-      this.attackParty.status = "dead";
-      return;
-    }
-
-    const healResult = this.healEachOthers(creeps);
-    if (healResult === "OK") {
-      this.attackParty.status = "attacking";
-      this.runAttackingParty();
-      return;
-    }
-
-    const regroupResult = this.regroupIfNecessary(creeps);
-    if (regroupResult === "needs-regroup") {
-      this.attackEnemiesAround(creeps);
-    } else {
-      this.moveAndAttack(creeps, "backward");
-    }
-  }
-
   private attackObject(creeps: AttackPartyCreepLoaded[], object: Creep | AnyStructure) {
     console.log("Attacking object", object);
     for (const creepInfo of creeps) {
@@ -305,14 +308,12 @@ export class AttackPartyManager {
     }
   }
 
-  private moveAndAttack(creeps: AttackPartyCreepLoaded[], direction: "forward" | "backward") {
-    const leader = creeps[0];
+  private moveAndAttack(creeps: AttackPartyCreepLoaded[]) {
     const attackResult = this.attackEnemiesAround(creeps);
-    const blockingObject = this.moveParty(creeps, direction);
+    const blockingObject = this.moveParty(creeps);
     if (blockingObject) {
       this.swapPositionsIfNecassary(creeps, blockingObject);
     }
-    console.log("Attack result:", attackResult);
 
     if (attackResult === "OK") {
       if (blockingObject) {
@@ -386,23 +387,33 @@ export class AttackPartyManager {
     }
   }
 
-  private getTargets(room: Room): RoomPosition[] {
-    let targets: (AnyStructure | undefined)[] = [];
-    targets = targets.concat(room.spawns);
-    targets = targets.concat([room.terminal]);
-    targets = targets.concat([room.storage]);
-    targets = targets.concat(room.towers);
-    targets = targets.concat(room.extensions);
-    targets = targets.concat(room.containers);
+  private getTarget(room: Room): RoomPosition | undefined {
+    let target: AnyStructure | undefined;
+    target = target || room.spawns[0];
+    target = target || room.terminal;
+    target = target || room.storage;
+    target = target || room.towers;
+    target = target || room.extensions;
+    target = target || room.containers;
+    target = target || room.find(FIND_HOSTILE_CREEPS)[0];
 
-    return targets.filter(i => i).map(i => (i as AnyStructure).pos);
+    return target && target.pos;
   }
 
-  private moveParty(creeps: AttackPartyCreepLoaded[], direction: "forward" | "backward") {
-    if (this.attackParty.blocker && this.attackParty.blocker.dir === direction) {
-      var obj = Game.getObjectById(this.attackParty.blocker.obj);
+  private moveParty(creeps: AttackPartyCreepLoaded[]) {
+    const leader = creeps[0];
+    if (this.attackParty.blocker && Game.time % 15 > 0) {
+      var obj = Game.getObjectById(this.attackParty.blocker) as AnyStructure | Creep;
       if (obj) {
-        return obj as AnyStructure | Creep;
+        leader.creep.room.visual.circle(obj.pos.x, obj.pos.y, {
+          radius: 0.2,
+          opacity: 0.8,
+          fill: "transparent",
+          lineStyle: "solid",
+          stroke: "red",
+          strokeWidth: 0.1
+        });
+        return obj;
       } else {
         delete this.attackParty.blocker;
       }
@@ -416,22 +427,13 @@ export class AttackPartyManager {
       return undefined;
     }
 
-    if (
-      !this.attackParty.attackPath ||
-      this.attackParty.currentPositionIndex === undefined ||
-      this.attackParty.attackPath.length <= this.attackParty.currentPositionIndex
-    ) {
-      return;
-    }
-
-    if (this.attackParty.currentPositionIndex === 0 && direction === "backward") {
-      console.log("Cannot go backward when at rallying point");
+    if (!this.attackParty.attackPath || this.attackParty.attackPath.length === 0 || !this.attackParty.currentPos) {
       return;
     }
 
     if (this.attackParty.attackPath && "show_visuals" in Game.flags) {
       let currentPos: RoomPosition | void = creeps[0].creep.pos;
-      for (let index = this.attackParty.currentPositionIndex; index < this.attackParty.attackPath.length; index++) {
+      for (let index = 0; index < this.attackParty.attackPath.length; index++) {
         const dir = this.attackParty.attackPath[index];
         currentPos = Traveler.positionAtDirection(currentPos, parseInt(dir));
         if (!currentPos) {
@@ -442,23 +444,24 @@ export class AttackPartyManager {
           opacity: 0.8,
           fill: "transparent",
           lineStyle: "solid",
-          stroke: "blue",
+          stroke: "green",
           strokeWidth: 0.1
         });
       }
     }
 
-    const leader = creeps[0];
-
-    let nextDirection: number;
-    if (direction === "forward") {
-      nextDirection = parseInt(this.attackParty.attackPath[this.attackParty.currentPositionIndex]);
-    } else {
-      nextDirection = Traveler.invertDirection(
-        parseInt(this.attackParty.attackPath[this.attackParty.currentPositionIndex - 1])
-      );
+    // consume path
+    if (this.attackParty.currentPos.x !== leader.creep.pos.x || this.attackParty.currentPos.y !== leader.creep.pos.y) {
+      this.attackParty.attackPath = this.attackParty.attackPath.substr(1);
+      this.attackParty.currentPos = {
+        x: leader.creep.pos.x,
+        y: leader.creep.pos.y,
+        roomName: leader.creep.pos.roomName
+      };
     }
-    console.log("Moving", direction, this.attackParty.currentPositionIndex, nextDirection, leader.creep.pos);
+
+    let nextDirection = parseInt(this.attackParty.attackPath[0]);
+    console.log("Moving", nextDirection, leader.creep.pos);
 
     const nextPositions = creeps
       .map(creepInfo => {
@@ -481,7 +484,6 @@ export class AttackPartyManager {
       .filter(i => i);
 
     const firstObstacle = obstacles[0];
-    console.log("Direction", nextDirection);
     if (firstObstacle) {
       leader.creep.room.visual.circle(firstObstacle.pos.x, firstObstacle.pos.y, {
         radius: 0.2,
@@ -491,10 +493,7 @@ export class AttackPartyManager {
         stroke: "red",
         strokeWidth: 0.1
       });
-      this.attackParty.blocker = {
-        dir: direction,
-        obj: firstObstacle.id
-      };
+      this.attackParty.blocker = firstObstacle.id;
 
       return firstObstacle as AnyStructure | Creep;
     } else {
@@ -512,13 +511,6 @@ export class AttackPartyManager {
       for (const creepInfo of creeps) {
         const result = creepInfo.creep.move(nextDirection as DirectionConstant);
         if (result === OK && creepInfo === creeps[0]) {
-          // leader leads the pace
-          if (direction === "forward") {
-            this.attackParty.currentPositionIndex++;
-          } else {
-            this.attackParty.currentPositionIndex--;
-          }
-          console.log("Moved", direction, this.attackParty.currentPositionIndex, nextDirection);
         }
       }
       return undefined;
@@ -526,23 +518,28 @@ export class AttackPartyManager {
   }
 
   private getAttackMatrixForRoom(creeps: AttackPartyCreepLoaded[], room: string, matrix: CostMatrix) {
-    console.log("Callback for room ", room);
     const roomVisibility = Game.rooms[room];
     const terrain = Game.map.getRoomTerrain(room);
+    const showVisuals = "show_visuals" in Game.flags;
     // make sure floor is walkable at creep locations
 
     for (let i = 0; i < 50; i++) {
       for (let j = 0; j < 50; j++) {
         const isWall = terrain.get(i, j) === TERRAIN_MASK_WALL;
         const isSwamp = terrain.get(i, j) === TERRAIN_MASK_SWAMP;
-        if (isWall) {
-          for (const creep of creeps) {
-            matrix.set(i - creep.x, j - creep.y, 0xff);
+        for (const creep of creeps) {
+          const x = i - creep.x;
+          const y = j - creep.y;
+          if (x < 0 || x > 49 || y < 0 || y > 49) {
+            continue;
           }
-        }
-        if (isSwamp) {
-          for (const creep of creeps) {
-            matrix.set(i - creep.x, j - creep.y, 0x05);
+          if (isWall) {
+            if (showVisuals) {
+              new RoomVisual(room).circle(x, y);
+            }
+            matrix.set(x, y, 0xff);
+          } else if (isSwamp && matrix.get(x, y) < 0xff) {
+            matrix.set(x, y, 0x05);
           }
         }
       }
@@ -555,16 +552,22 @@ export class AttackPartyManager {
       }) as (StructureWall | StructureRampart)[];
       for (const wall of walls) {
         for (const creep of creeps) {
-          matrix.set(wall.pos.x - creep.x, wall.pos.y - creep.y, this.wallHitToCost(wall.hits));
-          roomVisibility &&
-            roomVisibility.visual.circle(wall.pos.x - creep.x, wall.pos.y - creep.y, {
-              radius: 0.2,
-              opacity: 0.8,
-              fill: "transparent",
-              lineStyle: "solid",
-              stroke: "yellow",
-              strokeWidth: 0.1
-            });
+          const x = wall.pos.x - creep.x;
+          const y = wall.pos.y - creep.y;
+          const currentValue = matrix.get(x, y);
+          if (currentValue < 0xff) {
+            matrix.set(x, y, currentValue + AttackPartyManager.wallHitToCost(wall.hits));
+            if (showVisuals) {
+              new RoomVisual(room).circle(x, y, {
+                radius: 0.2,
+                opacity: 0.8,
+                fill: "transparent",
+                lineStyle: "solid",
+                stroke: "yellow",
+                strokeWidth: 0.1
+              });
+            }
+          }
         }
       }
     }
@@ -596,15 +599,13 @@ export class AttackPartyManager {
   }
 
   private findAttackPath() {
-    const creeps = this.creeps();
-    const leader = creeps[0];
     const roomVisibility = Game.rooms[this.attack.toRoom];
 
-    let targets: RoomPosition[] = [];
+    let target: RoomPosition | undefined;
     if (roomVisibility) {
-      targets = this.getTargets(roomVisibility);
-      if (targets.length === 0) {
-        // no more targets in this room.
+      target = this.getTarget(roomVisibility);
+      if (!target) {
+        // no more target in this room.
         this.attackParty.status = "complete";
         return;
       }
@@ -615,37 +616,68 @@ export class AttackPartyManager {
         roomInformations && roomInformations.es && roomInformations.es.length
           ? roomInformations.es[0]
           : { x: 25, y: 25 };
-      targets = [new RoomPosition(targetLocation.x, targetLocation.y, this.attack.toRoom)];
+      target = new RoomPosition(targetLocation.x, targetLocation.y, this.attack.toRoom);
     }
 
-    var pathSerialized = "";
-    let previousPosition = leader.creep.pos;
+    this.setPathTo(target);
 
-    for (const spawn of targets) {
-      console.log("Adding target ", spawn);
-      var attackPath = this.getAttackPath(previousPosition, spawn, creeps);
-      console.log("Attack path is incomplete?", attackPath.incomplete);
-      pathSerialized = pathSerialized + Traveler.serializePath(previousPosition, attackPath.path);
-
-      if (attackPath.incomplete) {
-        break;
-      } else {
-        previousPosition = spawn;
-      }
-    }
-
-    // if there's already a path, truncate where we are and append the new path
-    if (this.attackParty.attackPath) {
-      const upToNow = this.attackParty.attackPath.slice(0, this.attackParty.currentPositionIndex);
-      this.attackParty.attackPath = upToNow + pathSerialized;
-    } else {
-      this.attackParty.attackPath = pathSerialized;
-    }
     this.attackParty.isApproxPath = roomVisibility ? false : true;
   }
 
-  private wallHitToCost(hits: number) {
-    return 100 + Math.floor((10 * Math.log(hits + 1)) / Math.LN10);
+  private findRetreatPath() {
+    if (this.attackParty.rallyPoint) {
+      this.setPathTo(
+        new RoomPosition(
+          this.attackParty.rallyPoint.x,
+          this.attackParty.rallyPoint.y,
+          this.attackParty.rallyPoint.roomName
+        )
+      );
+    } else {
+      this.setPathTo(new RoomPosition(25, 25, this.attack.fromRoom));
+    }
+  }
+
+  private setPathTo(target: RoomPosition) {
+    const creeps = this.creeps();
+    const leader = creeps[0];
+    console.log("Going to target ", target);
+    var attackPath = this.getAttackPath(leader.creep.pos, target, creeps);
+    console.log("Attack path is incomplete?", attackPath.incomplete);
+    let pathSerialized = Traveler.serializePath(leader.creep.pos, attackPath.path);
+
+    if (attackPath.incomplete) {
+      console.log("WARNING: attack path is incomplete");
+    }
+
+    this.attackParty.attackPath = pathSerialized;
+    this.attackParty.currentPos = {
+      x: leader.creep.pos.x,
+      y: leader.creep.pos.y,
+      roomName: leader.creep.pos.roomName
+    };
+    this.attackParty.targetPos = { x: target.x, y: target.y, roomName: target.roomName };
+  }
+
+  public static wallHitToCost(hits: number) {
+    let value = 0;
+    if (hits < 1000000) {
+      // 1M
+      value = 10 + hits / 10000;
+    } else if (hits < 10000000) {
+      // 10M
+      value = 110 + hits / 100000;
+    } else if (hits < 20000000) {
+      // 20M
+      value = 220;
+    } else if (hits < 30000000) {
+      // 30M
+      value = 230;
+    } else {
+      value = 249;
+    }
+
+    return value / 4;
   }
 
   private runMovingParty() {
@@ -658,8 +690,21 @@ export class AttackPartyManager {
 
     const regroupFlag = Game.flags["regroup"];
     const defaultPos = new RoomPosition(25, 25, this.attack.toRoom);
+    const maxDistance = creeps.length + 1;
+    let leaderWait = false;
 
-    leader.creep.goTo(regroupFlag ? regroupFlag.pos : defaultPos);
+    for (const creep of creeps) {
+      if (
+        leader.creep.pos.getRangeTo(creep.creep.pos) > maxDistance &&
+        leader.creep.pos.roomName === creep.creep.pos.roomName
+      ) {
+        leaderWait = true;
+      }
+    }
+
+    if (!leaderWait) {
+      leader.creep.goTo(regroupFlag ? regroupFlag.pos : defaultPos, { allowSK: true });
+    }
     if (!this.attackParty.distance) {
       this.attackParty.distance =
         leader.creep.memory._trav && leader.creep.memory._trav.path ? leader.creep.memory._trav.path.length : 0;
@@ -697,6 +742,10 @@ export class AttackPartyManager {
     if (this.attackParty.status === "moving") {
       // go back home
       this.attackParty.status = "forming";
+    }
+    if (this.attackParty.status === "attacking") {
+      // reset computed path, since now the leader is at another position.
+      this.attackParty.attackPath = undefined;
     }
   }
 
@@ -747,8 +796,37 @@ export class AttackPartyManager {
       }
     }
   }
+
+  public static testAttackPath() {
+    if (!Game.flags.start || !Game.flags.end) {
+      return;
+    }
+    const start = Game.flags.start;
+    const end = Game.flags.end;
+
+    var party = new AttackPartyManager(null as any, { toRoom: end.pos.roomName } as any);
+    const path = party.getAttackPath(start.pos, end.pos, [
+      { x: 0, y: 0 },
+      { x: 1, y: 0 },
+      { x: 0, y: 1 },
+      { x: 1, y: 1 }
+    ] as any);
+    for (const pos of path.path) {
+      new RoomVisual(pos.roomName).circle(pos, {
+        radius: 0.4,
+        fill: "transparent",
+        stroke: "blue",
+        strokeWidth: 0.15,
+        opacity: 1,
+        lineStyle: "solid"
+      });
+    }
+  }
 }
 
 interface AttackPartyCreepLoaded extends AttackPartyCreep {
   creep: Creep;
 }
+
+(global as any).testAttackPath = AttackPartyManager.testAttackPath;
+(global as any).AttackPartyManager = AttackPartyManager;

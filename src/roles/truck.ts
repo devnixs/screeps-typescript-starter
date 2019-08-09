@@ -461,9 +461,11 @@ class RoleTruck implements IRole {
       const containerWithMultipleResources = containersWithMultipleResources[containerWithMultipleResourcesIndex];
 
       const resourcesInThatContainer = findNonEmptyResourcesInStore(containerWithMultipleResources.store);
+      console.log("resources", JSON.stringify(resourcesInThatContainer));
       const resourceId = _.random(0, resourcesInThatContainer.length - 1);
 
       const resourceType = resourcesInThatContainer[resourceId] as ResourceConstant;
+      console.log("selected resource ", resourceType);
       const job = this.createRetrievalJob({
         amount: containerWithMultipleResources.store[resourceType] as any,
         creep: creep,
@@ -592,38 +594,6 @@ class RoleTruck implements IRole {
         }
       }
 
-      if (creep.room.controller && creep.room.controller.level === 8 && terminal) {
-        var nucker: StructureNuker | undefined = creep.room.find(FIND_STRUCTURES, {
-          filter: i => i.structureType === "nuker"
-        })[0] as any;
-
-        if (nucker) {
-          if (nucker.energy < nucker.energyCapacity && storage.store.energy > 100000) {
-            yield {
-              isUnique: true,
-              targetSource: storage.id,
-              targetDestination: nucker.id,
-              jobResource: "energy",
-              jobNeededAmount: nucker.energyCapacity - nucker.energy,
-              jobTag: "refill-e-nuker-" + nucker.id,
-              emoji: "💥"
-            };
-          }
-          const availableGhodium = terminal.store[RESOURCE_GHODIUM] || 0;
-          if (nucker.ghodium < nucker.ghodiumCapacity && availableGhodium > 0) {
-            yield {
-              isUnique: true,
-              targetSource: terminal.id,
-              targetDestination: nucker.id,
-              jobResource: RESOURCE_GHODIUM,
-              jobNeededAmount: nucker.ghodiumCapacity - nucker.ghodium,
-              jobTag: "refill-g-nuker-" + nucker.id,
-              emoji: "☄️"
-            };
-          }
-        }
-      }
-
       var labsThatNeedsRefills = labs.filter(i => {
         if (!i.memory.needsResource) {
           return;
@@ -660,6 +630,38 @@ class RoleTruck implements IRole {
             jobNeededAmount: lab.obj.mineralAmount,
             jobTag: "empty-lab-" + lab.obj.id,
             emoji: "💎"
+          };
+        }
+      }
+    }
+
+    if (storage && creep.room.controller && creep.room.controller.level === 8 && terminal) {
+      var nucker: StructureNuker | undefined = creep.room.find(FIND_STRUCTURES, {
+        filter: i => i.structureType === "nuker"
+      })[0] as any;
+
+      if (nucker) {
+        if (nucker.energy < nucker.energyCapacity && storage.store.energy > 100000) {
+          yield {
+            isUnique: true,
+            targetSource: storage.id,
+            targetDestination: nucker.id,
+            jobResource: "energy",
+            jobNeededAmount: nucker.energyCapacity - nucker.energy,
+            jobTag: "refill-e-nuker-" + nucker.id,
+            emoji: "💥"
+          };
+        }
+        const availableGhodium = terminal.store[RESOURCE_GHODIUM] || 0;
+        if (nucker.ghodium < nucker.ghodiumCapacity && availableGhodium > 0) {
+          yield {
+            isUnique: true,
+            targetSource: terminal.id,
+            targetDestination: nucker.id,
+            jobResource: RESOURCE_GHODIUM,
+            jobNeededAmount: nucker.ghodiumCapacity - nucker.ghodium,
+            jobTag: "refill-g-nuker-" + nucker.id,
+            emoji: "☄️"
           };
         }
       }

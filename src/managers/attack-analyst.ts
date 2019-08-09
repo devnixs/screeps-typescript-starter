@@ -31,7 +31,7 @@ const t0Rcl5: PartyDefinition = {
   repeat: 4,
   canCounterRcl: 2,
   requiresBoostsTier: 0,
-  requiresRcl: 6
+  requiresRcl: 5
 };
 
 const t0Rcl6: PartyDefinition = {
@@ -162,7 +162,7 @@ const t3Rcl7: PartyDefinition = {
   ],
   repeat: 2,
   canCounterRcl: 7,
-  requiresBoostsTier: 2,
+  requiresBoostsTier: 3,
   requiresRcl: 7
 };
 
@@ -252,9 +252,23 @@ export function generateAttackCreeps(infos: GenerateAttackCreepsInfos) {
   const targetRcl = targetRoomInfos ? targetRoomInfos.el : undefined;
 
   const allTerminals = getMyRooms()
-    .map(i => (i.terminal && i.terminal.store) as StoreDefinition)
+    .map(i => {
+      let store = (i.terminal && i.terminal.store) as any;
+      // if it's in another room, only 100 of that resource can be transfered.
+      if (i.name !== fromRoom.name) {
+        store = _.clone(store);
+        for (const mineral in store) {
+          if (store[mineral] || store[mineral] < 100) {
+            store[mineral] = 0;
+          }
+        }
+      }
+      return store;
+    })
     .filter(i => i);
   const resourcesAvailable: any = mergeObjects(allTerminals);
+
+  const forcedAttackRcl = [0, 1, 2, 3, 4, 5, 6, 7, 8].find(i => !!Game.flags["force_attack_rcl_" + i]);
 
   for (const def of definitions) {
     const parts = mergeObjects(def.creeps);
@@ -284,7 +298,11 @@ export function generateAttackCreeps(infos: GenerateAttackCreepsInfos) {
 
     hasEnoughRcl = fromRoom.controller ? fromRoom.controller.level >= def.requiresRcl : false;
 
-    if (hasEnoughBoosts && hasEnoughRcl && (targetRcl === undefined || infos.force || targetRcl <= def.canCounterRcl)) {
+    const canDefeat = targetRcl === undefined || infos.force || targetRcl <= def.canCounterRcl;
+    const forcedRclMatches = !forcedAttackRcl || forcedAttackRcl === def.requiresRcl;
+
+    console.log(hasEnoughBoosts, hasEnoughRcl, canDefeat, forcedRclMatches);
+    if (hasEnoughBoosts && hasEnoughRcl && canDefeat && forcedRclMatches) {
       return {
         creeps: repeatArray(def.creeps, def.repeat),
         minerals: needsBoostResources

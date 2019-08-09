@@ -16,9 +16,12 @@ class RoleStaticHarvester implements IRole {
       creep.harvest(source);
 
       if (memory.targetLinkId && creep.carry.energy > 0) {
-        const link = Game.getObjectById(memory.targetLinkId) as StructureLink;
-        if (link) {
-          creep.transfer(link, "energy");
+        const almostFull = creep.getActiveBodyparts(WORK) * HARVEST_POWER > creep.carry.energy + creep.carryCapacity;
+        if (almostFull) {
+          const link = Game.getObjectById(memory.targetLinkId) as StructureLink;
+          if (link) {
+            creep.transfer(link, "energy");
+          }
         }
       }
     } else {

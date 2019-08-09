@@ -57,6 +57,12 @@ class RoleUpgrader implements IRole {
   }
 
   withdrawFromProximityStorageIfPossible(creep: Creep) {
+    // only if we're gonna run out of energy soon, to save CPU
+    const almostDepleted = creep.getActiveBodyparts(WORK) > creep.carry.energy;
+    if (!almostDepleted) {
+      return;
+    }
+
     const container = Game.getObjectById(creep.room.memory.controllerContainer) as StructureContainer | undefined;
     const outputLink = creep.room.memory.links && creep.room.memory.links.find(i => i.type === "output");
     const outputLinkObj = outputLink && (Game.getObjectById(outputLink.id) as StructureLink | undefined);

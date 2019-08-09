@@ -93,9 +93,8 @@ function initOneTimeValues() {
   ) {
     claimerCount = 1;
     closestRoomToClaimTarget = findClosestRoom(claimFlag.pos.roomName);
-    /*     console.log("Found claim target : ", claimFlag.pos.roomName);
-    console.log("closestRoomToClaimTarget : ", closestRoomToClaimTarget);
-    console.log("claimerCount : ", claimerCount); */
+  } else {
+    claimerCount = 0;
   }
 
   let colonyThatNeedsHelpBuilding = Object.keys(Game.rooms)
@@ -108,18 +107,13 @@ function initOneTimeValues() {
     )[0];
 
   if (colonyThatNeedsHelpBuilding && myRooms.length > 1) {
-    var initialCpu = Game.cpu.getUsed();
     builderHelperSource = findClosestRoom(colonyThatNeedsHelpBuilding.name);
-    var afterCpu = Game.cpu.getUsed();
-    //  console.log("Used CPU: ", afterCpu - initialCpu);
     builderHelperTarget = colonyThatNeedsHelpBuilding.name;
     builderHelperCount = 2;
-    if (Game.time % 100 === 0) {
-      /*       console.log("Found colonyThatNeedsHelpBuilding : ", colonyThatNeedsHelpBuilding.name);
-      console.log("builderHelperTarget : ", colonyThatNeedsHelpBuilding.name);
-      console.log("builderHelperSource : ", builderHelperSource);
-      console.log("builderHelperCount : ", builderHelperCount); */
-    }
+  } else {
+    builderHelperSource = undefined;
+    builderHelperTarget = undefined;
+    builderHelperCount = 0;
   }
 
   let colonyThatNeedsHelpDefending = Object.keys(Game.rooms)
@@ -154,6 +148,10 @@ function initOneTimeValues() {
       transportHelperTarget = colonyThatNeedsHelpDefending.name;
       transportHelperCount = 4;
     } */
+  } else {
+    remoteDefenderHelperSources = [];
+    remoteDefenderHelperTarget = undefined;
+    remoteDefenderHelperCount = 0;
   }
 }
 

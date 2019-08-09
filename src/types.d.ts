@@ -126,31 +126,28 @@ interface AttackSetup {
 }
 
 interface AttackParty {
+  currentPos?: SimplePosWithRoomName;
+  targetPos?: SimplePosWithRoomName;
   failed: boolean;
   isApproxPath: boolean;
   id: number;
   creeps: AttackPartyCreep[];
   needs: BodyPartConstant[][];
   mineralsNeeded: MineralNeed[];
-  status: "forming" | "moving" | "regrouping" | "attacking" | "retreating" | "complete" | "dead";
+  status: "forming" | "moving" | "regrouping" | "attacking" | "complete" | "dead";
+  retreat: boolean;
   boosted: boolean;
   count: number;
   rallyPoint?: { x: number; y: number; roomName: string };
-  currentPositionIndex?: number;
   attackPath?: string;
   ttl: number;
   distance?: number;
-  blocker?: Blocker;
+  blocker?: string;
 }
 
 interface MineralNeed {
   mineral: ResourceConstant;
   requiredAmount: number;
-}
-
-interface Blocker {
-  dir: "forward" | "backward";
-  obj: string;
 }
 
 interface AttackPartyCreep {

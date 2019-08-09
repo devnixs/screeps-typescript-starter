@@ -165,7 +165,8 @@ export class AttackManager {
       status: "forming",
       isApproxPath: true,
       ttl: 1500,
-      failed: false
+      failed: false,
+      retreat: false
     } as AttackParty;
 
     console.log("Creating attack party ", JSON.stringify(party));

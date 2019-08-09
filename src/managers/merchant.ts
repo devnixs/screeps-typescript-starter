@@ -207,7 +207,7 @@ export class Merchant {
     // console.log("Resources needed", JSON.stringify(roomsWithResourcesNeeded));
 
     for (const resourceNeeded of roomsWithResourcesNeeded) {
-      const roomThatCanProvide = roomsThatCanProvide.find(i => (i.store[resourceNeeded.mineral] || 0) > 0);
+      const roomThatCanProvide = roomsThatCanProvide.find(i => (i.store[resourceNeeded.mineral] || 0) >= 100);
       // console.log(
       //   "Found room that can provide",
       //   resourceNeeded.neededAmount,
