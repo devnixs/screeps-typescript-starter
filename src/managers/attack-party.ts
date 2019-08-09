@@ -292,17 +292,13 @@ export class AttackPartyManager {
   }
 
   private attackObject(creeps: AttackPartyCreepLoaded[], object: Creep | AnyStructure) {
-    console.log("Attacking object", object);
     for (const creepInfo of creeps) {
       if (creepInfo.creep.pos.isNearTo(object)) {
-        console.log(creepInfo.creep, "doing close attack against", object);
         if (creepInfo.creep.getActiveBodyparts(WORK)) {
-          console.log("Dismantling", object);
           creepInfo.creep.dismantle(object as any);
         }
         creepInfo.creep.rangedMassAttack();
       } else {
-        console.log(creepInfo.creep, "doing ranged attack against", object);
         creepInfo.creep.rangedAttack(object);
       }
     }
@@ -317,7 +313,6 @@ export class AttackPartyManager {
 
     if (attackResult === "OK") {
       if (blockingObject) {
-        console.log("Blocking object", blockingObject);
         this.attackObject(creeps, blockingObject);
       }
     }
@@ -388,15 +383,15 @@ export class AttackPartyManager {
   }
 
   private getTarget(room: Room): RoomPosition | undefined {
+    const structures = room.find(FIND_HOSTILE_STRUCTURES);
     let target: AnyStructure | undefined;
     target = target || room.spawns[0];
     target = target || room.storage;
     target = target || room.terminal;
-    target = target || room.towers;
-    target = target || room.extensions;
-    target = target || room.containers;
-    target = target || room.extractor;
-    target = target || room.labs[0];
+    target = target || structures.find(i => i.structureType === "tower");
+    target = target || structures.find(i => i.structureType === "extension");
+    target = target || structures.find(i => i.structureType === "extractor");
+    target = target || structures.find(i => i.structureType === "lab");
     target = target || room.find(FIND_HOSTILE_CREEPS)[0];
 
     return target && target.pos;
