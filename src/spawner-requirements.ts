@@ -1,6 +1,6 @@
 import { ILongDistanceHarvesterMemory } from "roles/longDistanceHarvester";
 import { IDismantlerMemory } from "roles/dismantler";
-import { requiredFightersForAnAttack, requiredDismantlersForAnAttack } from "./constants/misc";
+import { requiredFightersForAnAttack, requiredDismantlersForAnAttack, whitelist } from "./constants/misc";
 import { requiredHealersForAnAttack } from "./constants/misc";
 import { IStaticHarvesterMemory } from "roles/static-harvester";
 import { findClosestRoom } from "utils/finder";
@@ -167,7 +167,7 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
     spawn.room.terminal && mineralWithReserve && mineralWithReserve.length
       ? spawn.room.terminal.store[mineralWithReserve[0].mineralType] || 0
       : 0;
-  const enemies = spawn.room.find(FIND_HOSTILE_CREEPS);
+  const enemies = spawn.room.find(FIND_HOSTILE_CREEPS, { filter: i => whitelist.indexOf(i.owner.username) === -1 });
 
   const storageQuantity = spawn.room.storage ? _.sum(spawn.room.storage.store) : 0;
   const isStorageAlmostFull = storageQuantity > 900000;
@@ -457,6 +457,26 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
       } as RoleRequirement;
     });
 
+  const campers =
+    !spawn.room.memory.isUnderSiege && Memory.attack && Memory.attack.parties.find(i => i.status === "camping");
+  const attack = Memory.attack;
+  const downgraders =
+    campers &&
+    attack &&
+    ({
+      percentage: 20,
+      role: "reserver",
+      maxCount: isStorageAlmostFull ? 0 : 1,
+      bodyTemplate: [CLAIM, MOVE],
+      maxRepeat: 3,
+      subRole: attack.toRoom,
+      disableIfLowOnCpu: true,
+      additionalMemory: {
+        home: spawn.pos.roomName,
+        targetRoomName: attack.toRoom
+      } as Partial<IReserverMemory>
+    } as RoleRequirement);
+
   const attackers = spawn.room.memory.needsAttackers
     ? ({
         percentage: 100,
@@ -631,6 +651,7 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
       } as Partial<ILongDistanceTruckMemory>
     },
     ...reservers,
+    downgraders,
     ...stealers,
     {
       percentage: 2,

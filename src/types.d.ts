@@ -134,7 +134,7 @@ interface AttackParty {
   creeps: AttackPartyCreep[];
   needs: BodyPartConstant[][];
   mineralsNeeded: MineralNeed[];
-  status: "forming" | "moving" | "regrouping" | "attacking" | "complete" | "dead";
+  status: "forming" | "moving" | "regrouping" | "attacking" | "complete" | "dead" | "safemode" | "camping";
   retreat: boolean;
   boosted: boolean;
   count: number;
@@ -257,6 +257,12 @@ interface Memory {
   lastConquestTime: number | undefined;
 
   attack: AttackSetup | undefined;
+  nextAttack: NextAttack | undefined;
+}
+
+interface NextAttack {
+  time: number;
+  room: string;
 }
 
 type MEMORY_TICK = "t";
@@ -315,6 +321,11 @@ interface RoomExplorationReport {
    * Enemy remote container locations
    */
   erc: SimplePos[] | null;
+
+  /**
+   * Owner Username
+   */
+  o?: string;
 }
 
 interface ColonizationEvaluation {

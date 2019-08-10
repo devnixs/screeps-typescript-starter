@@ -1,4 +1,4 @@
-import { requiredHealersForAnAttack, signature } from "../constants/misc";
+import { requiredHealersForAnAttack, signature, whitelist } from "../constants/misc";
 import { findRestSpot, findHostile } from "utils/finder";
 import { boostCreep } from "utils/boost-manager";
 import { hasMinerals, getMyRooms, getUsername } from "utils/misc-utils";
@@ -142,7 +142,7 @@ class RoleScout implements IRole {
         // avoid enemies if possible
         const room = Game.rooms[roomName];
         if (room) {
-          const enemies = room.find(FIND_HOSTILE_CREEPS);
+          const enemies = room.find(FIND_HOSTILE_CREEPS, { filter: i => whitelist.indexOf(i.owner.username) === -1 });
           enemies.forEach(enemy => {
             for (let i = -3; i <= 3; i++)
               for (let j = -3; j <= 3; j++) {

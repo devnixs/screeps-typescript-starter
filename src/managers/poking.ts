@@ -2,6 +2,7 @@ import { getMyRooms } from "utils/misc-utils";
 import { Cartographer } from "utils/cartographer";
 import { IPokerMemory } from "roles/poker";
 import { ExplorationCache } from "utils/exploration-cache";
+import { whitelist } from "constants/misc";
 
 export class PokingManager {
   constructor(private room: Room) {}
@@ -31,7 +32,8 @@ export class PokingManager {
           i =>
             i.er &&
             Cartographer.findRoomDistanceSum(i.r, this.room.name) <= 11 &&
-            Cartographer.findRoomDistanceSum(i.r, this.room.name) > 3
+            Cartographer.findRoomDistanceSum(i.r, this.room.name) > 3 &&
+            (i.o && whitelist.indexOf(i.o) === -1)
         )
         .filter(i => !stealTargets.find(s => s.roomName === i.r));
 
@@ -52,7 +54,12 @@ export class PokingManager {
       const memory = creep.memory as IPokerMemory;
       const remotes = explorations
         .filter(i => i.er)
-        .filter(i => i.r !== memory.targetRoom && !stealTargets.find(s => s && s.roomName === i.r))
+        .filter(
+          i =>
+            i.r !== memory.targetRoom &&
+            !stealTargets.find(s => s && s.roomName === i.r) &&
+            (i.o && whitelist.indexOf(i.o) === -1)
+        )
         .map(i => ({
           room: i.r,
           distance: Cartographer.findRoomDistanceSum(i.r, creep.room.name)

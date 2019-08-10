@@ -2,6 +2,7 @@ import { getMyRooms, paddingLeft } from "utils/misc-utils";
 import { Cartographer } from "utils/cartographer";
 import { IPokerMemory } from "roles/poker";
 import { ExplorationCache } from "utils/exploration-cache";
+import { whitelist } from "constants/misc";
 
 export class StealingManager {
   constructor(private room: Room) {}
@@ -49,6 +50,7 @@ export class StealingManager {
     } else {
       const remoteContainers = _.flatten(
         explorations
+          .filter(i => i.o && whitelist.indexOf(i.o) === -1)
           .map(i =>
             i.er && Cartographer.findRoomDistanceSum(i.r, this.room.name) <= 5 && i.erc
               ? i.erc.map(rc => ({ ...rc, roomName: i.r }))

@@ -1,5 +1,5 @@
 import { profiler } from "../utils/profiler";
-import { rampartMinHp, wallsMinHp } from "constants/misc";
+import { rampartMinHp, wallsMinHp, whitelist } from "constants/misc";
 
 interface ITowerMemory extends CreepMemory {
   upgrading: boolean;
@@ -167,7 +167,9 @@ class RoleTower {
   }
 
   private getEnemyInRoom(tower: StructureTower): Creep | null {
-    var enemies = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
+    var enemies = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS, {
+      filter: i => whitelist.indexOf(i.owner.username) === -1
+    });
 
     // var healersFirst = _.sortBy(enemies, enemy => -1 * enemy.getActiveBodyparts(HEAL));
 

@@ -115,6 +115,7 @@ export class RoomAnalyzer {
     // register if enemy
     memory.er = isEnemyRemote;
     memory.erc = enemyRemoteContainers.concat(enemyDroppedEnergy);
+    memory.o = room.controller && room.controller.owner ? room.controller.owner.username : undefined;
 
     ExplorationCache.setExploration(memory);
 

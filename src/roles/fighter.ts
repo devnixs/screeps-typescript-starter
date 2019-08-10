@@ -1,4 +1,4 @@
-import { requiredHealersForAnAttack } from "../constants/misc";
+import { requiredHealersForAnAttack, whitelist } from "../constants/misc";
 import { findRestSpot } from "utils/finder";
 
 interface IFighterMemory extends CreepMemory {
@@ -9,7 +9,9 @@ class RoleFighter implements IRole {
   run(creep: Creep) {
     const rooms = Object.keys(Game.rooms).map(i => Game.rooms[i]);
 
-    let hostile: Creep | null = creep.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
+    let hostile: Creep | null = creep.pos.findClosestByRange(FIND_HOSTILE_CREEPS, {
+      filter: i => whitelist.indexOf(i.owner.username) === -1
+    });
     let hostileBuilding: AnyStructure | null = creep.pos.findClosestByRange(FIND_HOSTILE_STRUCTURES);
     /*
     if (hostile) {

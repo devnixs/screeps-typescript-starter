@@ -252,7 +252,7 @@ export class RoomPlanner {
     }
 
     // find the closest sector to the ctrl to build the storage between the first 14 sectors
-    const storageSector = _(sectors)
+    /*     const storageSector = _(sectors)
       .take(14)
       .filter(sector => {
         const hasStructure = this.getPositionsFromSector(sector).find(sectorPos => {
@@ -261,7 +261,10 @@ export class RoomPlanner {
         return !hasStructure;
       })
       .sortBy(s => new RoomPosition(s.x, s.y, room.name).getRangeTo(ctrl))
-      .first();
+      .first(); */
+
+    // the storage sector will now be just after the spawn
+    const storageSector = sectors[1];
 
     RoomPlanner.reserveSpot(storageSector.x, storageSector.y, STRUCTURE_STORAGE, planner, 4);
     RoomPlanner.reserveSpot(storageSector.x - 1, storageSector.y, STRUCTURE_LINK, planner, 5);

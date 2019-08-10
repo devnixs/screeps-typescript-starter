@@ -1,5 +1,6 @@
 import { profiler, profileMethod } from "../utils/profiler";
 import { Traveler } from "./Traveler";
+import { whitelist } from "constants/misc";
 
 interface RoomAndExpiration {
   expiration: number;
@@ -136,8 +137,9 @@ let findNonEmptyResourcesInStore = function findNonEmptyResourcesInStore(store: 
 export function findHostile(creep: Creep) {
   const hostile = creep.pos.findClosestByRange(FIND_HOSTILE_CREEPS, {
     filter: creep => {
-      return !!creep.body.find(
-        i => i.type === ATTACK || i.type === RANGED_ATTACK || i.type === WORK || i.type === HEAL
+      return (
+        whitelist.indexOf(creep.owner.username) === -1 &&
+        !!creep.body.find(i => i.type === ATTACK || i.type === RANGED_ATTACK || i.type === WORK || i.type === HEAL)
       );
     }
   });
@@ -147,8 +149,9 @@ export function findHostile(creep: Creep) {
 export function findHostiles(creep: Creep) {
   const hostiles = creep.room.find(FIND_HOSTILE_CREEPS, {
     filter: creep => {
-      return !!creep.body.find(
-        i => i.type === ATTACK || i.type === RANGED_ATTACK || i.type === WORK || i.type === HEAL
+      return (
+        whitelist.indexOf(creep.owner.username) === -1 &&
+        !!creep.body.find(i => i.type === ATTACK || i.type === RANGED_ATTACK || i.type === WORK || i.type === HEAL)
       );
     }
   });

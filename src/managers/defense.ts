@@ -1,6 +1,7 @@
 import { getMyRooms } from "utils/misc-utils";
 import { Cartographer } from "utils/cartographer";
 import { Chemist } from "./chemist";
+import { whitelist } from "constants/misc";
 
 interface ThreatLevelAndTime {
   threatLevel: number;
@@ -163,6 +164,7 @@ export class DefenseManager {
     const enemies = targetRoom
       ? targetRoom.find(FIND_HOSTILE_CREEPS, {
           filter: i =>
+            whitelist.indexOf(i.owner.username) === -1 &&
             i.body.find(
               bodyPart =>
                 bodyPart.type === "attack" ||

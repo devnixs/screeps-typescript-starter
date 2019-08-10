@@ -6,6 +6,7 @@ import { flee, runFromTimeToTime } from "utils/misc-utils";
 import { Cartographer } from "utils/cartographer";
 import { roleUpgrader } from "./upgrader";
 import { getUsedPercentage } from "utils/cpu";
+import { whitelist } from "constants/misc";
 
 export interface IStealerMemory extends CreepMemory {
   depositing?: boolean;
@@ -22,7 +23,7 @@ class RoleStealer implements IRole {
     const totalCargoContent = _.sum(creep.carry);
 
     const enemy = creep.pos
-      .findInRange(FIND_HOSTILE_CREEPS, 1)
+      .findInRange(FIND_HOSTILE_CREEPS, 1, { filter: i => whitelist.indexOf(i.owner.username) === -1 })
       .filter(i => i.body.find(t => t.type === ATTACK) || i.body.find(t => t.type === RANGED_ATTACK));
 
     if (enemy) {

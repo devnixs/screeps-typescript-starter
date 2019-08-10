@@ -1,6 +1,7 @@
 import { profiler } from "./profiler";
 import { isInSafeArea } from "./safe-area";
 import { DefenseManager } from "managers/defense";
+import { whitelist } from "constants/misc";
 
 export class SafeModeActivator {
   static activeSafeModeIfNecessary() {
@@ -17,7 +18,7 @@ export class SafeModeActivator {
   }
 
   static checkRoom(room: Room) {
-    var enemies = room.find(FIND_HOSTILE_CREEPS);
+    var enemies = room.find(FIND_HOSTILE_CREEPS, { filter: i => whitelist.indexOf(i.owner.username) === -1 });
     if (enemies.length === 0) {
       return;
     }

@@ -6,6 +6,7 @@ import { getUsername } from "utils/misc-utils";
 import { IAttackerMemory } from "roles/attacker";
 import { RoomAnalyzer } from "./room-analyzer";
 import { ExplorationCache } from "utils/exploration-cache";
+import { whitelist } from "constants/misc";
 
 export class AttackPartyManager {
   constructor(private attackParty: AttackParty, private attack: AttackSetup) {}
@@ -34,6 +35,9 @@ export class AttackPartyManager {
 
     const targetRoom = Game.rooms[this.attack.toRoom];
     if (targetRoom && targetRoom.controller && targetRoom.controller.safeMode) {
+      this.attackParty.status = "safemode";
+    }
+    if (targetRoom && targetRoom.controller && !targetRoom.controller.owner) {
       this.attackParty.status = "complete";
     }
 
@@ -43,7 +47,7 @@ export class AttackPartyManager {
       this.runMovingParty();
     } else if (this.attackParty.status === "regrouping") {
       this.runRegroupingParty();
-    } else if (this.attackParty.status === "attacking") {
+    } else if (this.attackParty.status === "attacking" || this.attackParty.status === "camping") {
       this.runAttackingParty();
     }
 
@@ -72,6 +76,12 @@ export class AttackPartyManager {
       }
       if (this.attackParty.status === "regrouping") {
         leader.creep.say("👬");
+      }
+      if (this.attackParty.status === "camping") {
+        leader.creep.say("🌋");
+      }
+      if (this.attackParty.status === "safemode") {
+        leader.creep.say("🌌");
       }
       if (this.attackParty.status === "attacking") {
         if (this.attackParty.retreat) {
@@ -107,7 +117,9 @@ export class AttackPartyManager {
 
   private attackAround(creeps: AttackPartyCreepLoaded[]) {
     for (const creep of creeps) {
-      const enemies = creep.creep.pos.findInRange(FIND_HOSTILE_CREEPS, 3);
+      const enemies = creep.creep.pos.findInRange(FIND_HOSTILE_CREEPS, 3, {
+        filter: i => whitelist.indexOf(i.owner.username) === -1
+      });
       if (enemies.length && creep.creep.getActiveBodyparts(RANGED_ATTACK)) {
         creep.creep.rangedAttack(enemies[0]);
       }
@@ -187,6 +199,10 @@ export class AttackPartyManager {
 
     if (!this.attackParty.attackPath) {
       this.findAttackPath();
+      // still no targets
+      if (!this.attackParty.attackPath) {
+        return;
+      }
     }
 
     const targetFlag = Game.flags.attack_target;
@@ -195,16 +211,6 @@ export class AttackPartyManager {
       this.findAttackPath();
 
       targetFlag.remove();
-    }
-
-    if (this.attackParty.attackPath && this.attackParty.attackPath.length === 0) {
-      // recompute path because we reached our target.
-      this.findAttackPath();
-
-      // still no targets
-      if (this.attackParty.attackPath.length === 0) {
-        return;
-      }
     }
 
     if (this.attackParty.attackPath && this.attackParty.isApproxPath && roomVisibility) {
@@ -363,7 +369,9 @@ export class AttackPartyManager {
     const enemyInRange = _.flatten(
       creeps.map(creepInfos =>
         creepInfos.creep.getActiveBodyparts("ranged_attack")
-          ? creepInfos.creep.pos.findInRange(FIND_HOSTILE_CREEPS, 3)
+          ? creepInfos.creep.pos.findInRange(FIND_HOSTILE_CREEPS, 3, {
+              filter: i => whitelist.indexOf(i.owner.username) === -1
+            })
           : []
       )
     );
@@ -392,7 +400,7 @@ export class AttackPartyManager {
     target = target || structures.find(i => i.structureType === "extension");
     target = target || structures.find(i => i.structureType === "extractor");
     target = target || structures.find(i => i.structureType === "lab");
-    target = target || room.find(FIND_HOSTILE_CREEPS)[0];
+    target = target || room.find(FIND_HOSTILE_CREEPS, { filter: i => whitelist.indexOf(i.owner.username) === -1 })[0];
 
     return target && target.pos;
   }
@@ -610,7 +618,7 @@ export class AttackPartyManager {
         console.log("Cannot find target in room ", roomVisibility.name);
         if (Game.time % 10 === 0) {
           // we don't want this to happen in the firt shot. I noticed a time where it was triggered but it shouldn't have
-          this.attackParty.status = "complete";
+          this.attackParty.status = "camping";
         }
         return;
       }

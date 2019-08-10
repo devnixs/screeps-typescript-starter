@@ -1,3 +1,4 @@
+export const whitelist: string[] = [];
 export const defaultReusePath = 15;
 
 export const requiredHealersForAnAttack = 0;

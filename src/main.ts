@@ -54,6 +54,7 @@ import { PokingManager } from "managers/poking";
 import { runTimeout } from "utils/set-timeout";
 import { StealingManager } from "managers/stealing";
 import { roleStealer } from "roles/stealer";
+import { AttackPlanner } from "managers/attack-planner";
 
 console.log("Code has been loaded");
 
@@ -210,6 +211,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
       SegmentManager.run();
       AttackManager.run();
       AttackPartyManager.runForAllAttackParties();
+      AttackPlanner.run();
       PokingManager.runForAllRooms();
       StealingManager.runForAllRooms();
     } catch (e) {

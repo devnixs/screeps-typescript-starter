@@ -14,6 +14,7 @@ export class AttackManager {
     AttackManager.createAttackParties();
     AttackManager.stopAttackIfSuccessful();
     AttackManager.stopAttackIfFailed();
+    AttackManager.stopAttackIfIdle();
   }
 
   static checkAttackStatus() {
@@ -95,7 +96,7 @@ export class AttackManager {
       return;
     }
 
-    if (attack.lastUpdateDate < Game.time - 3000) {
+    if (attack.lastUpdateDate < Game.time - 4000) {
       // stop attack
       console.log("Attack is idle. Stopping");
       const flag = getAttackFlag();
@@ -114,6 +115,19 @@ export class AttackManager {
     if (attack.parties.find(i => i.status === "complete")) {
       // stop attack
       console.log("Attack successful. Stopping attack");
+      const flag = getAttackFlag();
+      if (flag) {
+        flag.remove();
+      }
+    }
+
+    if (attack.parties.find(i => i.status === "safemode")) {
+      // stop attack
+      console.log("Attack successful (safemode activated). Stopping attack");
+      Memory.nextAttack = {
+        room: attack.toRoom,
+        time: Game.time + SAFE_MODE_DURATION
+      };
       const flag = getAttackFlag();
       if (flag) {
         flag.remove();

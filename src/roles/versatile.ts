@@ -1,4 +1,4 @@
-import { requiredHealersForAnAttack } from "../constants/misc";
+import { requiredHealersForAnAttack, whitelist } from "../constants/misc";
 import { findRestSpot } from "utils/finder";
 import { boostCreep } from "utils/boost-manager";
 
@@ -27,7 +27,9 @@ class RoleVersatile implements IRole {
     const memory: IVersatileMemory = creep.memory as any;
 
     let hostile: Creep | null = null;
-    hostile = creep.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
+    hostile = creep.pos.findClosestByRange(FIND_HOSTILE_CREEPS, {
+      filter: i => whitelist.indexOf(i.owner.username) === -1
+    });
 
     if (hostile) {
       if (hostile.pos.inRangeTo(creep.pos, 1)) {

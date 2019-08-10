@@ -1,4 +1,4 @@
-import { requiredHealersForAnAttack } from "../constants/misc";
+import { requiredHealersForAnAttack, whitelist } from "../constants/misc";
 import { findRestSpot, findHostile, findEmptyRempart } from "utils/finder";
 import { boostCreep } from "utils/boost-manager";
 import { profiler } from "utils/profiler";
@@ -113,7 +113,9 @@ class RoleRemoteDefender implements IRole {
         if (memory.subRole != creep.room.name) {
           const room = Game.rooms[memory.subRole];
           if (room) {
-            const hostile = room.find(FIND_HOSTILE_CREEPS)[0];
+            const hostile = room.find(FIND_HOSTILE_CREEPS, {
+              filter: i => whitelist.indexOf(i.owner.username) === -1
+            })[0];
             if (hostile) {
               // console.log("Creep", creep.name, "Going to hostile ", hostile.pos);
               creep.goTo(hostile);

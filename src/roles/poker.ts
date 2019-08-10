@@ -3,6 +3,7 @@ import { profiler } from "utils/profiler";
 import { PokingManager } from "managers/poking";
 import { RoomAnalyzer } from "managers/room-analyzer";
 import { getOffExit } from "utils/get-off-exits";
+import { whitelist } from "constants/misc";
 
 export interface IPokerMemory extends CreepMemory {
   targetRoom: string | null;
@@ -21,7 +22,7 @@ class RolePoker implements IRole {
     }
     const memory = creep.memory as IPokerMemory;
 
-    const enemies = creep.room.find(FIND_HOSTILE_CREEPS);
+    const enemies = creep.room.find(FIND_HOSTILE_CREEPS, { filter: i => whitelist.indexOf(i.owner.username) === -1 });
     const dangerousEnemies = enemies.filter(i => i.getActiveBodyparts(ATTACK) || i.getActiveBodyparts(RANGED_ATTACK));
     const pacisfistEnemies = _.difference(enemies, dangerousEnemies).filter(
       i => i.pos.x > 3 && i.pos.x < 47 && i.pos.y > 3 && i.pos.y < 47

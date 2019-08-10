@@ -1,4 +1,4 @@
-import { requiredHealersForAnAttack } from "../constants/misc";
+import { requiredHealersForAnAttack, whitelist } from "../constants/misc";
 import { findRestSpot, findHostile, findEmptyRempart } from "utils/finder";
 import { boostCreep } from "utils/boost-manager";
 import { profiler } from "utils/profiler";
@@ -26,7 +26,7 @@ class RoleLocalDefender implements IRole {
           }));
         }
       }
-      const enemies = creep.room.find(FIND_HOSTILE_CREEPS);
+      const enemies = creep.room.find(FIND_HOSTILE_CREEPS, { filter: i => whitelist.indexOf(i.owner.username) === -1 });
 
       moveOptions = {
         obstacles: safeAreaBoundaries[creep.room.name],
