@@ -53,6 +53,14 @@ export function hasMinerals(store: { [resourceType: string]: number }): boolean 
   return false;
 }
 
+export function createFlagAtPosition(pos: RoomPosition, flagName: string) {
+  var firstRoom = getMyRooms()[0];
+  new RoomPosition(25, 25, firstRoom.name).createFlag(flagName);
+  setTimeout(() => {
+    Game.flags[flagName].setPosition(new RoomPosition(pos.x, pos.y, pos.roomName));
+  }, 1);
+}
+
 let username: string | undefined = undefined;
 export function getUsername(): string {
   if (username) {
@@ -333,5 +341,28 @@ export function mergeObjects(objects: { [key: string]: number }[]) {
   return objects.reduce((acc, obj) => _.merge(acc, obj, (i, j) => (i || 0) + (j || 0)), {});
 }
 
+export function getExpectedRoomEnergyAtLevel(level: number) {
+  if (level === 1) {
+    return 300;
+  } else if (level === 2) {
+    return 550;
+  } else if (level === 3) {
+    return 800;
+  } else if (level === 4) {
+    return 1300;
+  } else if (level === 5) {
+    return 1800;
+  } else if (level === 6) {
+    return 2300;
+  } else if (level === 7) {
+    return 5600;
+  } else if (level === 8) {
+    return 12900;
+  }
+
+  return 0;
+}
+
 (global as any).getTowerDamage = getTowerDamage;
 (global as any).mergeObjects = mergeObjects;
+(global as any).createFlagAtPosition = createFlagAtPosition;

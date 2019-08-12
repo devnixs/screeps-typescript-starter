@@ -1,4 +1,4 @@
-import { getMyRooms } from "utils/misc-utils";
+import { getMyRooms, getExpectedRoomEnergyAtLevel } from "utils/misc-utils";
 import { Cartographer } from "utils/cartographer";
 import { Chemist } from "./chemist";
 import { whitelist } from "constants/misc";
@@ -31,13 +31,10 @@ export class DefenseManager {
     this.checkRemotes();
     this.runForOwnRoom();
     this.reassignDefenders();
+    this.checkRebuilding();
   }
 
   runForOwnRoom() {
-    if (this.room.name === "W2N5") {
-      return;
-    }
-
     const threatLevel = this.getThreatLevel(this.room.name);
     const towerCount = this.room.find(FIND_MY_STRUCTURES, { filter: s => s.structureType === "tower" }).length;
     const towerThreatCompensation = towerCount * 8;
@@ -61,6 +58,15 @@ export class DefenseManager {
         this.removeSiegeMode();
       }
     }
+  }
+
+  checkRebuilding() {
+    if (Game.time % 100 > 0) {
+      return;
+    }
+
+    const ctrlLevel = this.room.controller ? this.room.controller.level : 0;
+    this.room.memory.isRebuilding = this.room.energyCapacityAvailable <= getExpectedRoomEnergyAtLevel(ctrlLevel) / 2;
   }
 
   setupSiegeMode() {

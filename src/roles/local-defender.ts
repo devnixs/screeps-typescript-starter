@@ -30,6 +30,7 @@ class RoleLocalDefender implements IRole {
 
       moveOptions = {
         obstacles: safeAreaBoundaries[creep.room.name],
+        repath: enemies.length > 0 ? 1 : 0,
         roomCallback: (room, matrix) => {
           // avoid walking on areas that are in range of enemies
           // if there's a rampart, it's safe to walk on
@@ -88,9 +89,16 @@ class RoleLocalDefender implements IRole {
     if (hostile) {
       creep.say("Yarr!", true);
       if (hostile.pos.isNearTo(creep)) {
-        creep.rangedMassAttack();
+        if (creep.getActiveBodyparts(RANGED_ATTACK)) {
+          creep.rangedMassAttack();
+        }
+        if (creep.getActiveBodyparts(ATTACK)) {
+          creep.attack(hostile);
+        }
       } else {
-        creep.rangedAttack(hostile);
+        if (creep.getActiveBodyparts(RANGED_ATTACK)) {
+          creep.rangedAttack(hostile);
+        }
       }
     }
 

@@ -48,6 +48,20 @@ const t0Rcl6: PartyDefinition = {
   requiresRcl: 6
 };
 
+const t0Rcl7: PartyDefinition = {
+  creeps: [
+    {
+      [MOVE]: 16,
+      [RANGED_ATTACK]: 9,
+      [HEAL]: 7
+    }
+  ],
+  repeat: 4,
+  canCounterRcl: 4,
+  requiresBoostsTier: 0,
+  requiresRcl: 6
+};
+
 const t1Rcl6: PartyDefinition = {
   creeps: [
     {
@@ -166,6 +180,42 @@ const t3Rcl7: PartyDefinition = {
   requiresRcl: 7
 };
 
+const t3Rcl7NoRangedAttackBoosts: PartyDefinition = {
+  creeps: [
+    {
+      [MOVE]: 9,
+      [TOUGH]: 14,
+      [HEAL]: 20
+    },
+    {
+      [TOUGH]: 10,
+      [MOVE]: 10,
+      [WORK]: 15,
+      [RANGED_ATTACK]: 15
+    }
+  ],
+  boostedParts: [MOVE, WORK, TOUGH, HEAL],
+  repeat: 2,
+  canCounterRcl: 7,
+  requiresBoostsTier: 3,
+  requiresRcl: 7
+};
+
+const t3Rcl7OnlyHealBoosts: PartyDefinition = {
+  creeps: [
+    {
+      [MOVE]: 22,
+      [RANGED_ATTACK]: 10,
+      [HEAL]: 12
+    }
+  ],
+  boostedParts: [HEAL],
+  repeat: 4,
+  canCounterRcl: 7,
+  requiresBoostsTier: 3,
+  requiresRcl: 7
+};
+
 const t3Rcl7NoMoveParts: PartyDefinition = {
   creeps: [
     {
@@ -226,12 +276,15 @@ const definitions = [
   t3rcl8,
   t2rcl8,
   t3Rcl7,
+  t3Rcl7NoRangedAttackBoosts,
   t3Rcl7NoMoveParts,
   t2Rcl7,
+  t3Rcl7OnlyHealBoosts,
   t1Rcl7,
   t2Rcl6,
   t2Rcl6NoMoveBoosts,
   t1Rcl6NoMoveBoosts,
+  t0Rcl7,
   t1Rcl6,
   t0Rcl6,
   t0Rcl5
@@ -300,8 +353,9 @@ export function generateAttackCreeps(infos: GenerateAttackCreepsInfos) {
 
     const canDefeat = targetRcl === undefined || infos.force || targetRcl <= def.canCounterRcl;
     const forcedRclMatches = !forcedAttackRcl || forcedAttackRcl === def.requiresRcl;
+    const noBoosts = !("no_boosts" in Game.flags) || def.requiresBoostsTier === 0;
 
-    if (hasEnoughBoosts && hasEnoughRcl && canDefeat && forcedRclMatches) {
+    if (hasEnoughBoosts && hasEnoughRcl && canDefeat && forcedRclMatches && noBoosts) {
       return {
         creeps: repeatArray(def.creeps, def.repeat),
         minerals: needsBoostResources

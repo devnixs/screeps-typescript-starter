@@ -230,7 +230,7 @@ export class AttackPartyManager {
       this.findAttackPath();
     }
 
-    if (Game.time % 33 === 0) {
+    if (this.attackParty.movingTarget ? Game.time % 5 === 0 : Game.time % 33 === 0) {
       // Recompute attack path, just in case.
       if (this.attackParty.retreat) {
         this.findRetreatPath();
@@ -266,7 +266,7 @@ export class AttackPartyManager {
       targetHealth = 1;
     }
     // are creeps too badly damaged?
-    if (creepsAndDamage[0] && creepsAndDamage[0].health <= targetHealth) {
+    if (creepsAndDamage[0] && creepsAndDamage[0].health < targetHealth) {
       return "NeedsRetreat";
     } else {
       return "OK";
@@ -390,19 +390,22 @@ export class AttackPartyManager {
     }
   }
 
-  private getTarget(room: Room): RoomPosition | undefined {
-    const structures = room.find(FIND_HOSTILE_STRUCTURES);
-    let target: AnyStructure | undefined;
-    target = target || room.spawns[0];
-    target = target || room.storage;
-    target = target || room.terminal;
-    target = target || structures.find(i => i.structureType === "tower");
-    target = target || structures.find(i => i.structureType === "extension");
-    target = target || structures.find(i => i.structureType === "extractor");
-    target = target || structures.find(i => i.structureType === "lab");
+  private getTarget(room: Room): { target: RoomPosition; movingTarget: boolean } | undefined {
+    let target: AnyStructure | Creep | undefined = undefined;
+    if (room.controller && room.controller.owner.username !== getUsername()) {
+      const structures = room.find(FIND_HOSTILE_STRUCTURES);
+      target = target || structures.find(i => i.structureType === "tower");
+      target = target || room.spawns[0];
+      target = target || room.storage;
+      target = target || room.terminal;
+      target = target || structures.find(i => i.structureType === "extension");
+      target = target || structures.find(i => i.structureType === "extractor");
+      target = target || structures.find(i => i.structureType === "lab");
+    }
+
     target = target || room.find(FIND_HOSTILE_CREEPS, { filter: i => whitelist.indexOf(i.owner.username) === -1 })[0];
 
-    return target && target.pos;
+    return target && { target: target.pos, movingTarget: target instanceof Creep };
   }
 
   private moveParty(creeps: AttackPartyCreepLoaded[]) {
@@ -611,16 +614,23 @@ export class AttackPartyManager {
     const roomVisibility = Game.rooms[this.attack.toRoom];
 
     let target: RoomPosition | undefined;
+    let movingTarget = false;
     if (roomVisibility) {
-      target = this.getTarget(roomVisibility);
-      if (!target) {
+      const targetInfos = this.getTarget(roomVisibility);
+      const isEnemyRoom = roomVisibility.controller && roomVisibility.controller.owner.username !== getUsername();
+      if (!targetInfos) {
+        if (isEnemyRoom) {
+          console.log("Cannot find target in room ", roomVisibility.name);
+        }
         // no more target in this room.
-        console.log("Cannot find target in room ", roomVisibility.name);
-        if (Game.time % 10 === 0) {
+        if (Game.time % 10 === 0 && isEnemyRoom) {
           // we don't want this to happen in the firt shot. I noticed a time where it was triggered but it shouldn't have
           this.attackParty.status = "camping";
         }
         return;
+      } else {
+        target = targetInfos.target;
+        movingTarget = targetInfos.movingTarget;
       }
     } else {
       let targetLocation: SimplePos;
@@ -634,6 +644,7 @@ export class AttackPartyManager {
 
     this.setPathTo(target);
 
+    this.attackParty.movingTarget = movingTarget;
     this.attackParty.isApproxPath = roomVisibility ? false : true;
   }
 

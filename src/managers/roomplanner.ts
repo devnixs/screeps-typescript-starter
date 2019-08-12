@@ -67,6 +67,11 @@ export class RoomPlanner {
       return;
     }
 
+    if (ctrl.level < 2) {
+      // let's not build anything before level 2
+      return;
+    }
+
     for (let i = 0; i < this.room.memory.roomPlanner.structures.length; i++) {
       const structure = this.room.memory.roomPlanner.structures[i];
       if (structure.l && structure.l > ctrl.level) {
@@ -158,18 +163,20 @@ export class RoomPlanner {
         // .filter(i => i.type !== "road")
         .forEach((structure, index) => {
           this.room.visual.circle(structure.x, structure.y, {
-            radius: 0.2,
+            radius: 0.4,
             opacity: 0.8,
             fill: "transparent",
             lineStyle: "solid",
             stroke: structureColors[structure.type] || "black",
             strokeWidth: 0.1
           });
-          /*           this.room.visual.text(index.toString(), structure.x, structure.y, {
-            opacity: 0.4,
-            color: "white",
-            font: 0.3
-          }); */
+          if (structure.l) {
+            this.room.visual.text(structure.l.toString(), structure.x, structure.y, {
+              opacity: 0.4,
+              color: "white",
+              font: 0.3
+            });
+          }
         });
     }
   }
@@ -271,8 +278,7 @@ export class RoomPlanner {
     RoomPlanner.reserveSpot(storageSector.x + 1, storageSector.y, STRUCTURE_TERMINAL, planner, 6);
     RoomPlanner.reserveSpot(storageSector.x, storageSector.y + 1, STRUCTURE_ROAD, planner, 4);
     RoomPlanner.reserveSpot(storageSector.x, storageSector.y - 1, STRUCTURE_ROAD, planner, 4);
-
-    RoomPlanner.buildRoadsAroundStructures(planner, room, sectors, 2);
+    RoomPlanner.buildRoadsAroundStructures(planner, room, sectors, 4);
 
     for (let level = 2; level <= 8; level++) {
       const buildable = RoomPlanner.getNewlyAvailableStructuresAtLevel(level);
@@ -287,10 +293,9 @@ export class RoomPlanner {
 
       RoomPlanner.buildRoadsAroundStructures(planner, room, sectors, level);
     }
+    RoomPlanner.buildContainersAroundSources(planner, room);
 
     RoomPlanner.buildRoadsToSources(planner, room, sectors);
-
-    RoomPlanner.buildContainersAroundSources(planner, room);
 
     RoomPlanner.buildControllerLink(planner, room);
     RoomPlanner.buildRoadsToMineral(planner, room, sectors);
@@ -494,6 +499,9 @@ export class RoomPlanner {
       const structureExistsHere = planner.structures.find(i => i.x === pos.x && i.y === pos.y);
       if (!structureExistsHere) {
         RoomPlanner.reserveSpot(pos.x, pos.y, STRUCTURE_ROAD, planner, level);
+      } else if (structureExistsHere.type === "road") {
+        // override structure
+        structureExistsHere.l = level;
       }
     });
   }

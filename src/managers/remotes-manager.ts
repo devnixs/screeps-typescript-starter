@@ -23,7 +23,7 @@ export class RemotesManager {
       memory.remotes = [];
     }
 
-    if (this.room.spawns.length === 0) {
+    if (this.room.spawns.length === 0 || this.room.memory.isRebuilding) {
       // this room has been wiped.
       return;
     }
@@ -43,6 +43,14 @@ export class RemotesManager {
     this.checkRoomLevel();
     this.ensureRemotesAreValid();
     this.reduceStats();
+    this.resetStatsEveryLongTime();
+  }
+
+  resetStatsEveryLongTime() {
+    // some remotes might be interesting now
+    if (Game.time % 150000 === 0) {
+      this.resetRemoteStats();
+    }
   }
 
   reduceStats() {

@@ -59,6 +59,7 @@ interface StealingStat {
 }
 
 interface RoomMemory {
+  isRebuilding: boolean;
   stealingStats: StealingStat[];
   needsStealers: SimplePosWithRoomName[];
   poker: string;
@@ -126,6 +127,7 @@ interface AttackSetup {
 }
 
 interface AttackParty {
+  movingTarget?: boolean;
   currentPos?: SimplePosWithRoomName;
   targetPos?: SimplePosWithRoomName;
   failed: boolean;

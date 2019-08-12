@@ -13,7 +13,8 @@ import {
   runFromTimeToTime,
   hasRoomBeenAttacked,
   hasSafeModeAvailable,
-  hasSafeModeActivated
+  hasSafeModeActivated,
+  getExpectedRoomEnergyAtLevel
 } from "utils/misc-utils";
 import { isInSafeArea } from "utils/safe-area";
 import { profiler } from "utils/profiler";
@@ -66,6 +67,10 @@ let builderHelperCount = 0;
 let builderHelperTarget: string | undefined = undefined;
 let builderHelperSource: string | undefined = undefined;
 
+let rebuilderHelperCount = 0;
+let rebuilderHelperTarget: string | undefined = undefined;
+let rebuilderHelperSource: string | undefined = undefined;
+
 let remoteDefenderHelperCount = 0;
 let remoteDefenderHelperTarget: string | undefined = undefined;
 let remoteDefenderHelperSources: string[] | undefined = undefined;
@@ -114,6 +119,23 @@ function initOneTimeValues() {
     builderHelperSource = undefined;
     builderHelperTarget = undefined;
     builderHelperCount = 0;
+  }
+
+  let colonyThatNeedsHelpReBuilding = getMyRooms().filter(
+    i => i.controller && i.controller.my && i.controller.level >= 2 && i.memory.isRebuilding
+  )[0];
+
+  if (colonyThatNeedsHelpReBuilding && myRooms.length > 1) {
+    rebuilderHelperSource = findClosestRoom(colonyThatNeedsHelpReBuilding.name);
+    rebuilderHelperTarget = colonyThatNeedsHelpReBuilding.name;
+    rebuilderHelperCount = 2;
+    /*     console.log("rebuilderHelperTarget : ", rebuilderHelperTarget);
+    console.log("rebuilderHelperSource : ", rebuilderHelperSource);
+    console.log("rebuilderHelperCount : ", rebuilderHelperCount); */
+  } else {
+    rebuilderHelperSource = undefined;
+    rebuilderHelperTarget = undefined;
+    rebuilderHelperCount = 0;
   }
 
   let colonyThatNeedsHelpDefending = Object.keys(Game.rooms)
@@ -416,7 +438,7 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
         return {
           percentage: 20,
           role: "local-defender",
-          bodyTemplate: [MOVE, RANGED_ATTACK, RANGED_ATTACK],
+          bodyTemplate: [MOVE, MOVE, RANGED_ATTACK, ATTACK],
           maxRepatAccrossAll: Math.ceil(remote.threatLevel * 2),
           bodyTemplatePrepend: [HEAL, HEAL, MOVE],
           maxCount: remote.threatLevel / 50,
@@ -574,6 +596,15 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
     },
     {
       percentage: 2,
+      role: "builder",
+      maxCount: rebuilderHelperCount,
+      bodyTemplate: [MOVE, MOVE, WORK, CARRY],
+      onlyRooms: rebuilderHelperSource ? [rebuilderHelperSource] : undefined,
+      subRole: rebuilderHelperTarget,
+      disableIfLowOnCpu: true
+    },
+    {
+      percentage: 2,
       role: "transport",
       maxCount: transportHelperCount,
       bodyTemplate: [MOVE, CARRY],
@@ -593,7 +624,7 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
     {
       percentage: 2,
       role: "reparator",
-      maxCount: spawn.room.towers.length > 0 ? 0 : 1, // handled by towers
+      maxCount: spawn.room.towers.length > 0 && controllerLevel > 1 ? 0 : 1, // handled by towers
       bodyTemplate: [MOVE, WORK, CARRY],
       capMaxEnergy: 1400,
       disableIfLowOnCpu: true

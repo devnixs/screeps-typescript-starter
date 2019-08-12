@@ -1,4 +1,4 @@
-export const whitelist: string[] = [];
+export const whitelist: string[] = ["lgx"];
 export const defaultReusePath = 15;
 
 export const requiredHealersForAnAttack = 0;
@@ -18,8 +18,8 @@ export const wallsMinHp = (roomLevel: number) => {
   const power = 9;
   let value = Math.pow(roomLevel, power) * (25000000 / Math.pow(8, power));
 
-  if (roomLevel < 7) {
-    // limit to 300k under level 7
+  if (roomLevel < 6) {
+    // limit to 300k under level 6
     value = Math.min(value, 300000);
   }
 
