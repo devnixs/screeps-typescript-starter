@@ -1,6 +1,6 @@
 import { getSpawnerRequirements, RoleRequirement } from "spawner-requirements";
 import { profiler } from "./utils/profiler";
-import { isLowOnCpu } from "utils/cpu";
+import { isLowOnCpu, getUsedPercentage } from "utils/cpu";
 
 const costs = {
   [MOVE]: 50,
@@ -195,7 +195,9 @@ class Spawner {
       );
     }
 
-    let nextCheck = spawnResult === OK ? Game.time : Game.time + 20;
+    const delay = getUsedPercentage() < 0.6 ? 5 : 20;
+
+    let nextCheck = spawnResult === OK ? Game.time : Game.time + delay;
     nextCheckTimes[spawn.room.name] = nextCheck;
   }
 

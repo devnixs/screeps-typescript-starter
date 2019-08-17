@@ -11,6 +11,7 @@
     "push-dev": "rollup -c --environment DEST:dev",
     "push-pserver": "rollup -c --environment DEST:pserver",
     "push-screepsplus": "rollup -c --environment DEST:screepsplus",
+    "push-swc": "rollup -c --environment DEST:swc",
     "push-sim": "rollup -c --environment DEST:sim",
     "push-titan": "rollup -c --environment DEST:titan",
     "push-local": "rollup -c --environment DEST:local",

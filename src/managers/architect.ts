@@ -85,6 +85,10 @@ export class Architect {
     this.cleanupStaleConstructionSites();
     this.cleanupConstructionSitesWithNoProgress();
 
+    if (Game.shard.name === "swc") {
+      return;
+    }
+
     if (Object.keys(Game.constructionSites).length > MAX_CONSTRUCTION_SITES * 0.9) {
       return;
     }

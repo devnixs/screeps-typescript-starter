@@ -55,6 +55,7 @@ import { runTimeout } from "utils/set-timeout";
 import { StealingManager } from "managers/stealing";
 import { roleStealer } from "roles/stealer";
 import { AttackPlanner } from "managers/attack-planner";
+import { simpleAllies } from "managers/team-manager";
 
 console.log("Code has been loaded");
 
@@ -91,6 +92,12 @@ export const loop = ErrorMapper.wrapLoop(() => {
     let error: any = null;
     try {
       spawner.run();
+    } catch (e) {
+      error = e;
+    }
+    try {
+      simpleAllies.startOfTick();
+      // simpleAllies.run();
     } catch (e) {
       error = e;
     }
@@ -214,6 +221,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
       AttackPlanner.run();
       PokingManager.runForAllRooms();
       StealingManager.runForAllRooms();
+      simpleAllies.endOfTick();
     } catch (e) {
       console.log("Failed to run managers.", e);
       error = e;
@@ -243,8 +251,22 @@ export const loop = ErrorMapper.wrapLoop(() => {
 
     // Stop attack
     // TODO: remove this code
-    if (Game.time > 1669225 + 20000 && "attack" in Game.flags && "E8S15" in Game.rooms) {
-      Game.flags.attack.remove();
+    /*     if (Game.time ===  292456 + 20000) {
+      const claimFlag = Game.flags.claimer_target;
+
+      if(claimFlag){
+        claimFlag.setPosition(new RoomPosition())
+      }
+    } */
+
+    if (Game.time === 292456 + 20000) {
+      const storage = Game.getObjectById("5d53a21104d374529de1b682") as StructureStorage;
+      const terminal = Game.getObjectById("5d5489eab42d6a66a3f2cfce") as StructureTerminal;
+      if (storage && terminal) {
+        if (Game.time % 100 === 0 && storage.store.energy > 200000) {
+          terminal.send(RESOURCE_ENERGY, 1000, "W2N3");
+        }
+      }
     }
 
     if (error) {

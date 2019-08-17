@@ -122,7 +122,12 @@ function initOneTimeValues() {
   }
 
   let colonyThatNeedsHelpReBuilding = getMyRooms().filter(
-    i => i.controller && i.controller.my && i.controller.level >= 2 && i.memory.isRebuilding
+    i =>
+      i.controller &&
+      i.controller.my &&
+      i.controller.level >= 2 &&
+      i.memory.isRebuilding &&
+      i.find(FIND_HOSTILE_CREEPS).length === 0
   )[0];
 
   if (colonyThatNeedsHelpReBuilding && myRooms.length > 1) {
@@ -140,16 +145,19 @@ function initOneTimeValues() {
 
   let colonyThatNeedsHelpDefending = Object.keys(Game.rooms)
     .map(i => Game.rooms[i])
-    .filter(i => i.controller && i.controller.my && i.controller.level <= 5)[0];
+    .filter(i => i.controller && i.controller.my && i.controller.level <= 4)[0];
 
   if (
     colonyThatNeedsHelpDefending &&
-    myRooms.length > 1 &&
-    !hasSafeModeAvailable(colonyThatNeedsHelpDefending) &&
-    !hasSafeModeActivated(colonyThatNeedsHelpDefending)
+    myRooms.length > 1
+    // &&
+    /*     !hasSafeModeAvailable(colonyThatNeedsHelpDefending) &&
+    !hasSafeModeActivated(colonyThatNeedsHelpDefending) */
   ) {
     const inRangeRooms = getMyRooms().filter(
-      i => Cartographer.findRoomDistanceSum(i.name, colonyThatNeedsHelpDefending.name) < 12
+      i =>
+        i.name !== colonyThatNeedsHelpDefending.name &&
+        Cartographer.findRoomDistanceSum(i.name, colonyThatNeedsHelpDefending.name) < 12
     );
 
     remoteDefenderHelperSources = inRangeRooms.map(i => i.name);
@@ -438,11 +446,11 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
         return {
           percentage: 20,
           role: "local-defender",
-          bodyTemplate: [MOVE, MOVE, RANGED_ATTACK, ATTACK],
+          bodyTemplate: [MOVE, ATTACK],
           maxRepatAccrossAll: Math.ceil(remote.threatLevel * 2),
-          bodyTemplatePrepend: [HEAL, HEAL, MOVE],
+          bodyTemplatePrepend: [],
           maxCount: remote.threatLevel / 50,
-          sortBody: [TOUGH, MOVE, ATTACK, HEAL],
+          sortBody: [ATTACK, MOVE],
           additionalMemory: {
             homeSpawnPosition: spawn.pos,
             home: spawn.pos.roomName,
@@ -568,6 +576,23 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
     _.sum(spawn.room.memory.remotes.filter(i => i.energy > 0 && !i.disabled).map(i => i.distance * 0.3)) // 1 truck template repetition for every 3 distance
   );
 
+  const manualDefenders = Object.keys(Game.flags)
+    .filter(i => i.startsWith("manual_defend"))
+    .map(i => Game.flags[i])
+    .map(
+      flag =>
+        ({
+          percentage: 1,
+          role: "manual-defender",
+          subRole: flag.pos.roomName,
+          maxCount: 2,
+          maxRepatAccrossAll: 7,
+          bodyTemplate: [ATTACK, MOVE],
+          sortBody: [ATTACK, MOVE, HEAL],
+          bodyTemplatePrepend: [MOVE, HEAL]
+        } as RoleRequirement)
+    );
+
   const requirements = ([
     {
       percentage: 100,
@@ -578,9 +603,9 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
     ...harvesterDefinitions,
     attackers,
     {
-      percentage: 2,
+      percentage: 20,
       role: "builder",
-      maxCount: needsBuilder ? (controllerLevel <= 3 ? 2 : spawn.room.memory.isUnderSiege ? 4 : 1) : 0,
+      maxCount: needsBuilder ? (controllerLevel <= 3 ? 2 : spawn.room.memory.isUnderSiege ? 4 : 2) : 0,
       bodyTemplate: [MOVE, WORK, CARRY]
     },
     ...remoteDefenders,
@@ -619,12 +644,12 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
       role: "claimer",
       maxCount: claimerCount,
       onlyRooms: closestRoomToClaimTarget ? [closestRoomToClaimTarget] : undefined,
-      exactBody: [MOVE, CLAIM]
+      exactBody: [MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, CLAIM]
     },
     {
       percentage: 2,
       role: "reparator",
-      maxCount: spawn.room.towers.length > 0 && controllerLevel > 1 ? 0 : 1, // handled by towers
+      maxCount: spawn.room.towers.length > 0 && controllerLevel > 2 ? 0 : 1, // handled by towers
       bodyTemplate: [MOVE, WORK, CARRY],
       capMaxEnergy: 1400,
       disableIfLowOnCpu: true
@@ -637,6 +662,7 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
       sortBody: [TOUGH, MOVE, ATTACK]
     },
     remoteDefendersHelper,
+    ...manualDefenders,
     {
       percentage: 1,
       role: "miner",
@@ -660,7 +686,7 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
       maxCount:
         (getUsedPercentage() > 0.5 ? runFromTimeToTime(1500, 4500) : true) &&
         !spawn.room.memory.isUnderSiege &&
-        controllerLevel >= 3 &&
+        controllerLevel >= 2 &&
         controllerLevel < 8
           ? 1
           : 0

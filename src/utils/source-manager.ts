@@ -12,7 +12,9 @@ class SourceManager {
       return;
     }
 
-    const targetEnergySource = findAndCache<FIND_SOURCES>(
+    let targetEnergySource: Source | null;
+    // builder helpers need to be able to switch remotes if they can't find a path to it
+    targetEnergySource = findAndCache<FIND_SOURCES>(
       creep,
       "harvest_source_id",
       FIND_SOURCES,
@@ -21,7 +23,9 @@ class SourceManager {
         filter: (structure: Source) => {
           return structure.energy > 0;
         }
-      }
+      },
+      10,
+      { byPath: true }
     );
 
     if (!targetEnergySource) {
@@ -250,7 +254,7 @@ class SourceManager {
         creep.withdraw(targetStructure, RESOURCE_ENERGY);
       }
       return OK;
-    } else if (creep.getActiveBodyparts(WORK) > 0 && !creep.room.storage) {
+    } else if (creep.getActiveBodyparts(WORK) > 0 && (!creep.room.storage || creep.room.storage.store.energy < 1000)) {
       // when a room doesn't have a storage yet, creeps need to be able to harvest themselves
       return this.harvestEnergyFromSource(creep);
     } else {

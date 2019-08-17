@@ -56,18 +56,18 @@ export class StatsManager {
       const storage = room.storage ? room.storage.store.energy : 0;
       const controller = room.controller ? room.controller.progress : 0;
 
-      const walls = _.sum(
-        room
-          .find(FIND_STRUCTURES)
-          .filter(i => i.structureType === STRUCTURE_WALL)
-          .map(i => i.hits / 100)
-      );
-      const ramparts = _.sum(
-        room
-          .find(FIND_MY_STRUCTURES)
-          .filter(i => i.structureType === STRUCTURE_RAMPART)
-          .map(i => i.hits / 100)
-      );
+      const rampartHits = room
+        .find(FIND_MY_STRUCTURES)
+        .filter(i => i.structureType === STRUCTURE_RAMPART)
+        .map(i => i.hits / 100);
+
+      const wallHits = room
+        .find(FIND_STRUCTURES)
+        .filter(i => i.structureType === STRUCTURE_WALL)
+        .map(i => i.hits / 100);
+
+      const walls = wallHits.length ? _.sum(wallHits) : 0;
+      const ramparts = rampartHits.length ? _.sum(rampartHits) : 0;
 
       const total = storage + controller + walls + ramparts;
 

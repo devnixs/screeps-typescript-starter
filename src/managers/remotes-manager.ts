@@ -1,10 +1,10 @@
 import { getMyRooms, paddingLeft } from "utils/misc-utils";
-import { findEmptySpotCloseTo } from "utils/finder";
 import { ILongDistanceTruckMemory } from "roles/longdistancetruck";
 import { profiler } from "utils/profiler";
 import { Cartographer } from "utils/cartographer";
 import { Traveler } from "utils/Traveler";
 import { getReduceUsageRatio } from "utils/cpu";
+import { remoteBlacklist } from "constants/misc";
 
 export class RemotesManager {
   constructor(private room: Room) {}
@@ -48,8 +48,18 @@ export class RemotesManager {
 
   resetStatsEveryLongTime() {
     // some remotes might be interesting now
-    if (Game.time % 150000 === 0) {
-      this.resetRemoteStats();
+    const remotesCount = this.room.memory.remotes.length;
+    if (remotesCount === 0) {
+      return;
+    }
+
+    const every = Math.floor(150000 / remotesCount);
+
+    if (Game.time % every === 0) {
+      const remoteToReset = _.sample(this.room.memory.remotes.filter(i => i));
+
+      delete remoteToReset.retrievedEnergy;
+      delete remoteToReset.spentEnergy;
     }
   }
 
@@ -257,6 +267,10 @@ export class RemotesManager {
   canEnableRoom(room: string) {
     const ctrlLevel = this.room.controller ? this.room.controller.level : 0;
     if (ctrlLevel < 3) {
+      return false;
+    }
+
+    if (remoteBlacklist.indexOf(room) >= 0) {
       return false;
     }
 

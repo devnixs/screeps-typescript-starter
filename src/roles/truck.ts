@@ -52,6 +52,15 @@ class RoleTruck implements IRole {
 
   run(creep: Creep) {
     const memory: ITruckMemory = creep.memory as any;
+    const moveOptions = {
+      roomCallback: (roomName, matrix) => (roomName === creep.room.name ? matrix : false)
+    } as TravelToOptions;
+
+    if (creep.room.name !== creep.memory.homeRoom) {
+      creep.goTo(new RoomPosition(25, 25, creep.memory.homeRoom));
+      return;
+    }
+
     if (!memory.sources) {
       memory.sources = [];
       memory.destinations = [];
@@ -71,7 +80,7 @@ class RoleTruck implements IRole {
         if (!target) {
           this.restartJob(creep);
         } else {
-          creep.goTo(target);
+          creep.goTo(target, moveOptions);
           const maxDeposit = creep.carry[firstTarget.resource] || 0;
 
           const depositResult = creep.transfer(
@@ -98,7 +107,7 @@ class RoleTruck implements IRole {
         if (!target) {
           this.restartJob(creep);
         } else {
-          creep.goTo(target);
+          creep.goTo(target, moveOptions);
 
           if (creep.pos.isNearTo(target.pos.x, target.pos.y)) {
             // var currentlyCarrying = creep.carry[memory.jobResource] || 0;
@@ -173,6 +182,10 @@ class RoleTruck implements IRole {
   }
 
   runEnergyTruck(creep: Creep) {
+    const moveOptions = {
+      roomCallback: (roomName, matrix) => (roomName === creep.room.name ? matrix : false)
+    } as TravelToOptions;
+
     const memory: ITruckMemory = creep.memory as any;
     const totalCargoContent = _.sum(creep.carry);
     if (totalCargoContent > creep.carry.energy) {
@@ -218,12 +231,12 @@ class RoleTruck implements IRole {
               i.energy < i.energyCapacity
           });
           if (otherNonFullExtension && !creep.pos.isNearTo(otherNonFullExtension.pos)) {
-            creep.goTo(otherNonFullExtension);
+            creep.goTo(otherNonFullExtension, moveOptions);
           }
         }
         return transferResult;
       } else {
-        creep.goTo(structureThatNeedsEnergy);
+        creep.goTo(structureThatNeedsEnergy, moveOptions);
         return OK;
       }
     } else {
@@ -461,11 +474,9 @@ class RoleTruck implements IRole {
       const containerWithMultipleResources = containersWithMultipleResources[containerWithMultipleResourcesIndex];
 
       const resourcesInThatContainer = findNonEmptyResourcesInStore(containerWithMultipleResources.store);
-      console.log("resources", JSON.stringify(resourcesInThatContainer));
       const resourceId = _.random(0, resourcesInThatContainer.length - 1);
 
       const resourceType = resourcesInThatContainer[resourceId] as ResourceConstant;
-      console.log("selected resource ", resourceType);
       const job = this.createRetrievalJob({
         amount: containerWithMultipleResources.store[resourceType] as any,
         creep: creep,

@@ -115,7 +115,12 @@ export class RoomAnalyzer {
     // register if enemy
     memory.er = isEnemyRemote;
     memory.erc = enemyRemoteContainers.concat(enemyDroppedEnergy);
-    memory.o = room.controller && room.controller.owner ? room.controller.owner.username : undefined;
+    memory.o =
+      room.controller && room.controller.owner
+        ? room.controller.owner.username
+        : room.controller && room.controller.reservation
+        ? room.controller.reservation.username
+        : undefined;
 
     ExplorationCache.setExploration(memory);
 
@@ -125,7 +130,7 @@ export class RoomAnalyzer {
       return;
     }
 
-    if (distanceToClosestRoom <= 3) {
+    if (distanceToClosestRoom <= 3 && !memory.eb && !memory.er) {
       // no need to add remotes if it's too far
       RoomAnalyzer.analyzeRemotes(room, closestRoom, closestSpawn);
     }

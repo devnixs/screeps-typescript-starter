@@ -72,7 +72,11 @@ class RoleReparator implements IRole {
         creep.goTo(damaged);
       }
     } else if (sourceManager.getEnergy(creep) !== OK) {
-      return this.goToRest(creep);
+      if (creep.room.controller && creep.room.controller.level <= 2) {
+        return roleHarvester.run(creep);
+      } else {
+        return this.goToRest(creep);
+      }
     }
   }
 

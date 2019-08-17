@@ -106,12 +106,16 @@ class RoleScout implements IRole {
 
     const currentSign = creep.room.controller && creep.room.controller.sign && creep.room.controller.sign.text;
     const currentSignUser = creep.room.controller && creep.room.controller.sign && creep.room.controller.sign.username;
+    const roomIsOwned = creep.room.controller && creep.room.controller.owner && !creep.room.controller.my;
 
     if (
+      !roomIsOwned &&
       creep.room.controller &&
       (currentSignUser !== getUsername() || (currentSign && !currentSign.endsWith(signature)))
     ) {
-      creep.goTo(creep.room.controller);
+      creep.goTo(creep.room.controller, {
+        roomCallback: (roomName, matrix) => (roomName === creep.room.name ? matrix : false)
+      });
       const hasExplorationMemory = ExplorationCache.getExploration(creep.room.name);
       if (hasExplorationMemory && hasExplorationMemory.c) {
         creep.signController(creep.room.controller, hasExplorationMemory.c.s + " " + signature);

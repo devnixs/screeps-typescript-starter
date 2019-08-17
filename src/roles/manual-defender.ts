@@ -6,14 +6,13 @@ import { getOffExit } from "utils/get-off-exits";
 import { roleLocalDefender } from "./local-defender";
 import { findOrCachePathfinding } from "utils/cached-pathfindings";
 
-export interface IRemoteDefenderMemory extends CreepMemory {
+export interface IManualDefenderMemory extends CreepMemory {
   roomTarget?: string;
 }
 
-class RoleRemoteDefender implements IRole {
+class RoleManualDefender implements IRole {
   run(creep: Creep) {
-    // const rooms = Object.keys(Game.rooms).map(i => Game.rooms[i]);
-    const memory: IRemoteDefenderMemory = creep.memory as any;
+    const memory: IManualDefenderMemory = creep.memory as any;
 
     let hostile = findHostile(creep);
     if (hostile && creep.room.controller && creep.room.controller.my) {
@@ -22,8 +21,15 @@ class RoleRemoteDefender implements IRole {
 
     if (creep.hits < creep.hitsMax * 0.8) {
       creep.heal(creep);
-      hostile && creep.rangedAttack(hostile);
-      this.goHome(creep);
+      hostile && creep.attack(hostile);
+      //rassemble
+      const farthestCreep = _.sortBy(
+        creep.room.find(FIND_MY_CREEPS).filter(i => i.id !== creep.id && i.pos.getRangeTo(creep.pos) > 1),
+        i => -1 * i.pos.getRangeTo(creep.pos)
+      )[0];
+      if (farthestCreep) {
+        creep.goTo(farthestCreep);
+      }
       return;
     }
 
@@ -44,20 +50,13 @@ class RoleRemoteDefender implements IRole {
       return;
     }
 
-    if (boostCreep(creep) === OK) {
-      return;
-    }
-
     const rampartTarget = hostile || creep;
 
     // ATTACK MODE
     if (hostile) {
       creep.say("Yarr!", true);
       if (hostile.pos.isNearTo(creep)) {
-        creep.rangedMassAttack();
-      } else {
-        creep.rangedAttack(hostile);
-        creep.memory.s = Game.time;
+        creep.attack(creep);
       }
 
       // find closest empty rempart
@@ -163,7 +162,7 @@ class RoleRemoteDefender implements IRole {
   }
 
   goHome(creep: Creep, options: TravelToOptions = {}) {
-    const homeRoom = (creep.memory as IRemoteDefenderMemory).roomTarget || creep.memory.homeRoom;
+    const homeRoom = (creep.memory as IManualDefenderMemory).roomTarget || creep.memory.homeRoom;
     const ctrl = Game.rooms[homeRoom].controller as StructureController;
     creep.goTo(ctrl, options);
   }
@@ -182,5 +181,5 @@ class RoleRemoteDefender implements IRole {
   }
 }
 
-profiler.registerClass(RoleRemoteDefender, "RoleRemoteDefender");
-export const roleRemoteDefender = new RoleRemoteDefender();
+profiler.registerClass(RoleManualDefender, "RoleManualDefender");
+export const roleManualDefender = new RoleManualDefender();

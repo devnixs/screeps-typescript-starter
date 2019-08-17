@@ -59,12 +59,7 @@ class RoleLongDistanceTruck implements IRole {
     if (memory.depositing == true) {
       // first let's see if a road needs to be built
       const constructionSite = creep.pos.findClosestByRange(FIND_CONSTRUCTION_SITES);
-      if (
-        constructionSite &&
-        constructionSite.pos.inRangeTo(creep, 5) &&
-        constructionSite.structureType !== "rampart" &&
-        constructionSite.structureType !== "lab"
-      ) {
+      if (constructionSite && constructionSite.pos.inRangeTo(creep, 5) && constructionSite.structureType === "road") {
         if (creep.build(constructionSite) === ERR_NOT_IN_RANGE) {
           creep.goTo(constructionSite);
         }
@@ -73,7 +68,7 @@ class RoleLongDistanceTruck implements IRole {
 
       // if in home room
       if (creep.room.name == memory.home) {
-        if (creep.room.energyAvailable < creep.room.energyCapacityAvailable / 2 || getUsedPercentage() < 0.6) {
+        if (creep.room.energyAvailable < creep.room.energyCapacityAvailable / 2 || getUsedPercentage() < 0.7) {
           sourceManager.store(creep);
         } else {
           const res = sourceManager.storeInStorageIfPossible(creep);

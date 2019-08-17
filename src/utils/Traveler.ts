@@ -1,6 +1,7 @@
 import { CachedPaths } from "./cached-paths";
 import { ExplorationCache } from "./exploration-cache";
 import { whitelist } from "constants/misc";
+import { getUsedPercentage } from "./cpu";
 
 /**
  * To start using Traveler, require it in main.js:
@@ -127,7 +128,7 @@ export class Traveler {
       state.destination = destination;
 
       let cpu = Game.cpu.getUsed();
-      let ret = this.findTravelPath(creep.pos, destination, options);
+      let ret = this.findTravelPath(creep.pos, destination, options, creep);
 
       let cpuUsed = Game.cpu.getUsed() - cpu;
       state.cpu = _.round(cpuUsed + state.cpu);
@@ -178,11 +179,20 @@ export class Traveler {
 
     let nextDirection = parseInt(travelData.path[0], 10);
 
+    const checkStuckCount = getUsedPercentage() < 0.6 ? 0 : 1;
+
     if (nextDirection) {
       let nextPos = Traveler.positionAtDirection(creep.pos, nextDirection);
-      if (nextPos && state.stuckCount === 1) {
+      if (nextPos && state.stuckCount === checkStuckCount) {
         const creepThere = nextPos.lookFor(LOOK_CREEPS)[0];
-        if (creepThere && creepThere.memory && creepThere.memory.s && creepThere.memory.s >= Game.time - 1) {
+        if (
+          creepThere &&
+          creepThere.memory &&
+          creepThere.memory.s &&
+          creepThere.memory.s >= Game.time - 1 &&
+          creepThere.memory.role !== creep.memory.role
+        ) {
+          // we don't push creeps of the same role
           if (options.pushCreeps) {
             creepThere.move(nextDirection as DirectionConstant);
           } else {
@@ -319,7 +329,8 @@ export class Traveler {
   public static findTravelPath(
     origin: RoomPosition | HasPos,
     destination: RoomPosition | HasPos,
-    options: TravelToOptions = {}
+    options: TravelToOptions = {},
+    creep?: Creep | undefined
   ): PathfinderReturn {
     _.defaults(options, {
       ignoreCreeps: true,
@@ -371,7 +382,7 @@ export class Traveler {
         if (options.ignoreStructures) {
           matrix = new PathFinder.CostMatrix();
           if (!options.ignoreCreeps) {
-            Traveler.addCreepsToMatrix(room, matrix);
+            Traveler.addCreepsToMatrix(room, matrix, creep);
           }
         } else if (options.ignoreCreeps || roomName !== originRoomName) {
           matrix = this.getStructureMatrix(room, options.freshMatrix);
@@ -424,7 +435,7 @@ export class Traveler {
           console.log(`TRAVELER: path failed without findroute, trying with options.useFindRoute = true`);
           console.log(`from: ${origin}, destination: ${destination}`);
           options.useFindRoute = true;
-          ret = this.findTravelPath(origin, destination, options);
+          ret = this.findTravelPath(origin, destination, options, creep);
           console.log(`TRAVELER: second attempt was ${ret.incomplete ? "not " : ""}successful`);
           return ret;
         }
@@ -625,8 +636,13 @@ export class Traveler {
    * @returns {CostMatrix}
    */
 
-  public static addCreepsToMatrix(room: Room, matrix: CostMatrix): CostMatrix {
-    room.find(FIND_CREEPS).forEach((creep: Creep) => matrix.set(creep.pos.x, creep.pos.y, 0xff));
+  public static addCreepsToMatrix(room: Room, matrix: CostMatrix, creep?: Creep | undefined): CostMatrix {
+    room
+      .find(FIND_CREEPS)
+      .filter(
+        i => !i.my || !i.memory.s || i.memory.s < Game.time - 1 || (!creep || i.memory.role === creep.memory.role)
+      )
+      .forEach((creep: Creep) => matrix.set(creep.pos.x, creep.pos.y, 0xff));
     return matrix;
   }
 
@@ -768,7 +784,7 @@ export class Traveler {
 const REPORT_CPU_THRESHOLD = 3000;
 
 const DEFAULT_MAXOPS = 20000;
-const DEFAULT_STUCK_VALUE = 3;
+const DEFAULT_STUCK_VALUE = 2;
 const STATE_PREV_X = 0;
 const STATE_PREV_Y = 1;
 const STATE_STUCK = 2;

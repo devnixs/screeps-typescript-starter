@@ -20,11 +20,13 @@ export class Merchant {
 
     const resources = _.uniq(Object.keys(desiredStocks).concat(Object.keys(terminal.store)));
 
+    const sellRatio = Game.shard.name === "swc" ? 10 : 6;
+
     const overSupply = resources.find(
       i =>
         i !== "energy" &&
         sellableElements.indexOf(i) >= 0 &&
-        this.getResource(terminal.store, i) > this.getResource(desiredStocks, i) * 6 &&
+        this.getResource(terminal.store, i) > this.getResource(desiredStocks, i) * sellRatio &&
         this.getResource(terminal.store, i) > 300
     ) as ResourceConstant | undefined;
 

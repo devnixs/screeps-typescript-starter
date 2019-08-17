@@ -1,4 +1,13 @@
-export const whitelist: string[] = ["lgx"];
+let whitelist: string[] = ["lgx"];
+let remoteBlacklist: string[] = [];
+
+if (Game.shard.name === "swc") {
+  whitelist = ["Tigga", "Robalian", "Davaned"];
+  remoteBlacklist = ["W2N4", "W1N3", "W3N4", "W3N3"];
+}
+
+export { whitelist, remoteBlacklist };
+
 export const defaultReusePath = 15;
 
 export const requiredHealersForAnAttack = 0;

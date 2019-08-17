@@ -23,12 +23,16 @@ interface BodyDefinition {
 const t0Rcl5: PartyDefinition = {
   creeps: [
     {
+      [MOVE]: 13,
+      [ATTACK]: 13
+    },
+    {
       [MOVE]: 6,
-      [RANGED_ATTACK]: 2,
-      [HEAL]: 4
+      [RANGED_ATTACK]: 0,
+      [HEAL]: 5
     }
   ],
-  repeat: 4,
+  repeat: 2,
   canCounterRcl: 2,
   requiresBoostsTier: 0,
   requiresRcl: 5

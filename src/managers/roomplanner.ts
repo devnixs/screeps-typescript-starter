@@ -1,7 +1,7 @@
 import { buildRangeFromRoomLimit } from "constants/misc";
 import { findEmptySpotCloseTo } from "utils/finder";
 import { mincutHelper } from "utils/mincut-walls";
-import { getMyRooms, hasRoomBeenAttacked } from "utils/misc-utils";
+import { getMyRooms, hasRoomBeenAttacked, hasSafeModeAvailable } from "utils/misc-utils";
 import { profiler } from "utils/profiler";
 import { setTimeout } from "utils/set-timeout";
 
@@ -77,10 +77,16 @@ export class RoomPlanner {
       if (structure.l && structure.l > ctrl.level) {
         continue;
       }
-      if (structure.type === "rampart") {
+
+      if (structure.type === "rampart" && i > 0) {
+        // first rampart is allowed
         // let's not build walls before rcl 4 or safe mode activated
 
-        if (this.room.controller && (this.room.controller.level < 6 && !hasRoomBeenAttacked(this.room))) {
+        if (
+          this.room.controller &&
+          (this.room.controller.level < 6 && !hasRoomBeenAttacked(this.room)) &&
+          hasSafeModeAvailable(this.room)
+        ) {
           continue;
         }
       }
@@ -124,12 +130,29 @@ export class RoomPlanner {
 
   doManualPlacement() {
     const deleteFlag = Game.flags.roomplanner_delete;
+
     if (deleteFlag && deleteFlag.pos.roomName === this.room.name) {
       const existing = this.room.memory.roomPlanner.structures.find(
         i => i.x === deleteFlag.pos.x && i.y === deleteFlag.pos.y
       );
       if (existing) {
         this.room.memory.roomPlanner.structures = this.room.memory.roomPlanner.structures.filter(i => i !== existing);
+      }
+    }
+    const createFlagName = Object.keys(Game.flags).find(i => i.startsWith("roomplanner_create_"));
+    const createFlag = createFlagName && Game.flags[createFlagName];
+    if (createFlagName && createFlag && createFlag.pos.roomName === this.room.name) {
+      const structure = createFlagName.replace("roomplanner_create_", "");
+      const existing = this.room.memory.roomPlanner.structures.find(
+        j => j.x === createFlag.pos.x && j.y === createFlag.pos.y
+      );
+      if (!existing) {
+        this.room.memory.roomPlanner.structures.push({
+          type: structure as any,
+          l: 1,
+          x: createFlag.pos.x,
+          y: createFlag.pos.y
+        });
       }
     }
 
@@ -183,7 +206,10 @@ export class RoomPlanner {
 
   addRampartToCriticalStructures() {
     // needs level 4 at lease
-    if (this.room.controller && this.room.controller.level < 4) {
+    if (
+      (this.room.controller && this.room.controller.level < 6 && !hasRoomBeenAttacked(this.room)) ||
+      !hasSafeModeAvailable(this.room)
+    ) {
       return;
     }
 
@@ -252,6 +278,7 @@ export class RoomPlanner {
 
     const spawn = room.spawns[0];
     if (!spawn) {
+      RoomPlanner.reserveSpot(sectors[0].x, sectors[0].y, STRUCTURE_RAMPART, planner);
       RoomPlanner.reserveSpot(sectors[0].x, sectors[0].y, STRUCTURE_SPAWN, planner);
       planner.spIndex++;
     } else {
@@ -499,9 +526,9 @@ export class RoomPlanner {
       const structureExistsHere = planner.structures.find(i => i.x === pos.x && i.y === pos.y);
       if (!structureExistsHere) {
         RoomPlanner.reserveSpot(pos.x, pos.y, STRUCTURE_ROAD, planner, level);
-      } else if (structureExistsHere.type === "road") {
+      } else if (structureExistsHere.type === "road" && level && structureExistsHere.l) {
         // override structure
-        structureExistsHere.l = level;
+        structureExistsHere.l = Math.min(level, structureExistsHere.l);
       }
     });
   }

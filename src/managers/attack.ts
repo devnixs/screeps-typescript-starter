@@ -1,11 +1,18 @@
 import { findClosestRoom, getAttackFlag } from "utils/finder";
-import { getMyRooms } from "utils/misc-utils";
+import { getMyRooms, hasSafeModeAvailable } from "utils/misc-utils";
 import { generateAttackCreeps } from "./attack-analyst";
 import { ExplorationCache } from "utils/exploration-cache";
 import { Cartographer } from "utils/cartographer";
 
 // This makes a quad
-const attackPartyPositions = [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 }, { x: 2, y: 0 }];
+const attackPartyPositions = [
+  { x: 0, y: 0 },
+  { x: 1, y: 0 },
+  { x: 0, y: 1 },
+  { x: 1, y: 1 },
+  { x: 0, y: 2 },
+  { x: 1, y: 2 }
+];
 
 export class AttackManager {
   static run() {
@@ -15,6 +22,8 @@ export class AttackManager {
     AttackManager.stopAttackIfSuccessful();
     AttackManager.stopAttackIfFailed();
     AttackManager.stopAttackIfIdle();
+    AttackManager.removeIdleParties();
+    AttackManager.stopDefenseWhenItsNoLongerNecessary();
   }
 
   static checkAttackStatus() {
@@ -87,6 +96,46 @@ export class AttackManager {
       if (flag) {
         flag.remove();
       }
+    }
+  }
+
+  static stopDefenseWhenItsNoLongerNecessary() {
+    const attack = Memory.attack;
+    if (!attack || Game.time % 5 > 0) {
+      return;
+    }
+
+    const targetRoom = Game.rooms[attack.toRoom];
+    if (!targetRoom) {
+      return;
+    }
+
+    if (!targetRoom.controller || !targetRoom.controller.my) {
+      return;
+    }
+
+    if (
+      hasSafeModeAvailable(targetRoom) ||
+      (targetRoom.controller && targetRoom.controller.level >= 6) ||
+      !targetRoom.memory.isUnderSiege
+    ) {
+      this.stopAttack();
+    }
+  }
+
+  static removeIdleParties() {
+    const attack = Memory.attack;
+    if (!attack || Game.time % 5 > 0) {
+      return;
+    }
+
+    const idleParty = attack.parties.find(
+      i => i.creeps.length === 0 && i.status === "forming" && i.creationDate < Game.time - 300
+    );
+    if (idleParty) {
+      // stop attack
+      console.log("Removing idle attack party");
+      attack.parties = attack.parties.filter(i => i !== idleParty);
     }
   }
 
@@ -180,7 +229,8 @@ export class AttackManager {
       isApproxPath: true,
       ttl: 1500,
       failed: false,
-      retreat: false
+      retreat: false,
+      creationDate: Game.time
     } as AttackParty;
 
     console.log("Creating attack party ", JSON.stringify(party));
@@ -232,6 +282,11 @@ export class AttackManager {
         Game.rooms[attack.fromRoom].memory.boostMode = undefined;
       }
       Memory.attack = undefined;
+
+      const flag = Game.flags.attack;
+      if (flag) {
+        flag.remove();
+      }
     } else {
       console.log("ERROR: attack was already stopped");
     }

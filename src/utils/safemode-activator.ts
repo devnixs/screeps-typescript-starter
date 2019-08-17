@@ -31,7 +31,7 @@ export class SafeModeActivator {
     }
 
     const spawns = room.find(FIND_MY_STRUCTURES, { filter: i => i.structureType === "spawn" });
-    if (spawns.length !== 1) {
+    if (spawns.length === 0) {
       return;
     }
 
@@ -48,6 +48,7 @@ export class SafeModeActivator {
       // var isBoosted = enemy.body.filter(i => i.boost).length > 5;
       var isPlayer = enemy.owner.username != "Invader" && enemy.owner.username != "Source Keeper";
       var isBig = enemy.body.length > 10;
+      var distanceToSpawn = spawns[0].pos.getRangeTo(enemy);
 
       if (isBig && isPlayer) {
         const inSafeArea = isInSafeArea(enemy.pos, enemy.room);
@@ -57,10 +58,21 @@ export class SafeModeActivator {
             Game.notify("Enemy in safe area, activating safe mode on room " + room.name);
           }
         }
-        if (inSafeArea === undefined && enemyPoints > towerPoints) {
-          const result = room.controller && room.controller.activateSafeMode();
-          if (result === OK) {
-            Game.notify("Enemy present, but no safe area defined. Activating safe mode on room " + room.name);
+        if (inSafeArea === undefined && enemyPoints > towerPoints && distanceToSpawn < 4) {
+          const rampartOnTopOfSpawn = spawns[0].pos.lookFor(LOOK_STRUCTURES).find(i => i.structureType === "rampart");
+
+          if (rampartOnTopOfSpawn) {
+            if (rampartOnTopOfSpawn.hits < 3000) {
+              const result = room.controller && room.controller.activateSafeMode();
+              if (result === OK) {
+                Game.notify("Enemy present, but no safe area defined. Activating safe mode on room " + room.name);
+              }
+            }
+          } else {
+            const result = room.controller && room.controller.activateSafeMode();
+            if (result === OK) {
+              Game.notify("Enemy present, but no safe area defined. Activating safe mode on room " + room.name);
+            }
           }
         }
       }

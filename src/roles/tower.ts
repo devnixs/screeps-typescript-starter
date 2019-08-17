@@ -1,85 +1,213 @@
 import { profiler } from "../utils/profiler";
 import { rampartMinHp, wallsMinHp, whitelist } from "constants/misc";
+import { getMyRooms } from "utils/misc-utils";
+import { stat } from "fs";
 
 interface ITowerMemory extends CreepMemory {
   upgrading: boolean;
 }
 
+interface ICreepMemory {
+  id: string;
+  firstSeen: number;
+  attackedCount: number;
+  nextAttackAt: number;
+  range: number;
+  room: string;
+}
+
+interface ICreepMemories {
+  [id: string]: ICreepMemory;
+}
+
+const creepsMemory: ICreepMemories = {};
+
+const maxAttacks = 5;
+const attackDelay = 100;
+
 class RoleTower {
   runAllTowers() {
-    const allTowers = this.getTowerList();
-    _.forEach(allTowers, this.runSingleTower);
+    getMyRooms().forEach(r => this.runSingleRoom(r));
+  }
+
+  private runSingleRoom(room: Room) {
+    if (Game.time % 30 === 0) {
+      this.refreshDamagedStructures(room);
+    }
+
+    if (Game.time % 7 === 0) {
+      this.refreshEnemiesMemory(room);
+    }
+
+    if (Game.time % 11 === 0) {
+      this.refreshDamagedCreep(room);
+    }
+
+    if (this.hasDamagedCreeps(room)) {
+      this.refreshDamagedCreep(room);
+    }
+
+    if (this.hasEnemies(room)) {
+      this.refreshEnemiesMemory(room);
+      this.refreshDamagedCreep(room);
+      this.showStatus(room);
+    }
+
+    if (this.hasDamagedStructures(room)) {
+      this.refreshDamagedStructures(room);
+    }
+
+    if (this.hasDamagedCreeps(room) || this.hasDamagedStructures(room) || this.hasAttackableEnemies(room)) {
+      _.forEach(room.towers, this.runSingleTower);
+    }
   }
 
   private runSingleTower = (tower: StructureTower) => {
     if (tower.energy === 0) {
       return;
     }
-    if (Game.time % 30 === 0) {
-      this.refreshDamagedStructures(tower);
+
+    if (this.hasDamagedCreeps(tower.room)) {
+      // if there are enemy creeps, alternate between healing and attacking
+      if (!this.hasAttackableEnemies(tower.room) || Game.time % 2 === 0) {
+        this.healDamageedCreeps(tower);
+        return;
+      }
     }
 
-    if (Game.time % 3 === 0) {
-      this.refreshEnemy(tower);
-      this.refreshDamagedCreep(tower);
-    }
-
-    if (this.hasDamagedCreeps(tower)) {
-      this.healDamageedCreeps(tower);
-      this.refreshDamagedCreep(tower);
-      return;
-    }
-
-    if (this.hasEnemies(tower)) {
+    if (this.hasAttackableEnemies(tower.room)) {
       this.attackEnemies(tower);
-      this.refreshEnemy(tower);
       return;
     }
 
-    if (this.hasDamagedStructures(tower)) {
+    if (this.hasDamagedStructures(tower.room)) {
       this.repairDamagedStructures(tower);
-      this.refreshDamagedStructures(tower);
       return;
     }
   };
 
-  private hasDamagedStructures(tower: StructureTower): boolean {
-    return Memory.rooms[tower.room.name] && Memory.rooms[tower.room.name].damagedStructureId ? true : false;
+  private hasDamagedStructures(room: Room): boolean {
+    return room.memory && room.memory.damagedStructureId ? true : false;
   }
 
-  private hasDamagedCreeps(tower: StructureTower): boolean {
-    return Memory.rooms[tower.room.name] && Memory.rooms[tower.room.name].damagedCreepId ? true : false;
+  private hasDamagedCreeps(room: Room): boolean {
+    return room.memory && room.memory.damagedCreepId ? true : false;
   }
 
-  private hasEnemies(tower: StructureTower): boolean {
-    return Memory.rooms[tower.room.name] && Memory.rooms[tower.room.name].enemyId ? true : false;
+  private hasEnemies(room: Room): boolean {
+    return !!Object.keys(creepsMemory)
+      .map(i => creepsMemory[i])
+      .find(i => i.room === room.name);
   }
 
-  private refreshEnemy(tower: StructureTower) {
-    Memory.rooms[tower.room.name] = Memory.rooms[tower.room.name] || {};
-    const enemy = this.getEnemyInRoom(tower);
-    Memory.rooms[tower.room.name].enemyId = enemy ? enemy.id : null;
+  private showStatus(room: Room) {
+    if ("show_enemy" in Game.flags) {
+      const enemies = Object.keys(creepsMemory)
+        .map(i => creepsMemory[i])
+        .filter(i => i.room === room.name);
+
+      for (let i = 0; i < enemies.length; i++) {
+        const enemy = enemies[i];
+        room.visual.text("ENEMY SINCE " + (Game.time - enemy.firstSeen), 10, 12 + i * 3, {
+          color: "white",
+          backgroundColor: "black",
+          opacity: 0.5
+        });
+        room.visual.text("RANGE " + enemy.range, 10, 14 + i * 3, {
+          color: "white",
+          backgroundColor: "black",
+          opacity: 0.5
+        });
+        room.visual.text("NEXT ATTACK: " + (enemy.nextAttackAt - Game.time), 10, 16 + i * 3, {
+          color: "white",
+          backgroundColor: "black",
+          opacity: 0.5
+        });
+      }
+    }
   }
 
-  private refreshDamagedCreep(tower: StructureTower) {
-    Memory.rooms[tower.room.name] = Memory.rooms[tower.room.name] || {};
-    const creep = this.getDamagedCreepInRoom(tower);
-    Memory.rooms[tower.room.name].damagedCreepId = creep ? creep.id : null;
+  private hasAttackableEnemies(room: Room): boolean {
+    return !!Object.keys(creepsMemory)
+      .map(i => creepsMemory[i])
+      .find(i => i.room === room.name && i.nextAttackAt <= Game.time);
   }
 
-  private refreshDamagedStructures(tower: StructureTower) {
-    Memory.rooms[tower.room.name] = Memory.rooms[tower.room.name] || {};
-    const damagedStructure = this.getDamagedStructureInRoom(tower);
-    Memory.rooms[tower.room.name].damagedStructureId = damagedStructure ? damagedStructure.id : null;
+  private refreshEnemiesMemory(room: Room) {
+    const hostiles = room.find(FIND_HOSTILE_CREEPS, {
+      filter: i => whitelist.indexOf(i.owner.username) === -1
+    });
+    const towers = room.towers;
+
+    const hostilesAndRange = hostiles.map(h => ({ hostile: h, range: _.sum(towers, t => t.pos.getRangeTo(h)) }));
+
+    for (const data of hostilesAndRange) {
+      if (creepsMemory[data.hostile.id]) {
+        creepsMemory[data.hostile.id].range = data.range;
+      } else {
+        creepsMemory[data.hostile.id] = {
+          firstSeen: Game.time,
+          id: data.hostile.id,
+          room: room.name,
+          range: data.range,
+          attackedCount: 0,
+          nextAttackAt: Game.time + 15
+        };
+      }
+    }
+
+    // cleanup
+    for (const id in creepsMemory) {
+      if (creepsMemory[id].room === room.name && !hostilesAndRange.find(i => i.hostile.id === id)) {
+        delete creepsMemory[id];
+      }
+    }
+  }
+
+  /*   private refreshEnemy(room: Room) {
+    room.memory = room.memory || {};
+    const enemy = this.getEnemyInRoom(room);
+
+    const enemyMemory = room.memory.enemy;
+    const existingEnemy: Creep | undefined | null = enemyMemory && Game.getObjectById(enemyMemory.id);
+
+    if (enemyMemory && existingEnemy) {
+      enemyMemory.attack = enemyMemory.range <= 8 || Game.time - enemyMemory.firstSeen > 18;
+      const towersOrdered = _.sortBy(room.towers.map(t => t.pos.getRangeTo(existingEnemy)), i => i);
+      enemyMemory.range = towersOrdered.length ? towersOrdered[0] : 0;
+    } else {
+      if (enemy) {
+        room.memory.enemy = {
+          attack: false,
+          firstSeen: Game.time,
+          id: enemy.hostile.id,
+          range: enemy.range
+        };
+      } else {
+        delete room.memory.enemy;
+      }
+    }
+  }
+ */
+  private refreshDamagedCreep(room: Room) {
+    room.memory = room.memory || {};
+    const creep = this.getDamagedCreepInRoom(room);
+    room.memory.damagedCreepId = creep ? creep.id : null;
+  }
+
+  private refreshDamagedStructures(room: Room) {
+    room.memory = room.memory || {};
+    const damagedStructure = this.getDamagedStructureInRoom(room);
+    room.memory.damagedStructureId = damagedStructure ? damagedStructure.id : null;
   }
 
   private repairDamagedStructures(tower: StructureTower) {
-    let damagedStructureId = Memory.rooms[tower.room.name] && Memory.rooms[tower.room.name].damagedStructureId;
+    let damagedStructureId = tower.room.memory && tower.room.memory.damagedStructureId;
     let damagedStructure: AnyStructure | null = null;
     if (damagedStructureId) {
       damagedStructure = Game.getObjectById(damagedStructureId);
       if (!damagedStructure || damagedStructure.hits === damagedStructure.hitsMax) {
-        Memory.rooms[tower.room.name].damagedStructureId = null;
+        tower.room.memory.damagedStructureId = null;
         damagedStructureId = null;
         damagedStructure = null;
       }
@@ -93,19 +221,22 @@ class RoleTower {
   }
 
   private attackEnemies(tower: StructureTower) {
-    let enemyId = Memory.rooms[tower.room.name] && Memory.rooms[tower.room.name].enemyId;
-    let enemy: Creep | null = null;
-    if (enemyId) {
-      enemy = Game.getObjectById(enemyId);
-      if (!enemy || enemy.hits === 0) {
-        Memory.rooms[tower.room.name].enemyId = null;
-        enemyId = null;
-        enemy = null;
-      }
-    }
+    const firstEnemy = Object.keys(creepsMemory)
+      .map(i => creepsMemory[i])
+      .find(i => i.room === tower.room.name && i.nextAttackAt <= Game.time);
 
-    if (enemy) {
-      return tower.attack(enemy);
+    const enemyCreep = firstEnemy && (Game.getObjectById(firstEnemy.id) as Creep);
+
+    if (enemyCreep && firstEnemy) {
+      const status = tower.attack(enemyCreep);
+      if (status === OK) {
+        firstEnemy.attackedCount++;
+        if (firstEnemy.attackedCount > maxAttacks && enemyCreep.hits === enemyCreep.hitsMax) {
+          firstEnemy.nextAttackAt = Game.time + attackDelay;
+          firstEnemy.attackedCount = 0;
+        }
+      }
+      return status;
     } else {
       return -1;
     }
@@ -130,17 +261,15 @@ class RoleTower {
     }
   }
 
-  private getDamagedStructureInRoom(tower: StructureTower): AnyStructure | null {
-    const maxEnergyInExtensions = tower.room.energyAvailable === tower.room.energyCapacityAvailable;
+  private getDamagedStructureInRoom(room: Room): AnyStructure | null {
+    const maxEnergyInExtensions = room.energyAvailable === room.energyCapacityAvailable;
     const allowWallsAndRemparts =
-      Game.cpu.bucket > 9000 &&
-      maxEnergyInExtensions &&
-      (tower.room.storage ? tower.room.storage.store.energy > 930000 : false);
-    // const minHpRampart = rampartMinHp(tower.room.controller ? tower.room.controller.level : 0);
-    // const minHpWalls = wallsMinHp(tower.room.controller ? tower.room.controller.level : 0);
+      Game.cpu.bucket > 9000 && maxEnergyInExtensions && (room.storage ? room.storage.store.energy > 930000 : false);
+    // const minHpRampart = rampartMinHp(room.controller ? room.controller.level : 0);
+    // const minHpWalls = wallsMinHp(room.controller ? room.controller.level : 0);
 
     // only repair really damaged stuff
-    var damagedOther = tower.room.find(FIND_MY_STRUCTURES, {
+    var damagedOther = room.find(FIND_MY_STRUCTURES, {
       filter: structure => structure.structureType != STRUCTURE_RAMPART && structure.hits < structure.hitsMax / 10
     });
     if (damagedOther.length) {
@@ -148,7 +277,7 @@ class RoleTower {
       return damagedOther[0];
     }
 
-    var damagedRoads = tower.room.find(FIND_STRUCTURES, {
+    var damagedRoads = room.find(FIND_STRUCTURES, {
       filter: structure =>
         (allowWallsAndRemparts && structure.structureType === STRUCTURE_RAMPART) ||
         (allowWallsAndRemparts && structure.structureType === "constructedWall" && structure.hits > 0) ||
@@ -159,33 +288,23 @@ class RoleTower {
     return damagedRoads[0];
   }
 
-  private getDamagedCreepInRoom(tower: StructureTower): Creep | null {
-    var damagedOther = tower.pos.findClosestByRange(FIND_MY_CREEPS, {
+  private getDamagedCreepInRoom(room: Room): Creep | undefined {
+    var damagedOther = room.find(FIND_MY_CREEPS, {
       filter: structure => structure.hits < structure.hitsMax
-    });
+    })[0];
     return damagedOther;
   }
 
-  private getEnemyInRoom(tower: StructureTower): Creep | null {
-    var enemies = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS, {
+  private getEnemyInRoom(room: Room): { hostile: Creep; range: number } | undefined {
+    const hostiles = room.find(FIND_HOSTILE_CREEPS, {
       filter: i => whitelist.indexOf(i.owner.username) === -1
     });
+    const towers = room.towers;
 
-    // var healersFirst = _.sortBy(enemies, enemy => -1 * enemy.getActiveBodyparts(HEAL));
+    const hostilesAndRange = hostiles.map(h => ({ hostile: h, range: _.sum(towers, t => t.pos.getRangeTo(h)) }));
+    const closest = _.sortBy(hostilesAndRange, i => i.range)[0];
 
-    return enemies;
-  }
-
-  private getTowerList(): StructureTower[] {
-    const isSimulation = "sim" in Game.rooms;
-    if (!Memory.existingTowerIds || Game.time % 100 === 0 || isSimulation) {
-      const towerIds = Object.keys(Game.structures)
-        .map(i => Game.structures[i])
-        .filter(i => i.structureType === STRUCTURE_TOWER)
-        .map(i => i.id);
-      Memory.existingTowerIds = towerIds;
-    }
-    return Memory.existingTowerIds.map(i => Game.getObjectById(i) as StructureTower).filter(i => i);
+    return closest;
   }
 }
 

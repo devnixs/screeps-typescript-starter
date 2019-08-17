@@ -37,7 +37,7 @@ export class DefenseManager {
   runForOwnRoom() {
     const threatLevel = this.getThreatLevel(this.room.name);
     const towerCount = this.room.find(FIND_MY_STRUCTURES, { filter: s => s.structureType === "tower" }).length;
-    const towerThreatCompensation = towerCount * 8;
+    const towerThreatCompensation = towerCount * 15;
 
     const threatDifference = threatLevel - towerThreatCompensation;
 
@@ -61,10 +61,7 @@ export class DefenseManager {
   }
 
   checkRebuilding() {
-    if (Game.time % 100 > 0) {
-      return;
-    }
-
+    // todo: only run this from time to time.
     const ctrlLevel = this.room.controller ? this.room.controller.level : 0;
     this.room.memory.isRebuilding = this.room.energyCapacityAvailable <= getExpectedRoomEnergyAtLevel(ctrlLevel) / 2;
   }
@@ -175,8 +172,8 @@ export class DefenseManager {
               bodyPart =>
                 bodyPart.type === "attack" ||
                 bodyPart.type === "ranged_attack" ||
-                bodyPart.type === "heal" ||
-                bodyPart.type === "work"
+                bodyPart.type === "work" ||
+                bodyPart.type === "heal"
             )
         })
       : [];
@@ -215,7 +212,7 @@ export class DefenseManager {
               }
               let threat = 0;
               if (i.type === "attack") {
-                threat = 1;
+                threat = 2;
               }
               if (i.type === "ranged_attack") {
                 threat = 1;
@@ -230,7 +227,7 @@ export class DefenseManager {
                 threat = 0.1;
               }
               if (i.boost) {
-                threat = threat * 2;
+                threat = threat * 3;
               }
               return threat;
             })

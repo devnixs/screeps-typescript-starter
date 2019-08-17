@@ -1,4 +1,4 @@
-import { createFlagAtPosition } from "utils/misc-utils";
+import { createFlagAtPosition, getMyRooms, hasSafeModeAvailable, hasSafeModeActivated } from "utils/misc-utils";
 
 export class AttackPlanner {
   static run() {
@@ -7,7 +7,7 @@ export class AttackPlanner {
     }
 
     // If an attack is already in progress, no need to do anything
-    if (Memory.attack) {
+    if (Memory.attack || "attack" in Game.flags) {
       return;
     }
 
@@ -18,6 +18,27 @@ export class AttackPlanner {
 
       console.log("Starting auto attack to room ", nextAttack.room);
       createFlagAtPosition(new RoomPosition(25, 25, nextAttack.room), "attack");
+      return;
+    }
+    /*
+    const rebuildingRoom = getMyRooms().find(i => i.memory.isRebuilding);
+    if (rebuildingRoom) {
+      createFlagAtPosition(new RoomPosition(25, 25, rebuildingRoom.name), "attack");
+      return;
+    }
+ */
+    const roomThatNeedHelp = getMyRooms().find(i =>
+      i.controller &&
+      i.controller.level >= 2 &&
+      i.controller.level <= 6 &&
+      !hasSafeModeAvailable(i) &&
+      !hasSafeModeActivated(i) &&
+      i.memory.isUnderSiege
+        ? true
+        : false
+    );
+    if (roomThatNeedHelp) {
+      createFlagAtPosition(new RoomPosition(25, 25, roomThatNeedHelp.name), "attack");
     }
   }
 }

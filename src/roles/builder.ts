@@ -76,9 +76,15 @@ export class RoleBuilder implements IRole {
   run(creep: Creep) {
     const memory: IBuilderMemory = creep.memory as any;
     const moveOptions: TravelToOptions = {};
+    memory.s = Game.time;
 
     if (creep.room.memory.isUnderSiege) {
       moveOptions.obstacles = getObstaclesToAvoidRangedEnemies(creep);
+
+      // during sieges, refresh more often
+      if (Game.time % 20 === 0) {
+        this.resetTarget(memory, creep.room);
+      }
     }
 
     if (memory.subRole) {
@@ -143,7 +149,12 @@ export class RoleBuilder implements IRole {
         }
       }
     } else if (sourceManager.getEnergy(creep) !== OK) {
-      if (memory.subRole) {
+      const hasStaticHarvesters = !!creep.room.find(FIND_MY_CREEPS, {
+        filter: i => i.memory.role === "static-harvester"
+      });
+
+      if (memory.subRole || !hasStaticHarvesters) {
+        // harvest ourselves
         sourceManager.harvestEnergyFromSource(creep);
       } else {
         return this.goToRest(creep);

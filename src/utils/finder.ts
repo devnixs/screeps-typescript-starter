@@ -9,9 +9,8 @@ interface RoomAndExpiration {
 const closestRooms: { [target: string]: RoomAndExpiration } = {};
 
 let findClosestRoom = function(targetRoom: string, filter?: (room: Room) => boolean) {
-  // special case
-  if (targetRoom === "E19S19") {
-    return "E17S19";
+  if (targetRoom === "E7N9" && Game.shard.name === "swc") {
+    return "W1N5";
   }
 
   if (closestRooms[targetRoom] && closestRooms[targetRoom].expiration <= Game.time) {
@@ -21,14 +20,21 @@ let findClosestRoom = function(targetRoom: string, filter?: (room: Room) => bool
   if (closestRooms[targetRoom]) {
     return closestRooms[targetRoom].room;
   }
-
   var myRooms = _.uniq(Object.keys(Game.spawns).map(spwnName => Game.spawns[spwnName].room.name)).filter(
     i => i != targetRoom
   );
-  const targetSpawn =
-    Game.rooms[targetRoom] && Game.rooms[targetRoom].spawns[0]
-      ? Game.rooms[targetRoom].spawns[0].pos
-      : new RoomPosition(25, 25, targetRoom);
+
+  let targetSpawn: RoomPosition;
+  if (Game.rooms[targetRoom] && Game.rooms[targetRoom].spawns[0]) {
+    targetSpawn = Game.rooms[targetRoom] && Game.rooms[targetRoom].spawns[0].pos;
+  } else {
+    const emptySpot = findSpotWithNoWallsCloseTo(new RoomPosition(25, 25, targetRoom));
+    if (emptySpot) {
+      targetSpawn = emptySpot;
+    } else {
+      targetSpawn = new RoomPosition(25, 25, targetRoom);
+    }
+  }
 
   var roomsAndDistances = myRooms.map(sourceRoom => {
     const allowed = !filter || filter(Game.rooms[sourceRoom]);
@@ -87,13 +93,19 @@ let findAndCache = function findAndCache<K extends FindConstant>(
   findConstant: FindConstant,
   keepAliveCheck: (element: FindTypes[K]) => boolean,
   filter: FindPathOpts & FilterOptions<K> & { algorithm?: string },
-  duration: number = 10
+  duration: number = 10,
+  options: { byPath?: boolean } = {}
 ): FindTypes[K] | null {
   const key = creep.id + cacheKey;
 
   let entry = caches[key];
   if (!entry || Game.time > entry.expiration) {
-    const value = creep.pos.findClosestByRange(findConstant as any, filter) as AnyStructure;
+    let value: AnyStructure;
+    if (options.byPath) {
+      value = creep.pos.findClosestByPath(findConstant as any, filter) as AnyStructure;
+    } else {
+      value = creep.pos.findClosestByRange(findConstant as any, filter) as AnyStructure;
+    }
     entry = {
       id: value ? value.id : null,
       expiration: Game.time + duration
@@ -139,7 +151,9 @@ export function findHostile(creep: Creep) {
     filter: creep => {
       return (
         whitelist.indexOf(creep.owner.username) === -1 &&
-        !!creep.body.find(i => i.type === ATTACK || i.type === RANGED_ATTACK || i.type === WORK || i.type === HEAL)
+        !!creep.body.find(
+          i => i.type === ATTACK || i.type === RANGED_ATTACK || i.type === WORK || i.type === HEAL || i.type === CLAIM
+        )
       );
     }
   });
@@ -151,7 +165,9 @@ export function findHostiles(creep: Creep) {
     filter: creep => {
       return (
         whitelist.indexOf(creep.owner.username) === -1 &&
-        !!creep.body.find(i => i.type === ATTACK || i.type === RANGED_ATTACK || i.type === WORK || i.type === HEAL)
+        !!creep.body.find(
+          i => i.type === ATTACK || i.type === RANGED_ATTACK || i.type === WORK || i.type === HEAL || i.type === CLAIM
+        )
       );
     }
   });
@@ -202,6 +218,44 @@ let findEmptySpotCloseTo = function findEmptySpotCloseTo(
     if (!structureHere && (!ignoreFirst || current.x != pos.x || current.y != pos.y)) {
       if (!filter || filter(new RoomPosition(current.x, current.y, room.name))) {
         return current;
+      }
+    }
+
+    for (let i = -1; i <= 1; i++) {
+      for (let j = -1; j <= 1; j++) {
+        const possibleX = current.x + i;
+        const possibleY = current.y + j;
+        if ((i !== 0 || j !== 0) && possibleX >= 1 && possibleY >= 1 && possibleX < 49 && possibleY < 49) {
+          if (
+            !closedList.find(i => i.x === possibleX && i.y === possibleY) &&
+            !openList.find(i => i.x === possibleX && i.y === possibleY)
+          ) {
+            openList.push({ x: possibleX, y: possibleY });
+          }
+        }
+      }
+    }
+  }
+  return null;
+};
+
+let findSpotWithNoWallsCloseTo = function findSpotWithNoWallsCloseTo(
+  pos: RoomPosition,
+  ignoreFirst: boolean = false,
+  filter?: (pos: RoomPosition) => boolean
+) {
+  const openList: SimplePos[] = [pos];
+  const closedList = [];
+  const terrain = Game.map.getRoomTerrain(pos.roomName);
+
+  let current: SimplePos | undefined;
+  while ((current = openList.shift())) {
+    closedList.push(current);
+    const wallHere = terrain.get(current.x, current.y) === TERRAIN_MASK_WALL;
+
+    if (!wallHere && (!ignoreFirst || current.x != pos.x || current.y != pos.y)) {
+      if (!filter || filter(new RoomPosition(current.x, current.y, pos.roomName))) {
+        return new RoomPosition(current.x, current.y, pos.roomName);
       }
     }
 
@@ -375,9 +429,11 @@ findRestSpot = profiler.registerFN(findRestSpot, "findRestSpot");
 findEmptySpotCloseTo = profiler.registerFN(findEmptySpotCloseTo, "findEmptySpotCloseTo");
 findSafeAreaAround = profiler.registerFN(findSafeAreaAround, "findSafeAreaAround");
 findUnsafeArea = profiler.registerFN(findUnsafeArea, "findUnsafeArea");
+findSpotWithNoWallsCloseTo = profiler.registerFN(findSpotWithNoWallsCloseTo, "findSpotWithNoWallsCloseTo");
 
 (global as any).findSafeAreaAround = findSafeAreaAround;
 (global as any).closestRooms = closestRooms;
+(global as any).findClosestRoom = findClosestRoom;
 (global as any).findEmptySpotCloseTo = findEmptySpotCloseTo;
 
 export {
@@ -388,5 +444,6 @@ export {
   findClosestRoom,
   findSafeAreaAround,
   findAndCache,
-  findUnsafeArea
+  findUnsafeArea,
+  findSpotWithNoWallsCloseTo
 };

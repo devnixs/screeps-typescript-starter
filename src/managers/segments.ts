@@ -61,7 +61,7 @@ export class SegmentManager {
     const groups = _.pairs(_.groupBy(SegmentManager.loadQueue, i => i.segment)) as [string, ILoadQueue[]][];
     const nextActiveSegments: number[] = [];
 
-    for (let i = 0; i < Math.min(10, groups.length); i++) {
+    for (let i = 0; i < Math.min(8, groups.length); i++) {
       const group = groups[i];
       const segment = Number(group[0]);
       const queuedItems = group[1];
@@ -73,7 +73,7 @@ export class SegmentManager {
     }
     RawMemory.setActiveSegments(nextActiveSegments);
 
-    for (let i = 0; i < 9; i++) {
+    for (let i = 0; i < 8; i++) {
       const toSave = SegmentManager.saveQueue.shift();
       if (!toSave) {
         break;

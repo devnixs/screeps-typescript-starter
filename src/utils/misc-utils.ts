@@ -316,7 +316,11 @@ export function hasRoomBeenAttacked(room: Room) {
 }
 
 export function hasSafeModeAvailable(room: Room) {
-  return room.controller && !room.controller.safeModeCooldown;
+  const isAvailable = room.controller && (!room.controller.safeModeCooldown && room.controller.safeModeAvailable > 0);
+  const otherRoomHasSafeMode = getMyRooms().find(i =>
+    i.controller && i.controller.safeMode ? i.controller.safeMode > 0 : false
+  );
+  return isAvailable && !otherRoomHasSafeMode;
 }
 
 export function hasSafeModeActivated(room: Room) {
@@ -366,3 +370,4 @@ export function getExpectedRoomEnergyAtLevel(level: number) {
 (global as any).getTowerDamage = getTowerDamage;
 (global as any).mergeObjects = mergeObjects;
 (global as any).createFlagAtPosition = createFlagAtPosition;
+(global as any).hasSafeModeAvailable = hasSafeModeAvailable;

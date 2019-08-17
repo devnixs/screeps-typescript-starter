@@ -303,6 +303,9 @@ export class AttackPartyManager {
         if (creepInfo.creep.getActiveBodyparts(WORK)) {
           creepInfo.creep.dismantle(object as any);
         }
+        if (creepInfo.creep.getActiveBodyparts(ATTACK)) {
+          creepInfo.creep.attack(object as any);
+        }
         creepInfo.creep.rangedMassAttack();
       } else {
         creepInfo.creep.rangedAttack(object);
@@ -327,10 +330,10 @@ export class AttackPartyManager {
   private swapPositionsIfNecassary(creeps: AttackPartyCreepLoaded[], blocking: AnyStructure | Creep) {
     // we want the dismantlers to be facing the blocking object
     const inRangeCreepsNotDismantler = creeps.filter(
-      i => i.creep.pos.isNearTo(blocking) && !i.creep.body.find(i => i.type === "work")
+      i => i.creep.pos.isNearTo(blocking) && !i.creep.body.find(i => i.type === "work" || i.type === "attack")
     );
     const dismantlersNotInRange = creeps.filter(
-      i => !i.creep.pos.isNearTo(blocking) && i.creep.body.find(i => i.type === "work")
+      i => !i.creep.pos.isNearTo(blocking) && i.creep.body.find(i => i.type === "work" || i.type === "attack")
     );
 
     for (let i = 0; i < Math.min(inRangeCreepsNotDismantler.length, dismantlersNotInRange.length); i++) {
@@ -368,8 +371,12 @@ export class AttackPartyManager {
   private attackEnemiesAround(creeps: AttackPartyCreepLoaded[]): "attacked" | "OK" {
     const enemyInRange = _.flatten(
       creeps.map(creepInfos =>
-        creepInfos.creep.getActiveBodyparts("ranged_attack")
+        creepInfos.creep.getActiveBodyparts(RANGED_ATTACK)
           ? creepInfos.creep.pos.findInRange(FIND_HOSTILE_CREEPS, 3, {
+              filter: i => whitelist.indexOf(i.owner.username) === -1
+            })
+          : creepInfos.creep.getActiveBodyparts(ATTACK)
+          ? creepInfos.creep.pos.findInRange(FIND_HOSTILE_CREEPS, 1, {
               filter: i => whitelist.indexOf(i.owner.username) === -1
             })
           : []
@@ -391,7 +398,7 @@ export class AttackPartyManager {
   }
 
   private getTarget(room: Room): { target: RoomPosition; movingTarget: boolean } | undefined {
-    let target: AnyStructure | Creep | undefined = undefined;
+    let target: AnyStructure | Creep | ConstructionSite | undefined = undefined;
     if (room.controller && room.controller.owner.username !== getUsername()) {
       const structures = room.find(FIND_HOSTILE_STRUCTURES);
       target = target || structures.find(i => i.structureType === "tower");
@@ -402,7 +409,12 @@ export class AttackPartyManager {
       target = target || structures.find(i => i.structureType === "extractor");
       target = target || structures.find(i => i.structureType === "lab");
     }
-
+    /*
+    target =
+      target ||
+      room.find(FIND_CONSTRUCTION_SITES, {
+        filter: i => whitelist.indexOf(i.owner.username) === -1 && i.structureType === "spawn"
+      })[0]; */
     target = target || room.find(FIND_HOSTILE_CREEPS, { filter: i => whitelist.indexOf(i.owner.username) === -1 })[0];
 
     return target && { target: target.pos, movingTarget: target instanceof Creep };
@@ -487,7 +499,7 @@ export class AttackPartyManager {
         const rampart = pos
           .lookFor(LOOK_STRUCTURES)
           .find(i => i.structureType !== "road" && i.structureType !== "container");
-        if (rampart) {
+        if (rampart && !(rampart as any).my) {
           return rampart;
         }
         const creep = pos.lookFor(LOOK_CREEPS).find(i => i.owner && i.owner.username !== getUsername());
@@ -560,7 +572,7 @@ export class AttackPartyManager {
     if (roomVisibility && room === roomVisibility.name) {
       // add ramparts and walls are hard to walk on
       const walls = roomVisibility.find(FIND_STRUCTURES, {
-        filter: i => i.structureType === "rampart" || i.structureType === "constructedWall"
+        filter: i => (i.structureType === "rampart" && !i.my) || i.structureType === "constructedWall"
       }) as (StructureWall | StructureRampart)[];
       for (const wall of walls) {
         for (const creep of creeps) {
@@ -613,12 +625,18 @@ export class AttackPartyManager {
   private findAttackPath() {
     const roomVisibility = Game.rooms[this.attack.toRoom];
 
+    const isInTargetRoom = this.creeps()[0].creep.pos.roomName === this.attack.toRoom;
+
     let target: RoomPosition | undefined;
     let movingTarget = false;
     if (roomVisibility) {
       const targetInfos = this.getTarget(roomVisibility);
       const isEnemyRoom = roomVisibility.controller && roomVisibility.controller.owner.username !== getUsername();
-      if (!targetInfos) {
+
+      const flag = Game.flags.attack;
+      if (!targetInfos && !isInTargetRoom && flag) {
+        target = flag.pos;
+      } else if (!targetInfos) {
         if (isEnemyRoom) {
           console.log("Cannot find target in room ", roomVisibility.name);
         }

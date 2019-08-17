@@ -24,8 +24,12 @@ class RoleHarvester implements IRole {
     // if on top of container and there's a static harvester nearby waiting, suicide
     const container = creep.pos.lookFor(LOOK_STRUCTURES).find(i => i.structureType === "container");
     if (container && creep.pos.findInRange(FIND_MY_CREEPS, 1, { filter: i => i.memory.role === "static-harvester" })) {
-      console.log("Static harvester is ready, suiciding", creep.name);
-      creep.suicide();
+      if (creep.memory.role === "harvester") {
+        console.log("Static harvester is ready, suiciding", creep.name);
+        creep.suicide();
+      } else {
+        creep.goTo(creep.room.spawns[0]);
+      }
       return;
     }
 
@@ -34,9 +38,19 @@ class RoleHarvester implements IRole {
       // take the energy from the containers because we need to fill the extensions quickly
       // sourceManager.getEnergy(creep);
       // } else {
+
       const specificSource: Source | null = memory.subRole ? Game.getObjectById(memory.subRole) : null;
       if (specificSource) {
-        sourceManager.harvestEnergyFromSpecificSource(creep, specificSource);
+        const inRangeToSource = specificSource.pos.isNearTo(creep);
+        const bigBuilderNeedsSpot = creep.pos.findInRange(FIND_MY_CREEPS, 1, {
+          filter: (i: Creep) => i.id !== creep.id && i.getActiveBodyparts(WORK) >= 7 && i.memory.role === "builder"
+        })[0];
+
+        if (inRangeToSource && bigBuilderNeedsSpot) {
+          creep.goTo(bigBuilderNeedsSpot);
+        } else {
+          sourceManager.harvestEnergyFromSpecificSource(creep, specificSource);
+        }
       } else {
         sourceManager.harvestEnergyFromSource(creep);
       }

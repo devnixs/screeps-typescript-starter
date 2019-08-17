@@ -27,6 +27,7 @@ type roles =
   | "transport"
   | "poker"
   | "stealer"
+  | "manual-defender"
   | "dismantler";
 
 // memory extension samples
@@ -58,6 +59,13 @@ interface StealingStat {
   brought: number;
 }
 
+interface EnemyDefinition {
+  firstSeen: number;
+  id: string;
+  attack: boolean;
+  range: number;
+}
+
 interface RoomMemory {
   isRebuilding: boolean;
   stealingStats: StealingStat[];
@@ -77,7 +85,7 @@ interface RoomMemory {
   terminalPlannedLocation: PlannedLocation | undefined;
   avoid: any;
   damagedStructureId: string | null;
-  enemyId: string | null;
+  enemy?: EnemyDefinition;
   damagedCreepId: string | null;
   lastTowerRefreshTime: number | undefined;
   labGroups: LabGroup[];
@@ -145,6 +153,7 @@ interface AttackParty {
   ttl: number;
   distance?: number;
   blocker?: string;
+  creationDate: number;
 }
 
 interface MineralNeed {
@@ -244,7 +253,6 @@ interface LabMemory {
 interface Memory {
   uuid: number;
   log: any;
-  existingTowerIds: string[] | undefined;
   noNotificationBefore: number | undefined;
   lastBucketQuantity: number | undefined;
   lastBucketRefillTime: number | undefined;
