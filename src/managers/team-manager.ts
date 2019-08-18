@@ -1,8 +1,9 @@
 "use strict";
 
-import { whitelist } from "constants/misc";
-import { getMyRooms } from "utils/misc-utils";
+import { whitelist, desiredEnergyInTerminal } from "constants/misc";
+import { getMyRooms, runFromTimeToTime } from "utils/misc-utils";
 import { SegmentManager } from "./segments";
+import { profiler } from "utils/profiler";
 
 // This is completely unencrypted and in the clear. Maybe it shouldn't be :D
 const segmentID = 98;
@@ -25,35 +26,42 @@ interface DefenseRequest {
 }
 type Request = ResourceRequest | DefenseRequest;
 type RequestCallback = (request: Request) => void;
-function exampleCallback(request: Request) {
-  console.log("Team request detected:", JSON.stringify(request));
-  switch (request.requestType) {
+
+let myRooms: Room[] = [];
+
+function allyRequestCallback(request: Request) {
+  /*   switch (request.requestType) {
     case RequestType.RESOURCE:
       if (request.resourceType === "energy") {
+        const highEnergyRoom = myRooms.find(i => i.storage && i.storage.store.energy > 600000 - request.priority * 500000 && i.terminal && i.terminal.store.energy > desiredEnergyInTerminal);
+       if(highEnergyRoom && highEnergyRoom.terminal){
+        highEnergyRoom.terminal
+       }
       }
       break;
     case RequestType.DEFENSE:
       // Send some resources or whatever
       break;
-  }
+  } */
 }
 var allyRequests: Request[] | undefined;
 var requestArray: Request[];
 var simpleAllies = {
   run() {
-    this.checkAllies(exampleCallback);
+    if (runFromTimeToTime(whitelist.length, whitelist.length * 10)) {
+      this.checkAllies(allyRequestCallback);
+    }
   },
   // This sets foreign segments. Maybe you set them yourself for some other reason
   // Up to you to fix that.
   checkAllies(callback: RequestCallback) {
+    myRooms = getMyRooms().filter(i => i.controller && i.terminal && i.storage && i.storage && !i.terminal.cooldown);
     let currentAllyName = allyList[Game.time % allyList.length];
     if (RawMemory.foreignSegment && RawMemory.foreignSegment.username === currentAllyName) {
       const rawData = RawMemory.foreignSegment.data;
-      console.log("Raw data from user ", currentAllyName, rawData);
       allyRequests = allyRequests || (JSON.parse(rawData) as Request[]);
-      console.log("allyRequests", allyRequests);
+      //console.log("Request from ", currentAllyName, rawData);
       for (let request of allyRequests) {
-        console.log("Request", request);
         callback(request);
       }
     } else {
@@ -70,7 +78,7 @@ var simpleAllies = {
   // Call after making all your requests
   endOfTick() {
     if (Game.time % 5) {
-      SegmentManager.saveSegment(segmentID, JSON.stringify(requestArray));
+      SegmentManager.saveSegment(segmentID, requestArray);
     }
     // If you're already setting public segements somewhere this will overwrite that. You should
     // fix that yourself because I can't fix it for you.
@@ -94,3 +102,7 @@ var simpleAllies = {
   }
 };
 export { simpleAllies };
+
+simpleAllies.run = profiler.registerFN(simpleAllies.run, "simpleAllies.run");
+simpleAllies.endOfTick = profiler.registerFN(simpleAllies.endOfTick, "simpleAllies.endOfTick");
+simpleAllies.startOfTick = profiler.registerFN(simpleAllies.startOfTick, "simpleAllies.startOfTick");

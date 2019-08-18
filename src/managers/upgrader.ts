@@ -1,4 +1,5 @@
 import { getMyRooms } from "utils/misc-utils";
+import { profiler } from "utils/profiler";
 
 export class UpgradeManager {
   constructor(private room: Room) {}
@@ -114,3 +115,5 @@ export class UpgradeManager {
     }
   }
 }
+
+profiler.registerClass(UpgradeManager, "UpgradeManager");

@@ -3,7 +3,7 @@ let remoteBlacklist: string[] = [];
 
 if (Game.shard.name === "swc") {
   whitelist = ["Tigga", "Robalian", "Davaned"];
-  remoteBlacklist = ["W2N4", "W1N3", "W3N4", "W3N3"];
+  remoteBlacklist = ["W2N4", "W1N3", "W3N4", "W3N3", "W7N7", "W8N7"];
 }
 
 export { whitelist, remoteBlacklist };
@@ -33,8 +33,8 @@ export const wallsMinHp = (roomLevel: number) => {
   }
 
   if (roomLevel < 8) {
-    // limit to 1M under level 7
-    value = Math.min(value, 1000000);
+    // limit to 2M under level 7
+    value = Math.min(value, 2000000);
   }
   return value;
 };
@@ -98,7 +98,7 @@ export const desiredStocks: StoreDefinitionWithoutEnergy = {
   [RESOURCE_ZYNTHIUM_KEANITE]: 1000,
   [RESOURCE_UTRIUM_LEMERGITE]: 1000,
 
-  [RESOURCE_UTRIUM_HYDRIDE]: 0,
+  [RESOURCE_UTRIUM_HYDRIDE]: 1000,
   [RESOURCE_UTRIUM_OXIDE]: 0,
   [RESOURCE_KEANIUM_HYDRIDE]: 0,
   [RESOURCE_KEANIUM_OXIDE]: 1000,
@@ -109,7 +109,7 @@ export const desiredStocks: StoreDefinitionWithoutEnergy = {
   [RESOURCE_GHODIUM_HYDRIDE]: 0,
   [RESOURCE_GHODIUM_OXIDE]: 1000,
 
-  [RESOURCE_UTRIUM_ACID]: 0,
+  [RESOURCE_UTRIUM_ACID]: 3000,
   [RESOURCE_UTRIUM_ALKALIDE]: 0,
   [RESOURCE_KEANIUM_ACID]: 0,
   [RESOURCE_KEANIUM_ALKALIDE]: 30000,
@@ -120,7 +120,7 @@ export const desiredStocks: StoreDefinitionWithoutEnergy = {
   [RESOURCE_GHODIUM_ACID]: 0,
   [RESOURCE_GHODIUM_ALKALIDE]: 5000,
 
-  [RESOURCE_CATALYZED_UTRIUM_ACID]: 0,
+  [RESOURCE_CATALYZED_UTRIUM_ACID]: 3000,
   [RESOURCE_CATALYZED_UTRIUM_ALKALIDE]: 0,
   [RESOURCE_CATALYZED_KEANIUM_ACID]: 0,
   [RESOURCE_CATALYZED_KEANIUM_ALKALIDE]: 10000,

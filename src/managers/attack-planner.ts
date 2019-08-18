@@ -1,4 +1,5 @@
 import { createFlagAtPosition, getMyRooms, hasSafeModeAvailable, hasSafeModeActivated } from "utils/misc-utils";
+import { profiler } from "utils/profiler";
 
 export class AttackPlanner {
   static run() {
@@ -42,3 +43,5 @@ export class AttackPlanner {
     }
   }
 }
+
+profiler.registerClass(AttackPlanner, "AttackPlanner");

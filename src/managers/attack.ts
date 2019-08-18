@@ -3,6 +3,7 @@ import { getMyRooms, hasSafeModeAvailable } from "utils/misc-utils";
 import { generateAttackCreeps } from "./attack-analyst";
 import { ExplorationCache } from "utils/exploration-cache";
 import { Cartographer } from "utils/cartographer";
+import { profiler } from "utils/profiler";
 
 // This makes a quad
 const attackPartyPositions = [
@@ -436,3 +437,5 @@ interface ReadyReason {
   ready: boolean;
   reason: string;
 }
+
+profiler.registerClass(AttackManager, "AttackManager");

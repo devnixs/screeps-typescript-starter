@@ -161,6 +161,7 @@ class RoleLongDistanceTruck implements IRole {
           const ctrl = Game.rooms[memory.homeRoom].controller;
           if (ctrl && !ctrl.pos.isNearTo(creep)) {
             creep.say("🐓");
+            creep.memory.s = Game.time;
             creep.goTo(ctrl, { range: 4 });
           }
         } else {

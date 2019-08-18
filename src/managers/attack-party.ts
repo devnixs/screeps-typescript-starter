@@ -7,6 +7,7 @@ import { IAttackerMemory } from "roles/attacker";
 import { RoomAnalyzer } from "./room-analyzer";
 import { ExplorationCache } from "utils/exploration-cache";
 import { whitelist } from "constants/misc";
+import { profiler } from "utils/profiler";
 
 export class AttackPartyManager {
   constructor(private attackParty: AttackParty, private attack: AttackSetup) {}
@@ -872,3 +873,5 @@ interface AttackPartyCreepLoaded extends AttackPartyCreep {
 
 (global as any).testAttackPath = AttackPartyManager.testAttackPath;
 (global as any).AttackPartyManager = AttackPartyManager;
+
+profiler.registerClass(AttackPartyManager, "AttackPartyManager");

@@ -3,6 +3,7 @@ import { Cartographer } from "utils/cartographer";
 import { IPokerMemory } from "roles/poker";
 import { ExplorationCache } from "utils/exploration-cache";
 import { whitelist } from "constants/misc";
+import { profiler } from "utils/profiler";
 
 export class StealingManager {
   constructor(private room: Room) {}
@@ -110,3 +111,5 @@ export class StealingManager {
 (global as any).StealingManager = StealingManager;
 
 (global as any).outputStealingStats = StealingManager.outputStats;
+
+profiler.registerClass(StealingManager, "StealingManager");

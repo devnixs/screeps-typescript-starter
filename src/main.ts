@@ -56,6 +56,7 @@ import { StealingManager } from "managers/stealing";
 import { roleStealer } from "roles/stealer";
 import { AttackPlanner } from "managers/attack-planner";
 import { simpleAllies } from "managers/team-manager";
+import { runFromTimeToTime } from "utils/misc-utils";
 
 console.log("Code has been loaded");
 
@@ -97,7 +98,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
     }
     try {
       simpleAllies.startOfTick();
-      // simpleAllies.run();
+      simpleAllies.run();
     } catch (e) {
       error = e;
     }
@@ -259,13 +260,31 @@ export const loop = ErrorMapper.wrapLoop(() => {
       }
     } */
 
-    if (Game.time === 292456 + 20000) {
-      const storage = Game.getObjectById("5d53a21104d374529de1b682") as StructureStorage;
-      const terminal = Game.getObjectById("5d5489eab42d6a66a3f2cfce") as StructureTerminal;
-      if (storage && terminal) {
-        if (Game.time % 100 === 0 && storage.store.energy > 200000) {
-          terminal.send(RESOURCE_ENERGY, 1000, "W2N3");
-        }
+    const storage1 = Game.getObjectById("5d53a21104d374529de1b682") as StructureStorage;
+    const terminal1 = Game.getObjectById("5d5489eab42d6a66a3f2cfce") as StructureTerminal;
+    if (storage1 && terminal1) {
+      if (
+        terminal1.store.energy > 10000 &&
+        !terminal1.cooldown &&
+        storage1.store.energy > 100000 &&
+        runFromTimeToTime(500, 1000)
+      ) {
+        console.log("1. Sending energy to my other room...");
+        terminal1.send(RESOURCE_ENERGY, 1000, "W1N5");
+      }
+    }
+
+    const storage2 = Game.getObjectById("5d549d0732f0ba666cd64aaa") as StructureStorage;
+    const terminal2 = Game.getObjectById("5d55d14dc5cdea666aab5500") as StructureTerminal;
+    if (storage2 && terminal1) {
+      if (
+        terminal2.store.energy > 10000 &&
+        !terminal2.cooldown &&
+        storage2.store.energy > 100000 &&
+        runFromTimeToTime(500, 1000)
+      ) {
+        console.log("2. Sending energy to my other room...");
+        terminal2.send(RESOURCE_ENERGY, 1000, "W1N5");
       }
     }
 

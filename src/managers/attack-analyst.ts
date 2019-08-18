@@ -1,6 +1,7 @@
 import { boostResources } from "constants/resources";
 import { repeatArray, mergeObjects, getMyRooms } from "utils/misc-utils";
 import { ExplorationCache } from "utils/exploration-cache";
+import { profiler } from "utils/profiler";
 
 interface GenerateAttackCreepsInfos {
   fromRoom: string;
@@ -294,7 +295,7 @@ const definitions = [
   t0Rcl5
 ];
 
-export function generateAttackCreeps(infos: GenerateAttackCreepsInfos) {
+function generateAttackCreepsFn(infos: GenerateAttackCreepsInfos) {
   const fromRoom = Game.rooms[infos.fromRoom];
   if (!fromRoom) {
     console.log("Cannot find home room");
@@ -370,4 +371,10 @@ export function generateAttackCreeps(infos: GenerateAttackCreepsInfos) {
   return null;
 }
 
-(global as any).generateAttackCreeps = generateAttackCreeps;
+(global as any).generateAttackCreeps = generateAttackCreepsFn;
+
+const generateAttackCreeps = profiler.registerFN(
+  generateAttackCreepsFn,
+  "generateAttackCreeps"
+) as (typeof generateAttackCreepsFn);
+export { generateAttackCreeps };

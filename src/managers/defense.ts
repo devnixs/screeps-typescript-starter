@@ -2,6 +2,7 @@ import { getMyRooms, getExpectedRoomEnergyAtLevel } from "utils/misc-utils";
 import { Cartographer } from "utils/cartographer";
 import { Chemist } from "./chemist";
 import { whitelist } from "constants/misc";
+import { profiler } from "utils/profiler";
 
 interface ThreatLevelAndTime {
   threatLevel: number;
@@ -70,7 +71,7 @@ export class DefenseManager {
     this.room.memory.isUnderSiege = true;
     console.log("Room", this.room.name, "is under siege!");
     this.room.memory.boostMode = {
-      parts: [RANGED_ATTACK],
+      parts: [ATTACK],
       reason: "siege"
     };
     Game.notify("Room " + this.room.name + " is under siege! Tick=" + Game.time);
@@ -236,3 +237,5 @@ export class DefenseManager {
     );
   }
 }
+
+profiler.registerClass(DefenseManager, "DefenseManager");

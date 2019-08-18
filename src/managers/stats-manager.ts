@@ -1,6 +1,7 @@
 import { getMyRooms } from "utils/misc-utils";
 import { measureCpuAverage } from "utils/cpu";
 import { RoomExplorationsSegments } from "./segments";
+import { profiler } from "utils/profiler";
 
 const roles: roles[] = [
   "harvester",
@@ -130,3 +131,5 @@ export class StatsManager {
     };
   }
 }
+
+profiler.registerClass(StatsManager, "StatsManager");
