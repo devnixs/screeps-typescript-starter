@@ -53,11 +53,12 @@ export function hasMinerals(store: { [resourceType: string]: number }): boolean 
   return false;
 }
 
-export function createFlagAtPosition(pos: RoomPosition, flagName: string) {
+export function createFlagAtPosition(pos: RoomPosition, flagName: string, memory: any = {}) {
   var firstRoom = getMyRooms()[0];
   new RoomPosition(25, 25, firstRoom.name).createFlag(flagName);
   setTimeout(() => {
     Game.flags[flagName].setPosition(new RoomPosition(pos.x, pos.y, pos.roomName));
+    Game.flags[flagName].memory = memory;
   }, 1);
 }
 

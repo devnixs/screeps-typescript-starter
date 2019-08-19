@@ -197,7 +197,11 @@ class RoleTower {
 
   private refreshDamagedStructures(room: Room) {
     room.memory = room.memory || {};
-    const damagedStructure = this.getDamagedStructureInRoom(room);
+    let damagedStructure = this.getDamagedStructureInRoom(room);
+    if (room.memory.isUnderSiege) {
+      // save energy during sieges.
+      damagedStructure = null;
+    }
     room.memory.damagedStructureId = damagedStructure ? damagedStructure.id : null;
   }
 

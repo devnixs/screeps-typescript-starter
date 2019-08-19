@@ -18,7 +18,9 @@ export class AttackPlanner {
       Memory.nextAttack = undefined;
 
       console.log("Starting auto attack to room ", nextAttack.room);
-      createFlagAtPosition(new RoomPosition(25, 25, nextAttack.room), "attack");
+      createFlagAtPosition(new RoomPosition(25, 25, nextAttack.room), "attack", {
+        reason: "planned"
+      } as AttackFlagMemory);
       return;
     }
     /*
@@ -39,7 +41,9 @@ export class AttackPlanner {
         : false
     );
     if (roomThatNeedHelp) {
-      createFlagAtPosition(new RoomPosition(25, 25, roomThatNeedHelp.name), "attack");
+      createFlagAtPosition(new RoomPosition(25, 25, roomThatNeedHelp.name), "attack", {
+        reason: "self-defense"
+      } as AttackFlagMemory);
     }
   }
 }

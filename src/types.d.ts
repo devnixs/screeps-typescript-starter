@@ -239,6 +239,12 @@ interface LabGroup {
 
 type LabState = "waiting-for-resource" | "needs-emptying" | "running" | "idle";
 
+interface AttackFlagMemory {
+  reason: "manual" | "ally-defense" | "self-defense" | "planned";
+  expiration: number | undefined;
+  priority: number;
+}
+
 interface LabMemory {
   id: string;
   state: LabState;
@@ -268,6 +274,26 @@ interface Memory {
 
   attack: AttackSetup | undefined;
   nextAttack: NextAttack | undefined;
+  helps: Help[] | undefined;
+}
+
+interface Help {
+  /**
+   * Room
+   */
+  r: string;
+  /**
+   * Amount
+   */
+  a: number;
+  /**
+   * Location (room name)
+   */
+  l: string;
+  /**
+   * Date
+   */
+  t: number;
 }
 
 interface NextAttack {

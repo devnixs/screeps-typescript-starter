@@ -316,13 +316,13 @@ export class AttackPartyManager {
 
   private moveAndAttack(creeps: AttackPartyCreepLoaded[]) {
     const attackResult = this.attackEnemiesAround(creeps);
-    const blockingObject = this.moveParty(creeps);
+    const blockingObject = this.moveParty(creeps) as Creep;
     if (blockingObject) {
       this.swapPositionsIfNecassary(creeps, blockingObject);
     }
 
     if (attackResult === "OK") {
-      if (blockingObject) {
+      if (blockingObject && !blockingObject.my && whitelist.indexOf(blockingObject.owner.username) === -1) {
         this.attackObject(creeps, blockingObject);
       }
     }
@@ -400,7 +400,11 @@ export class AttackPartyManager {
 
   private getTarget(room: Room): { target: RoomPosition; movingTarget: boolean } | undefined {
     let target: AnyStructure | Creep | ConstructionSite | undefined = undefined;
-    if (room.controller && room.controller.owner.username !== getUsername()) {
+    if (
+      room.controller &&
+      room.controller.owner.username !== getUsername() &&
+      whitelist.indexOf(room.controller.owner.username) === -1
+    ) {
       const structures = room.find(FIND_HOSTILE_STRUCTURES);
       target = target || structures.find(i => i.structureType === "tower");
       target = target || room.spawns[0];
@@ -503,7 +507,7 @@ export class AttackPartyManager {
         if (rampart && !(rampart as any).my) {
           return rampart;
         }
-        const creep = pos.lookFor(LOOK_CREEPS).find(i => i.owner && i.owner.username !== getUsername());
+        const creep = pos.lookFor(LOOK_CREEPS)[0];
         return creep;
       })
       .filter(i => i);
@@ -632,7 +636,10 @@ export class AttackPartyManager {
     let movingTarget = false;
     if (roomVisibility) {
       const targetInfos = this.getTarget(roomVisibility);
-      const isEnemyRoom = roomVisibility.controller && roomVisibility.controller.owner.username !== getUsername();
+      const isEnemyRoom =
+        roomVisibility.controller &&
+        roomVisibility.controller.owner.username !== getUsername() &&
+        whitelist.indexOf(roomVisibility.controller.owner.username) === -1;
 
       const flag = Game.flags.attack;
       if (!targetInfos && !isInTargetRoom && flag) {

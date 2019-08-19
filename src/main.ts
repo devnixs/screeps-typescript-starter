@@ -260,13 +260,13 @@ export const loop = ErrorMapper.wrapLoop(() => {
       }
     } */
 
-    const storage1 = Game.getObjectById("5d53a21104d374529de1b682") as StructureStorage;
+    /*     const storage1 = Game.getObjectById("5d53a21104d374529de1b682") as StructureStorage;
     const terminal1 = Game.getObjectById("5d5489eab42d6a66a3f2cfce") as StructureTerminal;
     if (storage1 && terminal1) {
       if (
         terminal1.store.energy > 10000 &&
         !terminal1.cooldown &&
-        storage1.store.energy > 100000 &&
+        storage1.store.energy > 150000 &&
         runFromTimeToTime(500, 1000)
       ) {
         console.log("1. Sending energy to my other room...");
@@ -280,14 +280,14 @@ export const loop = ErrorMapper.wrapLoop(() => {
       if (
         terminal2.store.energy > 10000 &&
         !terminal2.cooldown &&
-        storage2.store.energy > 100000 &&
+        storage2.store.energy > 150000 &&
         runFromTimeToTime(500, 1000)
       ) {
         console.log("2. Sending energy to my other room...");
         terminal2.send(RESOURCE_ENERGY, 1000, "W1N5");
       }
     }
-
+ */
     if (error) {
       throw error;
     }

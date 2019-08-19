@@ -556,5 +556,3 @@ profiler.registerClass(RemotesManager, "RemotesManager");
 };
 
 (global as any).outputRemoteStats = RemotesManager.outputStats;
-
-profiler.registerClass(RemotesManager, "RemotesManager");

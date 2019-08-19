@@ -4,6 +4,7 @@ import { mincutHelper } from "utils/mincut-walls";
 import { getMyRooms, hasRoomBeenAttacked, hasSafeModeAvailable } from "utils/misc-utils";
 import { profiler } from "utils/profiler";
 import { setTimeout } from "utils/set-timeout";
+import { getUsedPercentage } from "utils/cpu";
 
 const structureColors: any = {
   [STRUCTURE_EXTENSION]: "yellow",
@@ -38,7 +39,9 @@ export class RoomPlanner {
     this.findRestSpot();
     this.doManualPlacement();
 
-    if (Game.time % 17 > 0) {
+    const delay = getUsedPercentage() > 0.5 ? 37 : 17;
+
+    if (Game.time % delay > 0) {
       return;
     }
 

@@ -23,6 +23,7 @@ export class AttackManager {
     AttackManager.stopAttackIfSuccessful();
     AttackManager.stopAttackIfFailed();
     AttackManager.stopAttackIfIdle();
+    AttackManager.stopAttackIfExpired();
     AttackManager.removeIdleParties();
     AttackManager.stopDefenseWhenItsNoLongerNecessary();
   }
@@ -156,6 +157,33 @@ export class AttackManager {
     }
   }
 
+  static stopAttackIfExpired() {
+    const attack = Memory.attack;
+    if (!attack || Game.time % 5 > 0) {
+      return;
+    }
+
+    const flag = Game.flags["attack"];
+    const memory = flag && (flag.memory as AttackFlagMemory);
+
+    if (flag && memory && memory.expiration && memory.expiration < Game.time) {
+      // stop attack
+      console.log("Attack is expired. Stopping");
+      flag.remove();
+    }
+  }
+
+  static isAlmostExpired() {
+    const flag = Game.flags["attack"];
+    const memory = flag && (flag.memory as AttackFlagMemory);
+
+    if (flag && memory && memory.expiration && memory.expiration < Game.time + 500) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
   static stopAttackIfSuccessful() {
     const attack = Memory.attack;
     if (!attack || Game.time % 5 > 0) {
@@ -194,15 +222,23 @@ export class AttackManager {
     if (!attack) {
       return;
     }
+
+    if (AttackManager.isAlmostExpired()) {
+      return;
+    }
+
     const existingParty = attack.parties.find(i => i.status !== "dead" && (!i.distance || i.distance <= i.ttl - 250));
     if (existingParty) {
       return;
     }
 
+    const attackFlagMemory = Game.flags.attack && (Game.flags.attack.memory as AttackFlagMemory);
+
     let partyInfo = generateAttackCreeps({
       fromRoom: attack.fromRoom,
       targetRoom: attack.toRoom,
-      force: false
+      force: false,
+      priority: attackFlagMemory ? attackFlagMemory.priority : undefined
     });
     if (!partyInfo) {
       // stop attack
@@ -210,7 +246,8 @@ export class AttackManager {
       partyInfo = generateAttackCreeps({
         fromRoom: attack.fromRoom,
         targetRoom: attack.toRoom,
-        force: true
+        force: true,
+        priority: attackFlagMemory ? attackFlagMemory.priority : undefined
       });
       if (!partyInfo) {
         console.log("I was not able to generate an attack party. aborting attack");

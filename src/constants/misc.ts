@@ -3,7 +3,7 @@ let remoteBlacklist: string[] = [];
 
 if (Game.shard.name === "swc") {
   whitelist = ["Tigga", "Robalian", "Davaned"];
-  remoteBlacklist = ["W2N4", "W1N3", "W3N4", "W3N3", "W7N7", "W8N7"];
+  remoteBlacklist = ["W2N4", "W1N3", "W3N4", "W3N3", "W7N7", "W8N7", "W3N3", "W2N2", "W1N2", "W3N2"];
 }
 
 export { whitelist, remoteBlacklist };

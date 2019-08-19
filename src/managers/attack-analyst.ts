@@ -2,11 +2,13 @@ import { boostResources } from "constants/resources";
 import { repeatArray, mergeObjects, getMyRooms } from "utils/misc-utils";
 import { ExplorationCache } from "utils/exploration-cache";
 import { profiler } from "utils/profiler";
+import { S_IFSOCK } from "constants";
 
 interface GenerateAttackCreepsInfos {
   fromRoom: string;
   targetRoom: string;
   force: boolean;
+  priority?: number;
 }
 
 interface PartyDefinition {
@@ -307,7 +309,7 @@ function generateAttackCreepsFn(infos: GenerateAttackCreepsInfos) {
   }
 
   const targetRoomInfos = ExplorationCache.getExploration(infos.targetRoom);
-  const targetRcl = targetRoomInfos ? targetRoomInfos.el : undefined;
+  let targetRcl = targetRoomInfos ? targetRoomInfos.el : undefined;
 
   const allTerminals = getMyRooms()
     .map(i => {
@@ -326,7 +328,11 @@ function generateAttackCreepsFn(infos: GenerateAttackCreepsInfos) {
     .filter(i => i);
   const resourcesAvailable: any = mergeObjects(allTerminals);
 
-  const forcedAttackRcl = [0, 1, 2, 3, 4, 5, 6, 7, 8].find(i => !!Game.flags["force_attack_rcl_" + i]);
+  let forcedAttackRcl = [0, 1, 2, 3, 4, 5, 6, 7, 8].find(i => !!Game.flags["force_attack_rcl_" + i]);
+
+  if (infos.priority) {
+    forcedAttackRcl = Math.floor(infos.priority * 8);
+  }
 
   for (const def of definitions) {
     const parts = mergeObjects(def.creeps);
@@ -377,4 +383,5 @@ const generateAttackCreeps = profiler.registerFN(
   generateAttackCreepsFn,
   "generateAttackCreeps"
 ) as (typeof generateAttackCreepsFn);
+
 export { generateAttackCreeps };
