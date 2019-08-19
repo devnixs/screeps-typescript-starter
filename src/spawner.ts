@@ -1,6 +1,7 @@
 import { getSpawnerRequirements, RoleRequirement } from "spawner-requirements";
 import { profiler } from "./utils/profiler";
 import { isLowOnCpu, getUsedPercentage } from "utils/cpu";
+import { getCreepsByHomeRoom } from "utils/creeps-cache";
 
 const costs = {
   [MOVE]: 50,
@@ -94,23 +95,19 @@ class Spawner {
 
     requirements = requirements.filter(i => !i.onlyRooms || i.onlyRooms.indexOf(spawn.room.name) >= 0);
 
-    const allCreeps = (_.values(Game.creeps) as Creep[]).filter(
+    const creepsInThisRoom = getCreepsByHomeRoom(spawn.room.name).filter(
       i =>
         i.ticksToLive === undefined ||
         i.ticksToLive > i.body.length * 3 + (i.room.name != spawn.room.name ? 100 : i.pos.getRangeTo(spawn))
     );
 
-    const creepsInThisRoom = allCreeps.filter(i => i.memory.homeRoom === spawn.room.name);
-
     const counts = _.countBy(creepsInThisRoom, i => this.getRoleSlug(i.memory.role, i.memory.subRole));
-    const countsAccrossAllRooms = _.countBy(allCreeps, i => this.getRoleSlug(i.memory.role, i.memory.subRole));
     const totalPercentage = _.sum(requirements.map(i => i.percentage));
     const debugMode = false;
 
     const roleInfos = requirements.map(role => {
       const roleSlug = this.getRoleSlug(role.role, role.subRole);
       const currentCount = counts[roleSlug] || 0;
-      const currentCountAccrossAllRooms = countsAccrossAllRooms[roleSlug] || 0;
       const currentPercentage = creepsInThisRoom.length > 0 ? currentCount / creepsInThisRoom.length : 0;
       const desiredPercentage = role.percentage / totalPercentage;
       const templateRepeats = _.sum(
@@ -132,7 +129,6 @@ class Spawner {
         currentPercentage,
         desiredPercentage,
         currentCount: currentCount,
-        currentCountAccrossAllRooms: currentCountAccrossAllRooms,
         requirement: role,
         templateRepeats: templateRepeats
       };
@@ -145,20 +141,14 @@ class Spawner {
         i.currentPercentage < i.desiredPercentage &&
         (!i.requirement.disableIfLowOnCpu || !lowOnCpu) &&
         (i.requirement.maxCount === undefined || i.currentCount < i.requirement.maxCount) &&
-        (i.requirement.maxRepatAccrossAll === undefined || i.templateRepeats < i.requirement.maxRepatAccrossAll) &&
-        (!i.requirement.countAllRooms ||
-          !i.requirement.maxCount ||
-          i.currentCountAccrossAllRooms < i.requirement.maxCount)
+        (i.requirement.maxRepatAccrossAll === undefined || i.templateRepeats < i.requirement.maxRepatAccrossAll)
     )[0];
 
     const roleThatCanBeCreated = roleInfos.filter(
       i =>
         (!i.requirement.disableIfLowOnCpu || !lowOnCpu) &&
         (i.requirement.maxCount === undefined || i.currentCount < i.requirement.maxCount) &&
-        (i.requirement.maxRepatAccrossAll === undefined || i.templateRepeats < i.requirement.maxRepatAccrossAll) &&
-        (!i.requirement.countAllRooms ||
-          !i.requirement.maxCount ||
-          i.currentCountAccrossAllRooms < i.requirement.maxCount)
+        (i.requirement.maxRepatAccrossAll === undefined || i.templateRepeats < i.requirement.maxRepatAccrossAll)
     )[0];
 
     if (debugMode) {

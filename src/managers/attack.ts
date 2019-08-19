@@ -4,6 +4,7 @@ import { generateAttackCreeps } from "./attack-analyst";
 import { ExplorationCache } from "utils/exploration-cache";
 import { Cartographer } from "utils/cartographer";
 import { profiler } from "utils/profiler";
+import { getCreepsByRoleAndRoom } from "utils/creeps-cache";
 
 // This makes a quad
 const attackPartyPositions = [
@@ -431,9 +432,7 @@ export class AttackManager {
       };
     }
 
-    var availableTrucks = Object.keys(Game.creeps)
-      .map(i => Game.creeps[i])
-      .filter(i => i.memory.role === "truck" && i.memory.homeRoom === roomName);
+    var availableTrucks = getCreepsByRoleAndRoom(roomName, "truck");
 
     if (availableTrucks.length < 2) {
       return {

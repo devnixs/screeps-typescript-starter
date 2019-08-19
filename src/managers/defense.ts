@@ -3,6 +3,7 @@ import { Cartographer } from "utils/cartographer";
 import { Chemist } from "./chemist";
 import { whitelist } from "constants/misc";
 import { profiler } from "utils/profiler";
+import { getCreepsByRoleAndRoom } from "utils/creeps-cache";
 
 interface ThreatLevelAndTime {
   threatLevel: number;
@@ -116,9 +117,7 @@ export class DefenseManager {
   }
 
   reassignDefenders() {
-    const defenders = Object.keys(Game.creeps)
-      .map(i => Game.creeps[i])
-      .filter(i => i.memory.homeRoom === this.room.name && i.memory.role === "remote-defender");
+    const defenders = getCreepsByRoleAndRoom(this.room.name, "remote-defender");
     let idleDefenders = defenders.filter(i => !i.memory.subRole);
     const threatenedRooms = this.room.memory.needsDefenders;
 

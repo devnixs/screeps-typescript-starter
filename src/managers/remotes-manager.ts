@@ -5,6 +5,7 @@ import { Cartographer } from "utils/cartographer";
 import { Traveler } from "utils/Traveler";
 import { getReduceUsageRatio } from "utils/cpu";
 import { remoteBlacklist } from "constants/misc";
+import { getCreepsByRoleAndRoom } from "utils/creeps-cache";
 
 export class RemotesManager {
   constructor(private room: Room) {}
@@ -361,6 +362,10 @@ export class RemotesManager {
         !(i.memory as ILongDistanceTruckMemory).depositing
     );
 
+    if (availableTrucks.length === 0) {
+      return;
+    }
+
     const remotes = _.sortBy(
       this.getEnabledRemotes().filter(i => {
         const maxTrucks = i.energy > 3000 ? 4 : 3;
@@ -392,19 +397,16 @@ export class RemotesManager {
   }
 
   availableRemoteTrucks() {
-    const allCreeps = _.values(Game.creeps) as Creep[];
-    return allCreeps.filter(
+    const trucks = getCreepsByRoleAndRoom(this.room.name, "long-distance-truck");
+    return trucks.filter(
       i =>
-        i.memory.homeRoom === this.room.name &&
-        i.memory.role === "long-distance-truck" &&
         (i.memory as ILongDistanceTruckMemory).targetContainer === undefined &&
         !(i.memory as ILongDistanceTruckMemory).depositing
     );
   }
 
   remoteTrucks() {
-    const allCreeps = _.values(Game.creeps) as Creep[];
-    return allCreeps.filter(i => i.memory.homeRoom === this.room.name && i.memory.role === "long-distance-truck");
+    return getCreepsByRoleAndRoom(this.room.name, "long-distance-truck");
   }
 
   checkReservation() {

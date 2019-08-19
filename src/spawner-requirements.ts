@@ -38,7 +38,6 @@ export interface RoleRequirement {
   bodyTemplate?: BodyPartConstant[];
   bodyTemplatePrepend?: BodyPartConstant[];
   additionalMemory?: any;
-  countAllRooms?: boolean;
   capMaxEnergy?: number;
   minEnergy?: number;
   sortBody?: BodyPartConstant[];
@@ -714,7 +713,7 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
       percentage: 2,
       role: "poker",
       exactBody: [MOVE, ATTACK],
-      maxCount: spawn.room.memory.poker && runFromTimeToTime(1500, 4500) ? 1 : 0,
+      maxCount: spawn.room.memory.poker && runFromTimeToTime(1500, 4500) && getUsedPercentage() < 0.7 ? 1 : 0,
       additionalMemory: {
         targetRoom: spawn.room.memory.poker
       } as Partial<IPokerMemory>

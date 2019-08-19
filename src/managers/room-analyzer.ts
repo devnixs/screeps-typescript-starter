@@ -6,6 +6,7 @@ import { findClosestRoom } from "utils/finder";
 import { explorationConstants } from "constants/memory-constants";
 import { buildRangeFromRoomLimit } from "constants/misc";
 import { ExplorationCache } from "../utils/exploration-cache";
+import { getUsedPercentage } from "utils/cpu";
 
 export class RoomAnalyzer {
   public static run() {
@@ -32,7 +33,12 @@ export class RoomAnalyzer {
       return;
     }
 
-    if (memory && memory.t >= Game.time - 500 && !force) {
+    const averageRefreshRate = 500;
+    const power = 5;
+    const coeff = Math.pow(averageRefreshRate / Math.pow(0.5, power), 1 / power);
+    const refreshRate = Math.pow(getUsedPercentage() * coeff, power);
+
+    if (memory && memory.t >= Game.time - refreshRate && !force) {
       return;
     }
 

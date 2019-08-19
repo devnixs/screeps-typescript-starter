@@ -37,6 +37,30 @@ class RoleScout implements IRole {
       return;
     }
 
+    this.findNextRoom(creep);
+
+    if (this.signIfNecessary(creep) === OK) {
+      return;
+    }
+
+    this.showStatus(creep);
+
+    const moveOptions: TravelToOptions = this.getMoveOptions();
+    if (memory.targetExit) {
+      creep.goTo(
+        new RoomPosition(memory.targetExit.x, memory.targetExit.y, memory.targetExit.roomName || creep.room.name),
+        moveOptions
+      );
+    } else {
+      creep.goTo(new RoomPosition(25, 25, memory.targetRoom as string), moveOptions);
+    }
+  }
+
+  findNextRoom(creep: Creep) {
+    const homeRoom = Game.rooms[creep.memory.homeRoom];
+    const memory = creep.memory as IScoutMemory;
+    let cpu = Game.cpu.getUsed();
+
     if (creep.room.name === memory.targetRoom || !memory.targetRoom || !memory.targetExitDir) {
       const myRooms = getMyRooms();
       if (!myRooms.find(i => i === creep.room)) {
@@ -46,6 +70,7 @@ class RoleScout implements IRole {
           roomMemory.l = Game.time;
         }
       }
+
       // console.log("Looking for new room", creep.room.name);
       const neighboorRooms = _.shuffle(_.pairs(Game.map.describeExits(creep.room.name)) as [[FindConstant, string]]);
 
@@ -103,7 +128,9 @@ class RoleScout implements IRole {
         delete memory.targetExit;
       }
     }
+  }
 
+  signIfNecessary(creep: Creep) {
     const currentSign = creep.room.controller && creep.room.controller.sign && creep.room.controller.sign.text;
     const currentSignUser = creep.room.controller && creep.room.controller.sign && creep.room.controller.sign.username;
     const roomIsOwned = creep.room.controller && creep.room.controller.owner && !creep.room.controller.my;
@@ -113,20 +140,29 @@ class RoleScout implements IRole {
       creep.room.controller &&
       (currentSignUser !== getUsername() || (currentSign && !currentSign.endsWith(signature)))
     ) {
-      creep.goTo(creep.room.controller, {
-        roomCallback: (roomName, matrix) => (roomName === creep.room.name ? matrix : false)
-      });
-      const hasExplorationMemory = ExplorationCache.getExploration(creep.room.name);
-      if (hasExplorationMemory && hasExplorationMemory.c) {
-        creep.signController(creep.room.controller, hasExplorationMemory.c.s + " " + signature);
-      } else {
-        creep.signController(creep.room.controller, signature);
-      }
-      return;
+      this.signController(creep, creep.room.controller);
+      return OK;
+    } else {
+      return -1;
     }
+  }
 
+  signController(creep: Creep, controller: StructureController) {
+    creep.goTo(controller, {
+      roomCallback: (roomName, matrix) => (roomName === creep.room.name ? matrix : false)
+    });
+    const hasExplorationMemory = ExplorationCache.getExploration(creep.room.name);
+    if (hasExplorationMemory && hasExplorationMemory.c) {
+      creep.signController(controller, hasExplorationMemory.c.s + " " + signature);
+    } else {
+      creep.signController(controller, signature);
+    }
+  }
+
+  showStatus(creep: Creep) {
+    const memory = creep.memory as IScoutMemory;
     if (Game.time % 2 === 0) {
-      creep.say(memory.targetRoom);
+      creep.say(memory.targetRoom || "");
     } else {
       if (memory.targetExitDir === FIND_EXIT_TOP) {
         creep.say("⬆️");
@@ -138,13 +174,16 @@ class RoleScout implements IRole {
         creep.say("⬅️");
       }
     }
+  }
 
+  getMoveOptions() {
     const moveOptions: TravelToOptions = {
       ignoreRoads: true,
       disableCaching: true,
       roomCallback: (roomName: string, matrix: CostMatrix) => {
         // avoid enemies if possible
         const room = Game.rooms[roomName];
+        const cpu = Game.cpu.getUsed();
         if (room) {
           const enemies = room.find(FIND_HOSTILE_CREEPS, { filter: i => whitelist.indexOf(i.owner.username) === -1 });
           enemies.forEach(enemy => {
@@ -162,16 +201,9 @@ class RoleScout implements IRole {
         return matrix;
       }
     };
-
-    if (memory.targetExit) {
-      creep.goTo(
-        new RoomPosition(memory.targetExit.x, memory.targetExit.y, memory.targetExit.roomName || creep.room.name),
-        moveOptions
-      );
-    } else {
-      creep.goTo(new RoomPosition(25, 25, memory.targetRoom), moveOptions);
-    }
+    return moveOptions;
   }
+
   goHome(creep: Creep) {
     if (creep.room.name !== creep.memory.homeRoom) {
       // go back home
