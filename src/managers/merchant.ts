@@ -149,13 +149,19 @@ export class Merchant {
     for (let resourceType in groups) {
       const resources = groups[resourceType];
       const orderedLowest = _.sortBy(resources, i => i.amount);
-      const orderedHighest = _.sortBy(resources.filter(i => i.terminalReady && !i.isBoostMode), i => -1 * i.amount);
+      const orderedHighest = _.sortBy(
+        resources.filter(i => i.terminalReady && !i.isBoostMode && i.amount >= TERMINAL_MIN_SEND),
+        i => -1 * i.amount
+      );
       const lowest = orderedLowest[0];
       const highest = orderedHighest[0];
 
-      if (highest.amount > lowest.amount * 1.5) {
+      if (highest && lowest && highest.amount > lowest.amount * 1.5) {
         const sourceTerminal = highest.room.terminal as StructureTerminal;
-        const amountToSend = Math.min((highest.amount - lowest.amount) / 4, maxTransferSize);
+        let amountToSend = Math.max(Math.min((highest.amount - lowest.amount) / 4, maxTransferSize), TERMINAL_MIN_SEND);
+
+        amountToSend = Math.round(amountToSend);
+
         console.log("Sending", amountToSend, resourceType, "from", highest.room.name, "to", lowest.room.name);
         const sendResult = sourceTerminal.send(resourceType as ResourceConstant, amountToSend, lowest.room.name);
         returns = returns === OK || sendResult === OK ? OK : -1;

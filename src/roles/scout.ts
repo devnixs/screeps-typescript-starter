@@ -185,7 +185,9 @@ class RoleScout implements IRole {
         const room = Game.rooms[roomName];
         const cpu = Game.cpu.getUsed();
         if (room) {
-          const enemies = room.find(FIND_HOSTILE_CREEPS, { filter: i => whitelist.indexOf(i.owner.username) === -1 });
+          const enemies = room.find(FIND_HOSTILE_CREEPS, {
+            filter: i => !i.owner || whitelist.indexOf(i.owner.username) === -1
+          });
           enemies.forEach(enemy => {
             for (let i = -3; i <= 3; i++)
               for (let j = -3; j <= 3; j++) {

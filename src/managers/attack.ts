@@ -5,6 +5,7 @@ import { ExplorationCache } from "utils/exploration-cache";
 import { Cartographer } from "utils/cartographer";
 import { profiler } from "utils/profiler";
 import { getCreepsByRoleAndRoom } from "utils/creeps-cache";
+import { setTimeout } from "utils/set-timeout";
 
 // This makes a quad
 const attackPartyPositions = [
@@ -27,6 +28,7 @@ export class AttackManager {
     AttackManager.stopAttackIfExpired();
     AttackManager.removeIdleParties();
     AttackManager.stopDefenseWhenItsNoLongerNecessary();
+    AttackManager.relocateAttack();
   }
 
   static checkAttackStatus() {
@@ -41,7 +43,7 @@ export class AttackManager {
           room: i,
           lvl: i.controller ? i.controller.level : 0
         }))
-        .filter(i => i.range <= 12);
+        .filter(i => i.range <= 17);
 
       const highestLevelRoomInRange = _.sortBy(_.sortBy(roomsInRange, i => i.range), i => -1 * i.lvl)[0];
 
@@ -67,7 +69,24 @@ export class AttackManager {
     }
 
     if (Memory.attack && !flag) {
+      console.log("Attack flag no longer exist. Stopping attack");
       AttackManager.stopAttack();
+    }
+  }
+
+  static relocateAttack() {
+    if (Game.time % 7 > 0) {
+      return;
+    }
+
+    const flag = getAttackFlag();
+    const attack = Memory.attack;
+    if (flag && attack && flag.pos.roomName !== attack.toRoom) {
+      console.log("Relocating attack from ", attack.toRoom, "to", flag.pos.roomName);
+      attack.toRoom = flag.pos.roomName;
+      attack.parties.forEach(party => {
+        party.status = "moving";
+      });
     }
   }
 
@@ -167,7 +186,7 @@ export class AttackManager {
     const flag = Game.flags["attack"];
     const memory = flag && (flag.memory as AttackFlagMemory);
 
-    if (flag && memory && memory.expiration && memory.expiration < Game.time) {
+    if (flag && memory && memory.expiration && memory.expiration + 300 < Game.time) {
       // stop attack
       console.log("Attack is expired. Stopping");
       flag.remove();
@@ -200,16 +219,29 @@ export class AttackManager {
       }
     }
 
-    if (attack.parties.find(i => i.status === "safemode")) {
+    const safeModeParty = attack.parties.find(i => i.status === "safemode");
+
+    if (safeModeParty) {
       // stop attack
-      console.log("Attack successful (safemode activated). Stopping attack");
+      console.log("Attack successful (safemode activated).");
       Memory.nextAttack = {
         room: attack.toRoom,
         time: Game.time + SAFE_MODE_DURATION
       };
       const flag = getAttackFlag();
       if (flag) {
-        flag.remove();
+        (flag.memory as AttackFlagMemory).expiration = Game.time + safeModeParty.ttl;
+
+        const nextTarget = Game.flags.next_target;
+        if (nextTarget) {
+          const nextpos = new RoomPosition(25, 25, nextTarget.pos.roomName);
+          console.log("Moving attack flag to next target", nextpos);
+          // flag.setPosition(nextpos);
+          setTimeout(() => {
+            console.log("Flag is now located at: ", Game.flags.attack ? Game.flags.attack.pos : "Not found");
+            // Game.flags.next_target.remove();
+          }, 1);
+        }
       }
     }
   }
@@ -230,6 +262,11 @@ export class AttackManager {
 
     const existingParty = attack.parties.find(i => i.status !== "dead" && (!i.distance || i.distance <= i.ttl - 250));
     if (existingParty) {
+      return;
+    }
+
+    const formingParty = attack.parties.find(i => i.status === "forming");
+    if (formingParty) {
       return;
     }
 
@@ -475,3 +512,5 @@ interface ReadyReason {
 }
 
 profiler.registerClass(AttackManager, "AttackManager");
+
+(global as any).AttackManager = AttackManager;

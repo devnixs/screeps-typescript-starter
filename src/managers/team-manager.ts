@@ -1,7 +1,7 @@
 "use strict";
 
-import { whitelist, desiredEnergyInTerminal, desiredStocks } from "constants/misc";
-import { getMyRooms, runFromTimeToTime, createFlagAtPosition } from "utils/misc-utils";
+import { whitelist, desiredEnergyInTerminal, desiredStocks, buyableElements } from "constants/misc";
+import { getMyRooms, runFromTimeToTime, createFlagAtPosition, getUsername } from "utils/misc-utils";
 import { SegmentManager } from "./segments";
 import { profiler } from "utils/profiler";
 
@@ -29,15 +29,15 @@ type RequestCallback = (request: Request) => void;
 
 let myRooms: Room[] = [];
 
-function sendCallback(resource: ResourceConstant, amount: number, room: string) {
-  console.log("Sent to ally ", amount, resource, "to", room);
+function sendCallback(resource: ResourceConstant, amount: number, room: string, priority: number) {
+  console.log("Sent to ally ", amount, resource, "to", room, "with priority", priority);
   Memory.helps = Memory.helps || [];
-  Memory.helps.push({
+  /*   Memory.helps.push({
     a: amount,
     l: room,
     r: resource,
     t: Game.time
-  });
+  }); */
 }
 
 function allyRequestCallback(request: Request) {
@@ -62,7 +62,7 @@ function allyRequestCallback(request: Request) {
             request.roomName
           );
           if (result === OK) {
-            sendCallback(request.resourceType, desiredEnergyInTerminal / 4, request.roomName);
+            sendCallback(request.resourceType, desiredEnergyInTerminal / 4, request.roomName, request.priority);
           }
         }
       } else if (request.priority >= 0.1) {
@@ -77,10 +77,10 @@ function allyRequestCallback(request: Request) {
 
         if (oversuppliedTerminal && oversuppliedTerminal.terminal) {
           const availableAmount = oversuppliedTerminal.terminal.store[request.resourceType] as number;
-          const sendingAmount = Math.min(1000, availableAmount - minAmount);
+          const sendingAmount = Math.max(1000, availableAmount - minAmount);
           const result = oversuppliedTerminal.terminal.send(request.resourceType, sendingAmount, request.roomName);
-          if (result) {
-            sendCallback(request.resourceType, sendingAmount, request.roomName);
+          if (result === OK) {
+            sendCallback(request.resourceType, sendingAmount, request.roomName, request.priority);
           }
         }
       }
@@ -107,10 +107,11 @@ var simpleAllies = {
       this.checkAllies(allyRequestCallback);
     }
 
-    if (Game.time % delay) {
+    if (Game.time % delay === 0) {
       // check energies
       const storageTargetEnergy = 100000;
-      const lowEnergyRooms = getMyRooms().filter(
+      const myRooms = getMyRooms();
+      const lowEnergyRooms = myRooms.filter(
         i => i.storage && i.terminal && i.storage.store.energy < storageTargetEnergy
       );
       for (const room of lowEnergyRooms) {
@@ -119,6 +120,35 @@ var simpleAllies = {
         const priority = (storageTargetEnergy - energy) / storageTargetEnergy;
         console.log("Asking for energy in room", room.name, "with priority", priority);
         this.requestResource(room.name, "energy", priority);
+      }
+
+      for (const room of myRooms) {
+        if (room.terminal && room.storage) {
+          for (const res of buyableElements) {
+            const available = room.terminal.store[res];
+            if (!available || available < 3000) {
+              this.requestResource(room.name, res, 0.25);
+            }
+          }
+        }
+      }
+    }
+
+    if (Game.time % delay === 0) {
+      const me = getUsername();
+      const lastTransactions = Game.market.incomingTransactions.filter(
+        i => i.time > Game.time - delay && i.sender && i.sender.username !== me
+      );
+      for (const trans of lastTransactions) {
+        console.log(
+          "Received",
+          trans.amount,
+          trans.resourceType,
+          "from",
+          trans.sender && trans.sender.username,
+          "in",
+          trans.to
+        );
       }
     }
   },
@@ -132,10 +162,12 @@ var simpleAllies = {
       allyRequests = allyRequests || (JSON.parse(rawData) as Request[]);
       //console.log("Request from ", currentAllyName, rawData);
       for (let request of allyRequests) {
-        callback(request);
+        if (currentAllyName !== "Davaned") {
+          callback(request);
+        }
       }
     } else {
-      console.log("Simple allies either has no segment or has the wrong name?", currentAllyName);
+      // console.log("Simple allies either has no segment or has the wrong name?", currentAllyName);
     }
     let nextAllyName = allyList[(Game.time + 1) % allyList.length];
     RawMemory.setActiveForeignSegment(nextAllyName, segmentID);

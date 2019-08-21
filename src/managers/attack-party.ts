@@ -2,7 +2,7 @@ import { findRestSpot, findEmptySpotCloseTo } from "utils/finder";
 import { Cartographer } from "utils/cartographer";
 import { Traveler } from "utils/Traveler";
 import { isFunction } from "util";
-import { getUsername } from "utils/misc-utils";
+import { getUsername, getCreepMaxBoostedHealth, getCreepMaxAttackDamage } from "utils/misc-utils";
 import { IAttackerMemory } from "roles/attacker";
 import { RoomAnalyzer } from "./room-analyzer";
 import { ExplorationCache } from "utils/exploration-cache";
@@ -194,6 +194,20 @@ export class AttackPartyManager {
     }
   }
 
+  private stayAtRangeOfDangerousEnemies(creeps: AttackPartyCreepLoaded[]) {
+    for (const creep of creeps) {
+      if (!creep.maxHealth) {
+        creep.maxHealth = getCreepMaxBoostedHealth(creep.creep);
+      }
+    }
+
+    const enemies = creeps[0].creep.room.find(FIND_HOSTILE_CREEPS, {
+      filter: i => whitelist.indexOf(i.owner.username) === -1
+    });
+    const closeEnemies = enemies.filter(e => e.pos.inRangeTo(creeps[0].creep, 4));
+    const cacDamage = enemies.map(i => ({ creep: i, damage: getCreepMaxAttackDamage(i) }));
+  }
+
   private runAttackingParty() {
     const creeps = this.creeps();
     const roomVisibility = Game.rooms[this.attack.toRoom];
@@ -308,8 +322,10 @@ export class AttackPartyManager {
           creepInfo.creep.attack(object as any);
         }
         creepInfo.creep.rangedMassAttack();
-      } else {
+      } else if (creepInfo.creep.pos.inRangeTo(object, 3)) {
         creepInfo.creep.rangedAttack(object);
+      } else {
+        creepInfo.creep.rangedMassAttack();
       }
     }
   }
@@ -505,9 +521,15 @@ export class AttackPartyManager {
           .lookFor(LOOK_STRUCTURES)
           .find(i => i.structureType !== "road" && i.structureType !== "container");
         if (rampart && !(rampart as any).my) {
-          return rampart;
+          var r = rampart.structureType === "rampart" ? (rampart as StructureRampart) : null;
+          if (r && r.isPublic) {
+            return null;
+          } else {
+            return rampart;
+          }
         }
-        const creep = pos.lookFor(LOOK_CREEPS)[0];
+        // find other creep
+        const creep = pos.lookFor(LOOK_CREEPS).find(i => !this.attackParty.creeps.find(j => j.name === i.name));
         return creep;
       })
       .filter(i => i);

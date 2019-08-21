@@ -93,7 +93,7 @@ const t2Rcl6: PartyDefinition = {
   ],
   repeat: 4,
   canCounterRcl: 6,
-  requiresBoostsTier: 1,
+  requiresBoostsTier: 2,
   requiresRcl: 6
 };
 
@@ -183,6 +183,21 @@ const t3Rcl7: PartyDefinition = {
   ],
   repeat: 2,
   canCounterRcl: 7,
+  requiresBoostsTier: 3,
+  requiresRcl: 7
+};
+
+const t3Rcl7RangedAttack: PartyDefinition = {
+  creeps: [
+    {
+      [TOUGH]: 6,
+      [MOVE]: 8,
+      [RANGED_ATTACK]: 15,
+      [HEAL]: 11
+    }
+  ],
+  repeat: 4,
+  canCounterRcl: 6,
   requiresBoostsTier: 3,
   requiresRcl: 7
 };
@@ -283,6 +298,7 @@ const definitions = [
   t3rcl8,
   t2rcl8,
   t3Rcl7,
+  t3Rcl7RangedAttack,
   t3Rcl7NoRangedAttackBoosts,
   t3Rcl7NoMoveParts,
   t2Rcl7,

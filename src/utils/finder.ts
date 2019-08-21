@@ -417,9 +417,11 @@ export function findEmptyRempart(target: _HasRoomPosition, creep: Creep) {
 }
 
 export function getAttackFlag() {
+  return Game.flags.attack;
+  /*
   return Object.keys(Game.flags)
     .filter(i => i.startsWith("attack"))
-    .map(i => Game.flags[i])[0];
+    .map(i => Game.flags[i])[0]; */
 }
 
 findAndCache = profiler.registerFN(findAndCache, "findAndCache");

@@ -34,6 +34,23 @@ export class UpgradeManager {
       return;
     }
 
+    const downgradeTimer = this.room.controller.ticksToDowngrade;
+    if (downgradeTimer < CONTROLLER_DOWNGRADE[this.room.controller.level] * 0.2) {
+      console.log("Triggering emergency upgrade in room", this.room.name);
+      this.room.memory.upgraderType = "mobile";
+      this.room.memory.upgraderRatio = 10;
+      return;
+    }
+
+    if (
+      Game.shard.name === "swc" &&
+      this.room.controller.level >= 7 &&
+      (this.room.name !== "W7N8" || this.room.controller.level === 8)
+    ) {
+      this.room.memory.upgraderRatio = 0;
+      return;
+    }
+
     const storage = this.room.storage;
     const container = Game.getObjectById(this.room.memory.controllerContainer) as StructureContainer | undefined;
 

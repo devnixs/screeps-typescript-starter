@@ -62,6 +62,42 @@ export function createFlagAtPosition(pos: RoomPosition, flagName: string, memory
   }, 1);
 }
 
+export function getCreepMaxBoostedHealth(creep: Creep) {
+  var hits = creep.body.map(part => {
+    if (part.type === "tough" && part.boost) {
+      const boost = part.boost as "GO" | "GHO2" | "XGHO2";
+      return 100 / BOOSTS.tough[boost].damage;
+    } else {
+      return 100;
+    }
+  });
+  return _.sum(hits);
+}
+
+export function getCreepMaxAttackDamage(creep: Creep) {
+  var hits = creep.body.map(part => {
+    if (part.type === "attack" && part.boost) {
+      const boost = part.boost as "UH" | "UH2O" | "XUH2O";
+      return ATTACK_POWER * BOOSTS.attack[boost].attack;
+    } else {
+      return 0;
+    }
+  });
+  return _.sum(hits);
+}
+
+export function getCreepMaxRangedAttackDamage(creep: Creep) {
+  var hits = creep.body.map(part => {
+    if (part.type === "ranged_attack" && part.boost) {
+      const boost = part.boost as "KO" | "KHO2" | "XKHO2";
+      return ATTACK_POWER * BOOSTS.ranged_attack[boost].rangedAttack;
+    } else {
+      return 0;
+    }
+  });
+  return _.sum(hits);
+}
+
 let username: string | undefined = undefined;
 export function getUsername(): string {
   if (username) {

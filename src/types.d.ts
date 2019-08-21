@@ -165,6 +165,7 @@ interface AttackPartyCreep {
   name: string;
   x: number;
   y: number;
+  maxHealth?: number;
 }
 
 interface BoostMode {
@@ -275,6 +276,12 @@ interface Memory {
   attack: AttackSetup | undefined;
   nextAttack: NextAttack | undefined;
   helps: Help[] | undefined;
+  portals: Portal[];
+}
+
+interface Portal {
+  from: SimplePosWithRoomName;
+  to: SimplePosWithRoomName;
 }
 
 interface Help {

@@ -1,6 +1,5 @@
 import { CachedPaths } from "./cached-paths";
 import { ExplorationCache } from "./exploration-cache";
-import { whitelist } from "constants/misc";
 import { getUsedPercentage } from "./cpu";
 
 /**
@@ -242,7 +241,9 @@ export class Traveler {
     const roomInfo = ExplorationCache.getExploration(roomName);
     if (roomInfo && roomInfo.eb) {
       if (roomInfo.o) {
-        return whitelist.indexOf(roomInfo.o) === -1;
+        return true;
+        // don't even go through owner rooms
+        // return whitelist.indexOf(roomInfo.o) === -1;
       } else {
         return true;
       }
@@ -344,6 +345,21 @@ export class Traveler {
 
     origin = this.normalizePos(origin);
     destination = this.normalizePos(destination);
+
+    const portalPath = this.findPortalPath(origin, destination);
+    if (portalPath) {
+      console.log("Finding path through portal", origin, destination, "path:", JSON.stringify(portalPath));
+      const path1 = this.findTravelPath(portalPath[0], portalPath[1]);
+      const path2 = this.findTravelPath(portalPath[2], portalPath[3]);
+      const merged = {
+        cost: path1.cost + path2.cost,
+        incomplete: path1.incomplete || path2.incomplete,
+        ops: path1.ops + path2.ops,
+        path: path1.path.concat(path2.path)
+      } as PathfinderReturn;
+      return merged;
+    }
+
     let originRoomName = origin.roomName;
     let destRoomName = destination.roomName;
 
@@ -466,13 +482,47 @@ export class Traveler {
     }
   }
 
+  public static findPortalPath(from: RoomPosition, to: RoomPosition) {
+    const distance = Game.map.getRoomLinearDistance(from.roomName, to.roomName);
+    if (Memory.portals && distance > 5) {
+      for (const portal of Memory.portals) {
+        const path1 =
+          Game.map.getRoomLinearDistance(from.roomName, portal.from.roomName) +
+          Game.map.getRoomLinearDistance(portal.to.roomName, to.roomName);
+        const path2 =
+          Game.map.getRoomLinearDistance(from.roomName, portal.to.roomName) +
+          Game.map.getRoomLinearDistance(portal.from.roomName, to.roomName);
+
+        if (path1 < distance - 3) {
+          return [from, simplePosToRoomPosition(portal.from), simplePosToRoomPosition(portal.to), to];
+        }
+
+        if (path2 < distance - 3) {
+          return [from, simplePosToRoomPosition(portal.to), simplePosToRoomPosition(portal.from), to];
+        }
+      }
+    }
+
+    return null;
+  }
+
   public static findRoute(
     origin: string,
     destination: string,
     options: TravelToOptions = {}
   ): { [roomName: string]: boolean } | void {
-    let restrictDistance = options.restrictDistance || Game.map.getRoomLinearDistance(origin, destination) + 10;
+    const distance = Game.map.getRoomLinearDistance(origin, destination);
+
+    let restrictDistance = options.restrictDistance || distance + 10;
     let allowedRooms = { [origin]: true, [destination]: true };
+
+    const portalPath = this.findPortalPath(new RoomPosition(25, 25, origin), new RoomPosition(25, 25, destination));
+    if (portalPath) {
+      const path1 = this.findRoute(portalPath[0].roomName, portalPath[1].roomName);
+      const path2 = this.findRoute(portalPath[2].roomName, portalPath[3].roomName);
+      const merged = _.assign({}, path1, path2);
+      return merged as { [roomName: string]: boolean };
+    }
 
     let highwayBias = 1;
     if (options.preferHighway) {
@@ -792,6 +842,10 @@ const STATE_CPU = 3;
 const STATE_DEST_X = 4;
 const STATE_DEST_Y = 5;
 const STATE_DEST_ROOMNAME = 6;
+
+function simplePosToRoomPosition(pos: SimplePosWithRoomName) {
+  return new RoomPosition(pos.x, pos.y, pos.roomName);
+}
 
 // assigns a function to Creep.prototype: creep.travelTo(destination)
 Creep.prototype.travelTo = function(destination: RoomPosition | { pos: RoomPosition }, options?: TravelToOptions) {

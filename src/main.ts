@@ -60,7 +60,7 @@ import { runFromTimeToTime } from "utils/misc-utils";
 
 console.log("Code has been loaded");
 
-// profiler.enable();
+profiler.enable();
 
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
@@ -71,8 +71,14 @@ export const loop = ErrorMapper.wrapLoop(() => {
     } catch (e) {
       console.log("Failed to run timeout", e);
     }
-    // console.log("Start tick used", Game.cpu.getUsed());
-    // console.log("After memory access", Memory.lastConquestTime ? Game.cpu.getUsed() : Game.cpu.getUsed());
+
+    if (Game.time % 333 === 0) {
+      const initial = Game.cpu.getUsed();
+      console.log(
+        "Time spent deserializing",
+        Memory.lastConquestTime ? Game.cpu.getUsed() - initial : Game.cpu.getUsed() - initial
+      );
+    }
 
     /*     if ("sim" in Game.rooms) {
       const flag = Game.flags["t"];
@@ -231,6 +237,21 @@ export const loop = ErrorMapper.wrapLoop(() => {
     for (const name in Memory.creeps) {
       if (!(name in Game.creeps)) {
         delete Memory.creeps[name];
+      }
+    }
+    for (const name in Memory.flags) {
+      if (!(name in Game.flags)) {
+        delete Memory.flags[name];
+      }
+    }
+
+    // cleanup useless room memories
+    if (Game.time % 20000 === 0) {
+      for (const roomName in Memory.rooms) {
+        if (Object.keys(Memory.rooms[roomName]).length === 0) {
+          console.log("Cleaning up room", roomName);
+          delete Memory.rooms[roomName];
+        }
       }
     }
 
