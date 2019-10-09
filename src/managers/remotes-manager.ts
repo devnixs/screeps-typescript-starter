@@ -308,6 +308,10 @@ export class RemotesManager {
   }
 
   createRoads() {
+    if (Object.keys(Game.constructionSites).length > MAX_CONSTRUCTION_SITES * 0.7) {
+      return;
+    }
+
     const remotes = this.getEnabledRemotes();
     if (Game.time % 287 === 0 && remotes.length) {
       const homeSpawn = this.room.find(FIND_MY_SPAWNS)[0];

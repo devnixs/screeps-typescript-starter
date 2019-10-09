@@ -44,10 +44,10 @@ class RoleRemoteDefender implements IRole {
       return;
     }
 
-    if (boostCreep(creep) === OK) {
+    /*     if (boostCreep(creep) === OK) {
       return;
     }
-
+ */
     const rampartTarget = hostile || creep;
 
     // ATTACK MODE

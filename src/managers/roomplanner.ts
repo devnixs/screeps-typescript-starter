@@ -25,6 +25,8 @@ const structureColors: any = {
   [STRUCTURE_EXTRACTOR]: "purple"
 };
 
+let nextChecks: { [roomName: string]: number } = {};
+
 export class RoomPlanner {
   constructor(private room: Room) {}
 
@@ -75,6 +77,11 @@ export class RoomPlanner {
       return;
     }
 
+    if (nextChecks[this.room.name] && nextChecks[this.room.name] > Game.time) {
+      return;
+    }
+    let somethingHasBeenDone = false;
+
     for (let i = 0; i < this.room.memory.roomPlanner.structures.length; i++) {
       const structure = this.room.memory.roomPlanner.structures[i];
       if (structure.l && structure.l > ctrl.level) {
@@ -96,6 +103,7 @@ export class RoomPlanner {
 
       const result = this.room.createConstructionSite(structure.x, structure.y, structure.type);
       if (result === OK) {
+        somethingHasBeenDone = true;
         break;
       } else if (result === ERR_INVALID_TARGET) {
         // check if there's a road underneath blocking
@@ -109,6 +117,7 @@ export class RoomPlanner {
           if (roadUnderneath && buildingsUnderneath.length === 1) {
             console.log("Destroying road", roadUnderneath, roadUnderneath.pos, Game.time);
             roadUnderneath.destroy();
+            somethingHasBeenDone = true;
             setTimeout(() => {
               console.log("Creating original element", JSON.stringify(structure), Game.time);
               Game.rooms[this.room.name].createConstructionSite(structure.x, structure.y, structure.type);
@@ -119,6 +128,7 @@ export class RoomPlanner {
           if (structure.type === "link" && containerUnderneath) {
             console.log("Destroying container", containerUnderneath, containerUnderneath.pos, Game.time);
             containerUnderneath.destroy();
+            somethingHasBeenDone = true;
             setTimeout(() => {
               console.log("Creating original element", JSON.stringify(structure), Game.time);
               Game.rooms[this.room.name].createConstructionSite(structure.x, structure.y, structure.type);
@@ -129,6 +139,14 @@ export class RoomPlanner {
     }
 
     this.addRampartToCriticalStructures();
+
+    if (somethingHasBeenDone) {
+      nextChecks[this.room.name] = Game.time;
+    } else {
+      const delay = Math.round(600 * Math.random());
+      console.log("Roomplanner ", this.room.name, "is idle. Waiting for", delay, "ticks.");
+      nextChecks[this.room.name] = Game.time + delay;
+    }
   }
 
   doManualPlacement() {

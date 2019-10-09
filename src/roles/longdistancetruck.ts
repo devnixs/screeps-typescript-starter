@@ -172,7 +172,7 @@ class RoleLongDistanceTruck implements IRole {
   }
 
   addRemoteCostStats(creep: Creep, memory: ILongDistanceTruckMemory) {
-    const skipTicks = 9;
+    const skipTicks = 19;
     if (Game.time % skipTicks === 0) {
       const cost = _.sum(creep.body.map(i => BODYPART_COST[i.type]));
       const currentCost = (cost / CREEP_LIFE_TIME) * skipTicks;

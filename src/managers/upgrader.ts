@@ -42,16 +42,18 @@ export class UpgradeManager {
       return;
     }
 
+    const storage = this.room.storage;
     if (
       Game.shard.name === "swc" &&
-      this.room.controller.level >= 7 &&
-      (this.room.name !== "W7N8" || this.room.controller.level === 8)
+      Game.gcl.level >= 6 &&
+      (this.room.controller && this.room.controller.level >= 7) &&
+      storage &&
+      storage.store.energy < 400000
     ) {
       this.room.memory.upgraderRatio = 0;
       return;
     }
 
-    const storage = this.room.storage;
     const container = Game.getObjectById(this.room.memory.controllerContainer) as StructureContainer | undefined;
 
     if (storage) {
@@ -84,7 +86,7 @@ export class UpgradeManager {
         this.room.memory.upgraderRatio = Math.ceil(Math.pow(points, 2) * 4);
       }
     } else {
-      const containers = this.room.containers;
+      const containers = this.room.containers.filter(i => i);
       if (containers.length === 0) {
         this.room.memory.upgraderRatio = 1;
         this.room.memory.upgraderType = "mobile";

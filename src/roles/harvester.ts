@@ -23,7 +23,10 @@ class RoleHarvester implements IRole {
 
     // if on top of container and there's a static harvester nearby waiting, suicide
     const container = creep.pos.lookFor(LOOK_STRUCTURES).find(i => i.structureType === "container");
-    if (container && creep.pos.findInRange(FIND_MY_CREEPS, 1, { filter: i => i.memory.role === "static-harvester" })) {
+    const staticHarvester = creep.pos.findInRange(FIND_MY_CREEPS, 1, {
+      filter: i => i.memory.role === "static-harvester"
+    });
+    if (container && staticHarvester[0]) {
       if (creep.memory.role === "harvester") {
         console.log("Static harvester is ready, suiciding", creep.name);
         creep.suicide();
@@ -49,7 +52,9 @@ class RoleHarvester implements IRole {
         if (inRangeToSource && bigBuilderNeedsSpot) {
           creep.goTo(bigBuilderNeedsSpot);
         } else {
-          sourceManager.harvestEnergyFromSpecificSource(creep, specificSource);
+          if (specificSource.energy > 0) {
+            sourceManager.harvestEnergyFromSpecificSource(creep, specificSource);
+          }
         }
       } else {
         sourceManager.harvestEnergyFromSource(creep);
@@ -58,9 +63,10 @@ class RoleHarvester implements IRole {
     } else {
       if (this.buildContainer(creep) === OK) {
         return;
-      } else if (sourceManager.storeInCloseContainer(creep) === OK) {
-        return;
       } else {
+      /*        else if (sourceManager.storeInCloseContainer(creep) === OK) {
+        return;
+      } */
         if (sourceManager.store(creep) === -1) {
           const constructionSite = creep.pos.findClosestByRange(FIND_CONSTRUCTION_SITES);
           if (constructionSite) {

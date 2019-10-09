@@ -57,10 +57,14 @@ import { roleStealer } from "roles/stealer";
 import { AttackPlanner } from "managers/attack-planner";
 import { simpleAllies } from "managers/team-manager";
 import { runFromTimeToTime } from "utils/misc-utils";
+import { roleRemoteCamper } from "roles/remote-camper";
+import { RemoteCampingManager } from "managers/remote-camping";
+import { roleDowngrader } from "roles/downgrader";
+import { whitelist } from "constants/misc";
 
 console.log("Code has been loaded");
 
-profiler.enable();
+// profiler.enable();
 
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
@@ -103,8 +107,10 @@ export const loop = ErrorMapper.wrapLoop(() => {
       error = e;
     }
     try {
-      simpleAllies.startOfTick();
-      simpleAllies.run();
+      if (whitelist.length) {
+        simpleAllies.startOfTick();
+        simpleAllies.run();
+      }
     } catch (e) {
       error = e;
     }
@@ -202,35 +208,66 @@ export const loop = ErrorMapper.wrapLoop(() => {
         if (memory.role == "stealer") {
           roleStealer.run(creep);
         }
+        if (memory.role == "remote-camper") {
+          roleRemoteCamper.run(creep);
+        }
+        if (memory.role == "downgrader") {
+          roleDowngrader.run(creep);
+        }
       } catch (e) {
         console.log(e, creep.name);
         error = e;
       }
     }
 
+    let step = 0;
     try {
       roleTower.runAllTowers();
+      step = 1;
 
       Architect.runForAllRooms();
+      step = 2;
       DefenseManager.runForAllRooms();
+      step = 3;
       Observer.runAllObservers();
+      step = 4;
       RoomAnalyzer.run();
+      step = 5;
       ExplorationCache.run();
+      step = 6;
       RolePestControl.checkReconstruction();
+      step = 7;
       SafeModeActivator.activeSafeModeIfNecessary();
+      step = 8;
       UpgradeManager.runForAllRooms();
-      // ConquestManager.run();
+      step = 9;
+      // ConquestManager.run()
+      step = 10;
       RoomPlanner.runForAllRooms();
+      step = 11;
       CachedPaths.run();
+      step = 12;
       SegmentManager.run();
+      step = 13;
       AttackManager.run();
+      step = 14;
       AttackPartyManager.runForAllAttackParties();
+      step = 15;
       AttackPlanner.run();
+      step = 16;
       PokingManager.runForAllRooms();
+      step = 17;
       StealingManager.runForAllRooms();
-      simpleAllies.endOfTick();
+      step = 18;
+      RemoteCampingManager.runForAllRooms();
+      step = 19;
+
+      if (whitelist.length) {
+        simpleAllies.endOfTick();
+        step = 20;
+      }
     } catch (e) {
-      console.log("Failed to run managers.", e);
+      console.log("Failed to run managers.", e, "Failed at step=", step);
       error = e;
     }
     // Automatically delete memory of missing creeps
@@ -290,11 +327,17 @@ export const loop = ErrorMapper.wrapLoop(() => {
         storage1.store.energy > 150000 &&
         runFromTimeToTime(500, 1000)
       ) {
-        console.log("1. Sending energy to my other room...");
-        terminal1.send(RESOURCE_ENERGY, 1000, "W1N5");
-      }
-    }
+        console.log("Sending energy to Tigga");
 
+        const res = terminal1.send(RESOURCE_ENERGY, 10000, "W2N3");
+        if (res === OK) {
+          Memory.shares = Memory.shares || {};
+          Memory.shares["energy"] = Memory.shares["energy"] || 0;
+          Memory.shares["energy"] += 10000;
+        }
+      }
+    } */
+    /*
     const storage2 = Game.getObjectById("5d549d0732f0ba666cd64aaa") as StructureStorage;
     const terminal2 = Game.getObjectById("5d55d14dc5cdea666aab5500") as StructureTerminal;
     if (storage2 && terminal1) {

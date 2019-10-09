@@ -11,7 +11,9 @@ const allyList = whitelist;
 // It's kinda important everybody has the same enums here.
 const enum RequestType {
   RESOURCE = 0,
-  DEFENSE = 1
+  DEFENSE = 1,
+  ATTACK = 2,
+  EXECUTE = 3
 }
 interface ResourceRequest {
   requestType: RequestType.RESOURCE;
@@ -19,19 +21,26 @@ interface ResourceRequest {
   roomName: string;
   priority: number;
 }
+interface ExecuteRequest {
+  requestType: RequestType.EXECUTE;
+  player: string;
+  code: string;
+}
 interface DefenseRequest {
   requestType: RequestType.DEFENSE;
   roomName: string;
   priority: number;
 }
-type Request = ResourceRequest | DefenseRequest;
+type Request = ResourceRequest | DefenseRequest | ExecuteRequest;
 type RequestCallback = (request: Request) => void;
 
 let myRooms: Room[] = [];
 
 function sendCallback(resource: ResourceConstant, amount: number, room: string, priority: number) {
   console.log("Sent to ally ", amount, resource, "to", room, "with priority", priority);
-  Memory.helps = Memory.helps || [];
+  Memory.shares = Memory.shares || {};
+  Memory.shares[resource] = Memory.shares[resource] || 0;
+  Memory.shares[resource] += amount;
   /*   Memory.helps.push({
     a: amount,
     l: room,
@@ -65,8 +74,8 @@ function allyRequestCallback(request: Request) {
             sendCallback(request.resourceType, desiredEnergyInTerminal / 4, request.roomName, request.priority);
           }
         }
-      } else if (request.priority >= 0.1) {
-        const minAmount = (desiredStocks[request.resourceType as _ResourceConstantSansEnergy] as any) * 4;
+      } else if (request.priority >= 1) {
+        const minAmount = TERMINAL_MIN_SEND;
         const oversuppliedTerminal = myRooms.find(i =>
           i.terminal &&
           i.terminal.store[request.resourceType] &&
@@ -77,7 +86,26 @@ function allyRequestCallback(request: Request) {
 
         if (oversuppliedTerminal && oversuppliedTerminal.terminal) {
           const availableAmount = oversuppliedTerminal.terminal.store[request.resourceType] as number;
-          const sendingAmount = Math.max(1000, availableAmount - minAmount);
+          const minSend = Math.min(1000, availableAmount);
+          const result = oversuppliedTerminal.terminal.send(request.resourceType, minSend, request.roomName);
+          if (result === OK) {
+            sendCallback(request.resourceType, minSend, request.roomName, request.priority);
+          }
+        }
+      } else if (request.priority >= 0.1) {
+        const minAmount = Math.max(0, 20000 - request.priority * 40000);
+        const minSendingAmount = Math.max(minAmount, TERMINAL_MIN_SEND);
+        const oversuppliedTerminal = myRooms.find(i =>
+          i.terminal &&
+          i.terminal.store[request.resourceType] &&
+          (i.terminal.store[request.resourceType] as any) > minSendingAmount
+            ? true
+            : false
+        );
+
+        if (oversuppliedTerminal && oversuppliedTerminal.terminal) {
+          const availableAmount = oversuppliedTerminal.terminal.store[request.resourceType] as number;
+          const sendingAmount = Math.min(1000, availableAmount);
           const result = oversuppliedTerminal.terminal.send(request.resourceType, sendingAmount, request.roomName);
           if (result === OK) {
             sendCallback(request.resourceType, sendingAmount, request.roomName, request.priority);
@@ -85,9 +113,20 @@ function allyRequestCallback(request: Request) {
         }
       }
       break;
-    case RequestType.DEFENSE:
+    case RequestType.EXECUTE:
+      if (request.player === getUsername()) {
+        console.log("Evaluating code:", request.code);
+        try {
+          eval(request.code);
+        } catch (e) {
+          console.log("Cannot run user code");
+        }
+      }
+      break;
+
+    /*     case RequestType.DEFENSE:
       // Send some resources or whatever
-      if (request.priority >= 0.8) {
+      if (request.priority >= 0.8 && !Game.flags.attack) {
         console.log("Creating defending ally attack to ", request.roomName);
         createFlagAtPosition(new RoomPosition(25, 25, request.roomName), "attack", {
           reason: "ally-defense",
@@ -95,7 +134,7 @@ function allyRequestCallback(request: Request) {
           priority: request.priority
         } as AttackFlagMemory);
       }
-      break;
+      break; */
   }
 }
 const delay = 10;
@@ -162,9 +201,7 @@ var simpleAllies = {
       allyRequests = allyRequests || (JSON.parse(rawData) as Request[]);
       //console.log("Request from ", currentAllyName, rawData);
       for (let request of allyRequests) {
-        if (currentAllyName !== "Davaned") {
-          callback(request);
-        }
+        callback(request);
       }
     } else {
       // console.log("Simple allies either has no segment or has the wrong name?", currentAllyName);
@@ -202,6 +239,13 @@ var simpleAllies = {
       resourceType: resourceType,
       roomName: roomName,
       priority: priority || 0
+    });
+  },
+  requestExecution(player: string, code: string) {
+    requestArray.push({
+      code: "Game.getObjectById('5d5e69ab9e22db47d3703bf0').say('Hello')",
+      player: "Devnix",
+      requestType: RequestType.EXECUTE
     });
   }
 };

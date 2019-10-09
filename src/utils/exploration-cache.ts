@@ -2,6 +2,7 @@ import { profiler } from "./profiler";
 import { SegmentManager, RoomExplorationsSegments } from "../managers/segments";
 
 let roomExplorations: RoomExplorationReport[] = [];
+let roomExplorationsByRoomName: { [roomName: string]: RoomExplorationReport } = {};
 let roomsAreLoaded = false;
 let roomsAreLoading = false;
 
@@ -42,6 +43,10 @@ export class ExplorationCache {
         if (data) {
           roomExplorations = roomExplorations.concat(data);
           roomExplorations = _.uniq(roomExplorations, i => i.r);
+
+          for (const room of data) {
+            roomExplorationsByRoomName[room.r] = room;
+          }
         }
         loadedSegments++;
 
@@ -76,11 +81,12 @@ export class ExplorationCache {
     // remove existing if any
     roomExplorations = roomExplorations.filter(i => i.r !== exploration.r);
     roomExplorations.push(exploration);
+    roomExplorationsByRoomName[exploration.r] = exploration;
   }
 
   static getExploration(roomName: string) {
     if (roomsAreLoaded) {
-      return roomExplorations.find(i => i.r === roomName);
+      return roomExplorationsByRoomName[roomName];
     } else {
       return null;
     }
@@ -96,6 +102,7 @@ export class ExplorationCache {
 
   static resetAllExplorations() {
     roomExplorations = [];
+    roomExplorationsByRoomName = {};
     ExplorationCache.saveExplorationsInSegments();
   }
 }

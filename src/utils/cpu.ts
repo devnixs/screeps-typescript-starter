@@ -25,7 +25,7 @@ export function getUsedPercentage() {
 
 export function getReduceUsageRatio() {
   const average = getAverageCpu();
-  const tolerance = 0.7;
+  const tolerance = 0.9;
 
   if (average < Game.cpu.limit * tolerance) {
     return 1;

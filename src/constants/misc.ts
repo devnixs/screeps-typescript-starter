@@ -6,6 +6,16 @@ if (Game.shard.name === "swc") {
   remoteBlacklist = ["W2N4", "W1N3", "W3N4", "W3N3", "W7N7", "W8N7", "W3N3", "W2N2", "W1N2", "W3N2"];
 }
 
+if (Game.shard.name === "screepsplus2") {
+  whitelist = [];
+  remoteBlacklist = [];
+}
+
+if (Game.shard.name === "screepsplus1") {
+  whitelist = [];
+  remoteBlacklist = ["E7N18", "E6N18", "E6N19"];
+}
+
 export { whitelist, remoteBlacklist };
 
 export const defaultReusePath = 15;
@@ -36,6 +46,17 @@ export const wallsMinHp = (roomLevel: number) => {
     // limit to 2M under level 7
     value = Math.min(value, 2000000);
   }
+
+  if (Game.shard.name === "swc") {
+    // limit to 3M
+    value = Math.min(value, 3000000);
+  }
+
+  if (Game.shard.name === "screepsplus2") {
+    // limit to 3M
+    value = Math.max(value, 1000000);
+  }
+
   return value;
 };
 

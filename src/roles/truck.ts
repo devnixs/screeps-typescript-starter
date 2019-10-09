@@ -448,6 +448,58 @@ class RoleTruck implements IRole {
       }
     }
 
+    if (storage && terminal) {
+      var labs = this.getLabs(creep.room).map(i => ({ memory: i, obj: Game.getObjectById(i.id) as StructureLab }));
+      var labsThatNeedsEmptying = labs.filter(
+        i =>
+          i.obj &&
+          i.memory.state === "needs-emptying" &&
+          i.obj.mineralAmount > 0 &&
+          (i.obj.cooldown === 0 || i.obj.mineralAmount > 300)
+      );
+
+      const terminal = creep.room.terminal;
+      var labsThatNeedsRefills = labs.filter(i => {
+        if (!i.memory.needsResource) {
+          return;
+        }
+        const availableResource = (terminal && terminal.store[i.memory.needsResource]) || 0;
+        return (
+          i.memory.state === "waiting-for-resource" &&
+          availableResource > 0 &&
+          i.memory.needsAmount > i.obj.mineralAmount
+        );
+      });
+
+      if (terminal) {
+        for (let labsThatNeedsRefillsIndex in labsThatNeedsRefills) {
+          const lab = labsThatNeedsRefills[labsThatNeedsRefillsIndex];
+          yield {
+            targetSource: terminal.id,
+            targetDestination: lab.obj.id,
+            jobResource: lab.memory.needsResource,
+            jobNeededAmount: lab.memory.needsAmount - lab.obj.mineralAmount,
+            jobTag: "refill-lab-" + lab.obj.id,
+            emoji: "⚗️"
+          };
+        }
+      }
+
+      if (terminal) {
+        for (let labsThatNeedsEmptyingIndex in labsThatNeedsEmptying) {
+          const lab = labsThatNeedsEmptying[labsThatNeedsEmptyingIndex];
+          yield {
+            targetSource: lab.obj.id,
+            targetDestination: terminal.id,
+            jobResource: lab.obj.mineralType as ResourceConstant,
+            jobNeededAmount: lab.obj.mineralAmount,
+            jobTag: "empty-lab-" + lab.obj.id,
+            emoji: "💎"
+          };
+        }
+      }
+    }
+
     // refill controller container
     const controllerContainer = Game.getObjectById(creep.room.memory.controllerContainer) as
       | StructureContainer
@@ -489,15 +541,6 @@ class RoleTruck implements IRole {
         yield job;
       }
     }
-
-    var labs = this.getLabs(creep.room).map(i => ({ memory: i, obj: Game.getObjectById(i.id) as StructureLab }));
-    var labsThatNeedsEmptying = labs.filter(
-      i =>
-        i.obj &&
-        i.memory.state === "needs-emptying" &&
-        i.obj.mineralAmount > 0 &&
-        (i.obj.cooldown === 0 || i.obj.mineralAmount > 300)
-    );
 
     if (storage) {
       var linksThatNeedsEmptying =
@@ -601,46 +644,6 @@ class RoleTruck implements IRole {
             jobNeededAmount: storage.store[nonEnergyInStorage] as any,
             jobTag: "empty-storage",
             emoji: "⬜️"
-          };
-        }
-      }
-
-      var labsThatNeedsRefills = labs.filter(i => {
-        if (!i.memory.needsResource) {
-          return;
-        }
-        const availableResource = (terminal && terminal.store[i.memory.needsResource]) || 0;
-        return (
-          i.memory.state === "waiting-for-resource" &&
-          availableResource > 0 &&
-          i.memory.needsAmount > i.obj.mineralAmount
-        );
-      });
-
-      if (terminal) {
-        for (let labsThatNeedsRefillsIndex in labsThatNeedsRefills) {
-          const lab = labsThatNeedsRefills[labsThatNeedsRefillsIndex];
-          yield {
-            targetSource: terminal.id,
-            targetDestination: lab.obj.id,
-            jobResource: lab.memory.needsResource,
-            jobNeededAmount: lab.memory.needsAmount - lab.obj.mineralAmount,
-            jobTag: "refill-lab-" + lab.obj.id,
-            emoji: "⚗️"
-          };
-        }
-      }
-
-      if (terminal) {
-        for (let labsThatNeedsEmptyingIndex in labsThatNeedsEmptying) {
-          const lab = labsThatNeedsEmptying[labsThatNeedsEmptyingIndex];
-          yield {
-            targetSource: lab.obj.id,
-            targetDestination: terminal.id,
-            jobResource: lab.obj.mineralType as ResourceConstant,
-            jobNeededAmount: lab.obj.mineralAmount,
-            jobTag: "empty-lab-" + lab.obj.id,
-            emoji: "💎"
           };
         }
       }

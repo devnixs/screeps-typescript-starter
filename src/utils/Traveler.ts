@@ -126,6 +126,15 @@ export class Traveler {
 
       state.destination = destination;
 
+      if (state.cpu > REPORT_CPU_THRESHOLD && Game.time % 35 > 0) {
+        console.log(
+          `SKIPPING TRAVELER: heavy cpu use: ${creep.name}, cpu: ${state.cpu} origin: ${
+            creep.pos
+          }, dest: ${destination}`
+        );
+        return ERR_NO_PATH;
+      }
+
       let cpu = Game.cpu.getUsed();
       let ret = this.findTravelPath(creep.pos, destination, options, creep);
 
@@ -346,7 +355,7 @@ export class Traveler {
     origin = this.normalizePos(origin);
     destination = this.normalizePos(destination);
 
-    const portalPath = this.findPortalPath(origin, destination);
+    /*     const portalPath = this.findPortalPath(origin, destination);
     if (portalPath) {
       console.log("Finding path through portal", origin, destination, "path:", JSON.stringify(portalPath));
       const path1 = this.findTravelPath(portalPath[0], portalPath[1]);
@@ -358,7 +367,7 @@ export class Traveler {
         path: path1.path.concat(path2.path)
       } as PathfinderReturn;
       return merged;
-    }
+    } */
 
     let originRoomName = origin.roomName;
     let destRoomName = destination.roomName;
@@ -515,14 +524,14 @@ export class Traveler {
 
     let restrictDistance = options.restrictDistance || distance + 10;
     let allowedRooms = { [origin]: true, [destination]: true };
-
+    /*
     const portalPath = this.findPortalPath(new RoomPosition(25, 25, origin), new RoomPosition(25, 25, destination));
     if (portalPath) {
       const path1 = this.findRoute(portalPath[0].roomName, portalPath[1].roomName);
       const path2 = this.findRoute(portalPath[2].roomName, portalPath[3].roomName);
       const merged = _.assign({}, path1, path2);
       return merged as { [roomName: string]: boolean };
-    }
+    } */
 
     let highwayBias = 1;
     if (options.preferHighway) {
@@ -831,7 +840,7 @@ export class Traveler {
 
 // this might be higher than you wish, setting it lower is a great way to diagnose creep behavior issues. When creeps
 // need to repath to often or they aren't finding valid paths, it can sometimes point to problems elsewhere in your code
-const REPORT_CPU_THRESHOLD = 3000;
+const REPORT_CPU_THRESHOLD = 1000;
 
 const DEFAULT_MAXOPS = 20000;
 const DEFAULT_STUCK_VALUE = 2;

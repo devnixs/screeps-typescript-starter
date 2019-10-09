@@ -1,4 +1,5 @@
 import { findHostile, findHostiles } from "./finder";
+import { whitelist } from "constants/misc";
 
 // Random utilities that don't belong anywhere else
 
@@ -267,13 +268,13 @@ export function paddingLeft(paddingValue: string, str: string | number) {
   return String(paddingValue + str).slice(-paddingValue.length);
 }
 
-export function flee(creep: Creep) {
+export function flee(creep: Creep, { force }: { force?: boolean } = {}) {
   let fleeing = false;
   fleeing = fleeing || creep.memory.flee ? creep.memory.flee > Game.time - 10 : false;
-  if (!fleeing) {
+  if (!fleeing && (Game.time % 5 === 0 || force)) {
     let enemy = findHostile(creep);
     const enemyIsDangerous = enemy && (enemy.getActiveBodyparts(ATTACK) || enemy.getActiveBodyparts(RANGED_ATTACK));
-    fleeing = enemy && enemyIsDangerous ? enemy.pos.getRangeTo(creep.pos.x, creep.pos.y) < 10 : false;
+    fleeing = enemy && enemyIsDangerous ? enemy.pos.getRangeTo(creep.pos.x, creep.pos.y) < 14 : false;
     if (fleeing) {
       creep.memory.flee = Game.time;
     }
@@ -307,6 +308,19 @@ export function flee(creep: Creep) {
     return -1;
   }
 }
+
+/* export function fleeInAnyDirection(creep: Creep) {
+  const enemies = creep.room.find(FIND_HOSTILE_CREEPS, {
+    filter: i => whitelist.indexOf(i.owner.username) === -1
+  });
+
+  const route = PathFinder.search(creep.pos, enemies.map(i => ({ pos: i.pos, range: 15 })), { flee: true });
+  if (route && route.path && route.path.length) {
+    const next = creep.pos.getDirectionTo(route.path[0]);
+    creep.move(next);
+    return;
+  }
+} */
 
 export function runFromTimeToTime(duration: number, every: number) {
   return Math.floor((Game.time / duration) % Math.floor(every / duration)) === 0;

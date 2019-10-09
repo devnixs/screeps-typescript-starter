@@ -1,4 +1,4 @@
-import { findAndCache, findRestSpot, findNonEmptyResourceInStore } from "./finder";
+import { findAndCache, findRestSpot, findNonEmptyResourceInStore, findClosest } from "./finder";
 import { LinkManager } from "./link-manager";
 import { profiler } from "../utils/profiler";
 import { desiredEnergyInTerminal } from "constants/misc";
@@ -279,7 +279,30 @@ class SourceManager {
     );
   };
 
-  getStructureThatNeedsEnergy(creep: Creep) {
+  getStructureThatNeedsEnergy(creep: Creep): AnyStructure | undefined {
+    const extensions = creep.room.extensions.filter(i => i.energy < i.energyCapacity);
+    if (extensions.length) {
+      return findClosest(extensions, creep);
+    }
+    const spawns = creep.room.spawns.filter(i => i.energy < i.energyCapacity);
+    if (spawns.length) {
+      return findClosest(spawns, creep);
+    }
+    const towers = creep.room.towers.filter(i => i.energy < i.energyCapacity * 0.5);
+    if (towers.length) {
+      return findClosest(towers, creep);
+    }
+    const labs = creep.room.labs.filter(i => i.energy < i.energyCapacity * 0.5);
+    if (labs.length) {
+      return findClosest(labs, creep);
+    }
+    const controllerContainer = Game.getObjectById(creep.room.memory.controllerContainer) as StructureContainer | null;
+    if (controllerContainer && controllerContainer.store.energy < controllerContainer.storeCapacity * 0.75) {
+      return controllerContainer;
+    }
+
+    return undefined;
+    /*
     let targetStructure: AnyStructure | undefined = findAndCache<FIND_STRUCTURES>(
       creep,
       "deposit_structure_id",
@@ -294,7 +317,7 @@ class SourceManager {
       }
     ) as any;
 
-    return targetStructure;
+    return targetStructure; */
   }
 
   storeInCloseContainer(creep: Creep) {
@@ -321,12 +344,12 @@ class SourceManager {
 
   storeEnergy(creep: Creep) {
     let targetStructure: AnyStructure | undefined = undefined;
-    const inputLink = LinkManager.getInputLinkThatCanReceiveEnergy(creep.pos);
+    /*  const inputLink = LinkManager.getInputLinkThatCanReceiveEnergy(creep.pos);
 
     if (inputLink && creep.memory.role !== "truck") {
       // if the link is very close, use it first, but not for trucks as they might end up stuck in a loop
       targetStructure = inputLink && inputLink.link;
-    }
+    } */
 
     if (!targetStructure) {
       targetStructure = this.getStructureThatNeedsEnergy(creep);

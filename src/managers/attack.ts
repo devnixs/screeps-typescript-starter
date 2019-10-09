@@ -84,9 +84,21 @@ export class AttackManager {
     if (flag && attack && flag.pos.roomName !== attack.toRoom) {
       console.log("Relocating attack from ", attack.toRoom, "to", flag.pos.roomName);
       attack.toRoom = flag.pos.roomName;
-      attack.parties.forEach(party => {
-        party.status = "moving";
-      });
+      attack.parties
+        .filter(
+          i =>
+            i.status === "moving" ||
+            i.status === "attacking" ||
+            i.status === "safemode" ||
+            i.status === "regrouping" ||
+            i.status === "camping" ||
+            i.status === "complete"
+        )
+        .forEach(party => {
+          party.status = "moving";
+          party.rallyPoint = undefined;
+          party.attackPath = undefined;
+        });
     }
   }
 
@@ -139,8 +151,9 @@ export class AttackManager {
     if (
       hasSafeModeAvailable(targetRoom) ||
       (targetRoom.controller && targetRoom.controller.level >= 6) ||
-      !targetRoom.memory.isUnderSiege
+      (!targetRoom.memory.isUnderSiege && !targetRoom.memory.isRebuilding)
     ) {
+      console.log("Defense is no longer necessary.");
       this.stopAttack();
     }
   }
@@ -185,8 +198,9 @@ export class AttackManager {
 
     const flag = Game.flags["attack"];
     const memory = flag && (flag.memory as AttackFlagMemory);
+    const nonDeadParties = attack.parties.find(i => i.status !== "dead" && i.status !== "forming");
 
-    if (flag && memory && memory.expiration && memory.expiration + 300 < Game.time) {
+    if (flag && memory && memory.expiration && memory.expiration + 300 < Game.time && !nonDeadParties) {
       // stop attack
       console.log("Attack is expired. Stopping");
       flag.remove();
@@ -212,11 +226,8 @@ export class AttackManager {
 
     if (attack.parties.find(i => i.status === "complete")) {
       // stop attack
-      console.log("Attack successful. Stopping attack");
-      const flag = getAttackFlag();
-      if (flag) {
-        flag.remove();
-      }
+      console.log("Attack successful. (complete)");
+      this.stopOrGoToNextAttackRoom();
     }
 
     const safeModeParty = attack.parties.find(i => i.status === "safemode");
@@ -228,20 +239,27 @@ export class AttackManager {
         room: attack.toRoom,
         time: Game.time + SAFE_MODE_DURATION
       };
-      const flag = getAttackFlag();
-      if (flag) {
-        (flag.memory as AttackFlagMemory).expiration = Game.time + safeModeParty.ttl;
+      this.stopOrGoToNextAttackRoom();
+    }
+  }
 
-        const nextTarget = Game.flags.next_target;
-        if (nextTarget) {
-          const nextpos = new RoomPosition(25, 25, nextTarget.pos.roomName);
-          console.log("Moving attack flag to next target", nextpos);
-          // flag.setPosition(nextpos);
-          setTimeout(() => {
-            console.log("Flag is now located at: ", Game.flags.attack ? Game.flags.attack.pos : "Not found");
-            // Game.flags.next_target.remove();
-          }, 1);
-        }
+  static stopOrGoToNextAttackRoom() {
+    const flag = getAttackFlag();
+    if (flag) {
+      (flag.memory as AttackFlagMemory).expiration = Game.time;
+
+      const nextTarget = Game.flags.next_target;
+      if (nextTarget) {
+        const nextpos = new RoomPosition(25, 25, nextTarget.pos.roomName);
+        console.log("Moving attack flag to next target", nextpos);
+        // flag.setPosition(nextpos);
+        setTimeout(() => {
+          console.log("Flag is now located at: ", Game.flags.attack ? Game.flags.attack.pos : "Not found");
+          // Game.flags.next_target.remove();
+        }, 1);
+      } else {
+        console.log("No next attack");
+        this.stopAttack();
       }
     }
   }
@@ -260,7 +278,7 @@ export class AttackManager {
       return;
     }
 
-    const existingParty = attack.parties.find(i => i.status !== "dead" && (!i.distance || i.distance <= i.ttl - 250));
+    const existingParty = attack.parties.find(i => i.status !== "dead" && (!i.distance || i.distance <= i.ttl - 300));
     if (existingParty) {
       return;
     }
@@ -295,6 +313,7 @@ export class AttackManager {
     }
 
     var party = {
+      kind: partyInfo.name,
       boosted: true,
       count: partyInfo.creeps.length,
       creeps: [],

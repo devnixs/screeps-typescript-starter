@@ -14,7 +14,8 @@ import {
   hasRoomBeenAttacked,
   hasSafeModeAvailable,
   hasSafeModeActivated,
-  getExpectedRoomEnergyAtLevel
+  getExpectedRoomEnergyAtLevel,
+  repeatArray
 } from "utils/misc-utils";
 import { isInSafeArea } from "utils/safe-area";
 import { profiler } from "utils/profiler";
@@ -78,6 +79,10 @@ let transportHelperCount = 0;
 let transportHelperTarget: string | undefined = undefined;
 let transportHelperSource: string | undefined = undefined;
 
+let downgradersCount = 0;
+let downgradersTarget: string | undefined = undefined;
+let downgradersSource: string | undefined = undefined;
+
 let lastInitializationTick: number | undefined;
 function initOneTimeValues() {
   if (lastInitializationTick === Game.time) {
@@ -99,6 +104,15 @@ function initOneTimeValues() {
     closestRoomToClaimTarget = findClosestRoom(claimFlag.pos.roomName);
   } else {
     claimerCount = 0;
+  }
+
+  const downgradeFlag = Game.flags["attack_controller"];
+  if (downgradeFlag && downgradeFlag.room && downgradeFlag.room.controller) {
+    downgradersCount = 1;
+    downgradersTarget = downgradeFlag.pos.roomName;
+    downgradersSource = findClosestRoom(downgradersTarget);
+  } else {
+    downgradersCount = 0;
   }
 
   let colonyThatNeedsHelpBuilding = Object.keys(Game.rooms)
@@ -144,7 +158,7 @@ function initOneTimeValues() {
 
   let colonyThatNeedsHelpDefending = Object.keys(Game.rooms)
     .map(i => Game.rooms[i])
-    .filter(i => i.controller && i.controller.my && i.controller.level <= 4)[0];
+    .filter(i => i.controller && i.controller.my && i.controller.level <= 4 && Game.shard.name === "swc")[0];
 
   if (
     colonyThatNeedsHelpDefending &&
@@ -202,6 +216,14 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
   const isStorageAlmostFull = storageQuantity > 900000;
 
   const hasStorageOrContainers = !!spawn.room.storage || !!spawn.room.containers.length;
+
+  let cpuMultiplier = 1;
+  // Save cpu by using more WORK parts
+  if (getUsedPercentage() > 0.75) {
+    cpuMultiplier = 3;
+  } else if (getUsedPercentage() > 0.5) {
+    cpuMultiplier = 2;
+  }
 
   // while forming an attack, stop spawning those as they occupy all the trucks
   const isStartingAttack =
@@ -274,7 +296,7 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
           filter: i => i.structureType === "link"
         })[0] as any);
 
-      const neededWorkParts = Math.ceil(energyRate / HARVEST_POWER);
+      let neededWorkParts = Math.ceil(energyRate / HARVEST_POWER);
 
       if (spawn.room.memory.isUnderSiege && !isInSafeArea(source.pos, spawn.room)) {
         return null;
@@ -285,11 +307,11 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
           percentage: 20,
           role: "static-harvester",
           subRole: source.id,
-          maxRepatAccrossAll: neededWorkParts,
+          maxRepatAccrossAll: neededWorkParts * cpuMultiplier,
           maxCount:
             storageQuantity && spawn.room.storage && storageQuantity >= spawn.room.storage.storeCapacity * 0.96 ? 0 : 1,
           bodyTemplate: [WORK],
-          bodyTemplatePrepend: [MOVE, MOVE, CARRY],
+          bodyTemplatePrepend: ([CARRY] as BodyPartConstant[]).concat(repeatArray([MOVE, MOVE], cpuMultiplier)),
           additionalMemory: {
             targetContainerId: closeContainer.id,
             targetLinkId: closeLink.id
@@ -300,11 +322,11 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
           percentage: 20,
           role: "static-harvester",
           subRole: source.id,
-          maxRepatAccrossAll: neededWorkParts,
+          maxRepatAccrossAll: neededWorkParts * cpuMultiplier,
           maxCount:
             storageQuantity && spawn.room.storage && storageQuantity >= spawn.room.storage.storeCapacity * 0.96 ? 0 : 1,
           bodyTemplate: [WORK],
-          bodyTemplatePrepend: [MOVE],
+          bodyTemplatePrepend: repeatArray([MOVE], cpuMultiplier),
           additionalMemory: {
             targetContainerId: closeContainer.id
           } as IStaticHarvesterMemory
@@ -332,9 +354,9 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
         role: "long-distance-harvester",
         maxCount: isStorageAlmostFull ? 0 : 1,
         bodyTemplate: [WORK],
-        maxRepeat: ((remote.energyGeneration || 10) * (remote.ratio || 1)) / HARVEST_POWER,
+        maxRepeat: ((remote.energyGeneration || 10) * (remote.ratio || 1) * cpuMultiplier) / HARVEST_POWER,
         subRole: remote.room + "-" + remote.x + "-" + remote.y,
-        bodyTemplatePrepend: [CARRY, MOVE, MOVE, MOVE],
+        bodyTemplatePrepend: repeatArray([CARRY, MOVE, MOVE, MOVE], cpuMultiplier),
         disableIfLowOnCpu: true,
         onSpawn: (totalCost, bodyTemplate) => {
           remote.spentEnergy = remote.spentEnergy || 0;
@@ -486,25 +508,21 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
       } as RoleRequirement;
     });
 
-  const campers =
-    !spawn.room.memory.isUnderSiege && Memory.attack && Memory.attack.parties.find(i => i.status === "camping");
-  const attack = Memory.attack;
-  const downgraders =
-    campers &&
-    attack &&
-    ({
-      percentage: 20,
-      role: "reserver",
-      maxCount: isStorageAlmostFull ? 0 : 1,
-      bodyTemplate: [CLAIM, MOVE],
-      maxRepeat: 3,
-      subRole: attack.toRoom,
-      disableIfLowOnCpu: true,
-      additionalMemory: {
-        home: spawn.pos.roomName,
-        targetRoomName: attack.toRoom
-      } as Partial<IReserverMemory>
-    } as RoleRequirement);
+  let downgraders = {
+    percentage: 20,
+    role: "downgrader",
+    maxCount: downgradersCount,
+    bodyTemplate: [CLAIM, MOVE],
+    bodyTemplatePrepend: [TOUGH, TOUGH, TOUGH, TOUGH, MOVE, MOVE, MOVE, MOVE],
+    subRole: downgradersTarget,
+    maxRepeat: 12,
+    onlyRooms: [downgradersSource],
+    disableIfLowOnCpu: true,
+    additionalMemory: {
+      home: spawn.pos.roomName,
+      targetRoomName: downgradersTarget
+    } as Partial<IReserverMemory>
+  } as RoleRequirement;
 
   const attackers = spawn.room.memory.needsAttackers
     ? ({
@@ -562,6 +580,20 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
       )
     : [];
 
+  const remoteCampers = spawn.room.memory.campedRooms
+    ? spawn.room.memory.campedRooms.map(
+        (campedRoom, index) =>
+          ({
+            percentage: 1,
+            role: "remote-camper",
+            subRole: campedRoom + "-" + index,
+            maxCount: 1,
+            bodyTemplate: [MOVE, MOVE, ATTACK, HEAL],
+            sortBody: [ATTACK, MOVE, HEAL]
+          } as RoleRequirement)
+      )
+    : [];
+
   let trucksCount = 2;
   if (controllerLevel === 1) {
     trucksCount = 0;
@@ -592,6 +624,19 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
         } as RoleRequirement)
     );
 
+  let buildersCount = 0;
+  if (needsBuilder) {
+    if (spawn.room.memory.isUnderSiege) {
+      buildersCount = 4;
+    } else {
+      if (controllerLevel < 5) {
+        buildersCount = 2;
+      } else {
+        buildersCount = 1;
+      }
+    }
+  }
+
   const requirements = ([
     {
       percentage: 100,
@@ -604,7 +649,7 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
     {
       percentage: 20,
       role: "builder",
-      maxCount: needsBuilder ? (controllerLevel <= 3 ? 2 : spawn.room.memory.isUnderSiege ? 4 : 2) : 0,
+      maxCount: buildersCount,
       bodyTemplate: [MOVE, WORK, CARRY]
     },
     ...remoteDefenders,
@@ -648,7 +693,7 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
     {
       percentage: 2,
       role: "reparator",
-      maxCount: spawn.room.towers.length > 0 && controllerLevel > 2 ? 0 : 1, // handled by towers
+      maxCount: spawn.room.towers.length > 0 && controllerLevel > 2 && storageQuantity > 20000 ? 0 : 1, // handled by towers
       bodyTemplate: [MOVE, WORK, CARRY],
       capMaxEnergy: 1400,
       disableIfLowOnCpu: true
@@ -672,8 +717,8 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
         !spawn.room.memory.isUnderSiege
           ? 1
           : 0,
-      bodyTemplate: [MOVE, WORK, WORK, WORK, WORK],
-      bodyTemplatePrepend: [CARRY, MOVE],
+      bodyTemplate: [MOVE, WORK, WORK, WORK, WORK, CARRY],
+      bodyTemplatePrepend: [MOVE, MOVE],
       sortBody: [MOVE, WORK, CARRY],
       disableIfLowOnCpu: true
     },
@@ -717,7 +762,8 @@ let getSpawnerRequirements = function(spawn: StructureSpawn): RoleRequirement[] 
       additionalMemory: {
         targetRoom: spawn.room.memory.poker
       } as Partial<IPokerMemory>
-    }
+    },
+    ...remoteCampers
   ] as (RoleRequirement | null)[])
     .filter(i => i)
     .map(i => i as RoleRequirement);

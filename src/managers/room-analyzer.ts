@@ -14,7 +14,7 @@ export class RoomAnalyzer {
   }
 
   static exploreVisibleRooms() {
-    if (Game.time % 29 > 0) {
+    if (Game.time % 19 > 0) {
       return;
     }
     const myRooms = getMyRooms().map(i => i.name);
@@ -22,7 +22,9 @@ export class RoomAnalyzer {
     const otherRooms = _.difference(rooms, myRooms);
 
     for (const roomName of otherRooms) {
-      RoomAnalyzer.analyzeRoom(Game.rooms[roomName]);
+      if (Math.random() > 0.9) {
+        RoomAnalyzer.analyzeRoom(Game.rooms[roomName]);
+      }
     }
   }
 

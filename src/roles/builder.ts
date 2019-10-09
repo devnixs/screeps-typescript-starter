@@ -4,6 +4,7 @@ import { profiler } from "../utils/profiler";
 import { wallsMinHp, rampartMinHp } from "constants/misc";
 import { roleHarvester } from "./harvester";
 import { getObstaclesToAvoidRangedEnemies } from "utils/misc-utils";
+import { roleUpgrader } from "./upgrader";
 
 interface IBuilderMemory extends CreepMemory {
   building: boolean;
@@ -19,6 +20,8 @@ export class RoleBuilder implements IRole {
   ): { object: ConstructionSite | StructureWall | StructureRampart; isConstructionSite: boolean } | null {
     const nukes = room.find(FIND_NUKES);
 
+    const storageIsLow = room.storage && room.storage.store.energy < 10000;
+
     const getNukeDamageAtLocation = (pos: RoomPosition) =>
       _.sum(
         nukes.map(n => (n.pos.x === pos.x && n.pos.y === pos.y ? 10000000 : n.pos.inRangeTo(pos, 2) ? 5000000 : 0))
@@ -27,7 +30,7 @@ export class RoleBuilder implements IRole {
     var lowRampart = room.find(FIND_STRUCTURES, {
       filter: i => i.structureType === "rampart" && i.hits < 1000
     })[0] as (StructureRampart | undefined);
-    if (lowRampart) {
+    if (lowRampart && !storageIsLow) {
       return {
         object: lowRampart,
         isConstructionSite: false
@@ -42,33 +45,38 @@ export class RoleBuilder implements IRole {
       };
     }
 
-    const controllerLevel = room.controller ? room.controller.level : 0;
-    var minWallsHp = wallsMinHp(controllerLevel);
-    var minRampartsHp = rampartMinHp(controllerLevel);
+    if (!storageIsLow) {
+      const controllerLevel = room.controller ? room.controller.level : 0;
+      var minWallsHp = wallsMinHp(controllerLevel);
+      var minRampartsHp = rampartMinHp(controllerLevel);
 
-    var walls = room.find(FIND_STRUCTURES, {
-      filter: i =>
-        i.structureType === "constructedWall" && i.hits > 0 && (i.hits < minWallsHp || forceFind) && i.hits < i.hitsMax
-    }) as (StructureWall | StructureRampart)[];
+      var walls = room.find(FIND_STRUCTURES, {
+        filter: i =>
+          i.structureType === "constructedWall" &&
+          i.hits > 0 &&
+          (i.hits < minWallsHp || forceFind) &&
+          i.hits < i.hitsMax
+      }) as (StructureWall | StructureRampart)[];
 
-    var rampart = room.find(FIND_STRUCTURES, {
-      filter: i =>
-        i.structureType === "rampart" &&
-        (i.hits - getNukeDamageAtLocation(i.pos) < minRampartsHp || forceFind) &&
-        i.hits < i.hitsMax
-    }) as (StructureWall | StructureRampart)[];
+      var rampart = room.find(FIND_STRUCTURES, {
+        filter: i =>
+          i.structureType === "rampart" &&
+          (i.hits - getNukeDamageAtLocation(i.pos) < minRampartsHp || forceFind) &&
+          i.hits < i.hitsMax
+      }) as (StructureWall | StructureRampart)[];
 
-    var rampartAndWalls = walls
-      .concat(rampart)
-      .map(r => ({ element: r, hits: r.hits - getNukeDamageAtLocation(r.pos) }));
+      var rampartAndWalls = walls
+        .concat(rampart)
+        .map(r => ({ element: r, hits: r.hits - getNukeDamageAtLocation(r.pos) }));
 
-    rampartAndWalls.sort((a, b) => a.hits - b.hits);
+      rampartAndWalls.sort((a, b) => a.hits - b.hits);
 
-    if (rampartAndWalls.length) {
-      return {
-        object: rampartAndWalls[0].element,
-        isConstructionSite: false
-      };
+      if (rampartAndWalls.length) {
+        return {
+          object: rampartAndWalls[0].element,
+          isConstructionSite: false
+        };
+      }
     }
     return null;
   }
@@ -93,6 +101,16 @@ export class RoleBuilder implements IRole {
         creep.goTo(new RoomPosition(25, 25, targetRoom), moveOptions);
         return;
       }
+    }
+
+    if (
+      creep.room.controller &&
+      creep.room.controller.my &&
+      creep.room.controller.ticksToDowngrade < CONTROLLER_DOWNGRADE[creep.room.controller.level] * 0.5
+    ) {
+      // emergency upgrade
+      roleUpgrader.run(creep);
+      return;
     }
 
     if (!memory.targetStructure) {

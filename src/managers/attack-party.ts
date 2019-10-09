@@ -81,6 +81,9 @@ export class AttackPartyManager {
       if (this.attackParty.status === "camping") {
         leader.creep.say("🌋");
       }
+      if (this.attackParty.status === "renewing") {
+        leader.creep.say("\\o/");
+      }
       if (this.attackParty.status === "safemode") {
         leader.creep.say("🌌");
       }
@@ -216,7 +219,7 @@ export class AttackPartyManager {
       this.findAttackPath();
       // still no targets
       if (!this.attackParty.attackPath) {
-        return;
+        // return;
       }
     }
 
@@ -276,7 +279,7 @@ export class AttackPartyManager {
       }
     }
 
-    let targetHealth = 0.7;
+    let targetHealth = 0.8;
     if (this.attackParty.retreat) {
       targetHealth = 1;
     }
@@ -410,7 +413,48 @@ export class AttackPartyManager {
       this.attackObject(creeps, closest[0]);
       return "attacked";
     } else {
-      return "OK";
+      // find structures
+      let attacked = false;
+
+      for (const creepInfos of creeps) {
+        if (
+          creepInfos.creep.room.controller &&
+          creepInfos.creep.room.controller.owner &&
+          creepInfos.creep.room.controller.owner.username !== getUsername() &&
+          whitelist.indexOf(creepInfos.creep.room.controller.owner.username) === -1
+        ) {
+          if (creepInfos.creep.getActiveBodyparts(RANGED_ATTACK)) {
+            const target = creepInfos.creep.pos.findInRange(FIND_STRUCTURES, 3)[0];
+            if (target && target.pos.isNearTo(creepInfos.creep)) {
+              creepInfos.creep.rangedMassAttack();
+              attacked = true;
+            } else if (target) {
+              creepInfos.creep.attack(target);
+              attacked = true;
+            }
+          }
+          if (creepInfos.creep.getActiveBodyparts(ATTACK)) {
+            const target = creepInfos.creep.pos.findInRange(FIND_STRUCTURES, 1)[0];
+            if (target) {
+              creepInfos.creep.attack(target);
+              attacked = true;
+            }
+          }
+          if (creepInfos.creep.getActiveBodyparts(WORK)) {
+            const target = creepInfos.creep.pos.findInRange(FIND_STRUCTURES, 1)[0];
+            if (target) {
+              creepInfos.creep.dismantle(target);
+              attacked = true;
+            }
+          }
+        }
+      }
+
+      if (attacked) {
+        return "attacked";
+      } else {
+        return "OK";
+      }
     }
   }
 
@@ -421,21 +465,28 @@ export class AttackPartyManager {
       room.controller.owner.username !== getUsername() &&
       whitelist.indexOf(room.controller.owner.username) === -1
     ) {
-      const structures = room.find(FIND_HOSTILE_STRUCTURES);
-      target = target || structures.find(i => i.structureType === "tower");
+      const structures = room.find(FIND_STRUCTURES);
+      const hostileStructures = structures
+        .map(i => i as any)
+        .filter((i: OwnedStructure) => i.owner && i.owner.username !== getUsername());
+      target = target || hostileStructures.find(i => i.structureType === "tower");
       target = target || room.spawns[0];
       target = target || room.storage;
       target = target || room.terminal;
-      target = target || structures.find(i => i.structureType === "extension");
-      target = target || structures.find(i => i.structureType === "extractor");
-      target = target || structures.find(i => i.structureType === "lab");
+      target = target || hostileStructures.find(i => i.structureType === "extension");
+      target = target || hostileStructures.find(i => i.structureType === "extractor");
+      target = target || hostileStructures.find(i => i.structureType === "lab");
+
+      target = target || structures.find(i => i.structureType === "container");
+
+      target =
+        target ||
+        room.find(FIND_CONSTRUCTION_SITES, {
+          filter: i => i.progress > 1000 && i.owner && whitelist.indexOf(i.owner.username) === -1
+        })[0];
+
+      target = target || hostileStructures.find(i => i.structureType === "rampart");
     }
-    /*
-    target =
-      target ||
-      room.find(FIND_CONSTRUCTION_SITES, {
-        filter: i => whitelist.indexOf(i.owner.username) === -1 && i.structureType === "spawn"
-      })[0]; */
     target = target || room.find(FIND_HOSTILE_CREEPS, { filter: i => whitelist.indexOf(i.owner.username) === -1 })[0];
 
     return target && { target: target.pos, movingTarget: target instanceof Creep };
@@ -443,7 +494,7 @@ export class AttackPartyManager {
 
   private moveParty(creeps: AttackPartyCreepLoaded[]) {
     const leader = creeps[0];
-    if (this.attackParty.blocker && Game.time % 15 > 0) {
+    if (this.attackParty.blocker && Game.time % 5 > 0) {
       var obj = Game.getObjectById(this.attackParty.blocker) as AnyStructure | Creep;
       if (obj) {
         leader.creep.room.visual.circle(obj.pos.x, obj.pos.y, {
@@ -534,7 +585,7 @@ export class AttackPartyManager {
       })
       .filter(i => i);
 
-    const firstObstacle = obstacles[0];
+    const firstObstacle = _.sortBy(obstacles, i => i instanceof Creep)[0];
     if (firstObstacle) {
       leader.creep.room.visual.circle(firstObstacle.pos.x, firstObstacle.pos.y, {
         radius: 0.2,
@@ -674,6 +725,7 @@ export class AttackPartyManager {
         if (Game.time % 10 === 0 && isEnemyRoom) {
           // we don't want this to happen in the firt shot. I noticed a time where it was triggered but it shouldn't have
           this.attackParty.status = "camping";
+          // this.attackParty.status = "complete";
         }
         return;
       } else {

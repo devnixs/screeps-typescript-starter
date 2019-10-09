@@ -1,6 +1,7 @@
 import { profiler, profileMethod } from "../utils/profiler";
 import { Traveler } from "./Traveler";
 import { whitelist } from "constants/misc";
+import { isMatchCustomizer } from "lodash";
 
 interface RoomAndExpiration {
   expiration: number;
@@ -86,6 +87,15 @@ interface CacheEntry {
   expiration: number;
   id: string | null;
 }
+
+let findClosest = function<T extends HasPos>(elements: T[], entity: HasPos): T | undefined {
+  if (elements.length === 0) {
+    return undefined;
+  }
+  const entries = elements.map(i => ({ entry: i, range: i.pos.getRangeTo(entity) }));
+  entries.sort((a, b) => a.range - b.range);
+  return entries[0].entry;
+};
 
 let findAndCache = function findAndCache<K extends FindConstant>(
   creep: Creep,
@@ -432,11 +442,13 @@ findEmptySpotCloseTo = profiler.registerFN(findEmptySpotCloseTo, "findEmptySpotC
 findSafeAreaAround = profiler.registerFN(findSafeAreaAround, "findSafeAreaAround");
 findUnsafeArea = profiler.registerFN(findUnsafeArea, "findUnsafeArea");
 findSpotWithNoWallsCloseTo = profiler.registerFN(findSpotWithNoWallsCloseTo, "findSpotWithNoWallsCloseTo");
+findClosest = profiler.registerFN(findClosest, "findClosest");
 
 (global as any).findSafeAreaAround = findSafeAreaAround;
 (global as any).closestRooms = closestRooms;
 (global as any).findClosestRoom = findClosestRoom;
 (global as any).findEmptySpotCloseTo = findEmptySpotCloseTo;
+(global as any).findClosest = findClosest;
 
 export {
   findNonEmptyResourceInStore,
@@ -444,6 +456,7 @@ export {
   findRestSpot,
   findEmptySpotCloseTo,
   findClosestRoom,
+  findClosest,
   findSafeAreaAround,
   findAndCache,
   findUnsafeArea,

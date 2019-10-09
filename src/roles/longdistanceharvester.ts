@@ -50,7 +50,9 @@ class RoleLongDistanceHarvester implements IRole {
 
     if (memory.sittingOnContainer && memory.sourceId) {
       const source = Game.getObjectById(memory.sourceId) as Source;
-      creep.harvest(source);
+      if (source.energy > 0) {
+        creep.harvest(source);
+      }
       return;
     }
 

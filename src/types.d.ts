@@ -26,8 +26,10 @@ type roles =
   | "scout"
   | "transport"
   | "poker"
+  | "remote-camper"
   | "stealer"
   | "manual-defender"
+  | "downgrader"
   | "dismantler";
 
 // memory extension samples
@@ -70,7 +72,7 @@ interface RoomMemory {
   isRebuilding: boolean;
   stealingStats: StealingStat[];
   needsStealers: SimplePosWithRoomName[];
-  poker: string;
+  poker?: string;
   controllerContainer?: string;
   boostModeIsSetup: boolean;
   useNewRoomPlanner: any;
@@ -117,6 +119,7 @@ interface RoomMemory {
   roomPlanner: RoomPlannerData;
 
   needsAttackers: AttackerNeed | undefined;
+  campedRooms: string[];
 }
 
 interface AttackerNeed {
@@ -144,7 +147,7 @@ interface AttackParty {
   creeps: AttackPartyCreep[];
   needs: BodyPartConstant[][];
   mineralsNeeded: MineralNeed[];
-  status: "forming" | "moving" | "regrouping" | "attacking" | "complete" | "dead" | "safemode" | "camping";
+  status: "forming" | "renewing" | "moving" | "regrouping" | "attacking" | "complete" | "dead" | "safemode" | "camping";
   retreat: boolean;
   boosted: boolean;
   count: number;
@@ -275,8 +278,8 @@ interface Memory {
 
   attack: AttackSetup | undefined;
   nextAttack: NextAttack | undefined;
-  helps: Help[] | undefined;
   portals: Portal[];
+  shares: { [res: string]: number };
 }
 
 interface Portal {

@@ -3,6 +3,7 @@ import { Cartographer } from "utils/cartographer";
 import { IPokerMemory } from "roles/poker";
 import { ExplorationCache } from "utils/exploration-cache";
 import { whitelist } from "constants/misc";
+import { getUsedPercentage } from "utils/cpu";
 
 export class PokingManager {
   constructor(private room: Room) {}
@@ -17,6 +18,11 @@ export class PokingManager {
     }
 
     if (this.room.controller && this.room.controller.level < 4) {
+      return;
+    }
+
+    if (getUsedPercentage() > 0.5) {
+      this.room.memory.poker = undefined;
       return;
     }
 

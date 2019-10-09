@@ -29,7 +29,7 @@ Changelog:
 var roomStructures: { [room: string]: { [structureType: string]: string[] } } = {};
 var roomStructuresExpiration: { [room: string]: number } = {};
 
-const CACHE_TIMEOUT = 50;
+const CACHE_TIMEOUT = 150;
 const CACHE_OFFSET = 4;
 
 const multipleList = [

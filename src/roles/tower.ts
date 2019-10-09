@@ -108,17 +108,22 @@ class RoleTower {
 
       for (let i = 0; i < enemies.length; i++) {
         const enemy = enemies[i];
-        room.visual.text("ENEMY SINCE " + (Game.time - enemy.firstSeen), 10, 12 + i * 3, {
+        room.visual.text("ENEMY SINCE " + (Game.time - enemy.firstSeen), 10, 10 + i * 5, {
           color: "white",
           backgroundColor: "black",
           opacity: 0.5
         });
-        room.visual.text("RANGE " + enemy.range, 10, 14 + i * 3, {
+        room.visual.text("RANGE " + enemy.range, 10, 11 + i * 5, {
           color: "white",
           backgroundColor: "black",
           opacity: 0.5
         });
-        room.visual.text("NEXT ATTACK: " + (enemy.nextAttackAt - Game.time), 10, 16 + i * 3, {
+        room.visual.text("ATTACKED " + enemy.attackedCount, 10, 12 + i * 5, {
+          color: "white",
+          backgroundColor: "black",
+          opacity: 0.5
+        });
+        room.visual.text("NEXT ATTACK: " + (enemy.nextAttackAt - Game.time), 10, 13 + i * 5, {
           color: "white",
           backgroundColor: "black",
           opacity: 0.5
@@ -293,10 +298,19 @@ class RoleTower {
   }
 
   private getDamagedCreepInRoom(room: Room): Creep | undefined {
-    var damagedOther = room.find(FIND_MY_CREEPS, {
-      filter: structure => structure.hits < structure.hitsMax
-    })[0];
-    return damagedOther;
+    const isUnderSiege = room.memory.isUnderSiege;
+
+    if (isUnderSiege) {
+      // only heal defenders during sieges
+      const allowedRoles: roles[] = ["local-defender", "remote-defender", "builder", "remote-defender-helper", "truck"];
+      return room.find(FIND_MY_CREEPS, {
+        filter: structure => structure.hits < structure.hitsMax && allowedRoles.indexOf(structure.memory.role) >= 0
+      })[0];
+    } else {
+      return room.find(FIND_MY_CREEPS, {
+        filter: structure => structure.hits < structure.hitsMax
+      })[0];
+    }
   }
 
   private getEnemyInRoom(room: Room): { hostile: Creep; range: number } | undefined {
